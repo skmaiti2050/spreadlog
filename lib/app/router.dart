@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../features/flights/presentation/screens/flight_list_screen.dart';
+
 class AppRouter {
   const AppRouter._();
 
@@ -9,11 +11,7 @@ class AppRouter {
     switch (settings.name) {
       case '/':
         return MaterialPageRoute<void>(
-          builder: (_) => const Scaffold(
-            body: Center(
-              child: Text('Aviation Logbook'),
-            ),
-          ),
+          builder: (_) => const FlightListScreen(),
           settings: settings,
         );
       default:
@@ -28,4 +26,3 @@ class AppRouter {
     }
   }
 }
-
