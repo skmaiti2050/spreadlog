@@ -24,6 +24,15 @@ class PhysicalLogbookScreen extends StatefulWidget {
 
 class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
   int _currentPageIndex = 0;
+  final ScrollController _verticalController = ScrollController();
+  final ScrollController _horizontalController = ScrollController();
+
+  @override
+  void dispose() {
+    _verticalController.dispose();
+    _horizontalController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,18 +69,34 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      body: Scrollbar(
+        controller: _verticalController,
+        thumbVisibility: true,
+        trackVisibility: true,
+        notificationPredicate: (notif) => notif.metrics.axis == Axis.vertical,
+        child: Scrollbar(
+          controller: _horizontalController,
+          thumbVisibility: true,
+          trackVisibility: true,
+          notificationPredicate: (notif) => notif.metrics.axis == Axis.horizontal,
+          child: SingleChildScrollView(
+            controller: _verticalController,
+            scrollDirection: Axis.vertical,
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SingleChildScrollView(
+              controller: _horizontalController,
+              scrollDirection: Axis.horizontal,
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: _buildSpreadTable(page),
+                padding: const EdgeInsets.all(12),
+                child: Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: _buildSpreadTable(page),
+                  ),
+                ),
               ),
             ),
           ),

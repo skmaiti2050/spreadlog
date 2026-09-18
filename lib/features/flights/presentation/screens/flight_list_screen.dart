@@ -171,14 +171,17 @@ class FlightListScreen extends ConsumerWidget {
                   );
                 }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  itemCount: flights.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final flight = flights[index];
-                    return _buildFlightCard(context, ref, flight);
-                  },
+                return Scrollbar(
+                  thumbVisibility: true,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    itemCount: flights.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final flight = flights[index];
+                      return _buildFlightCard(context, ref, flight);
+                    },
+                  ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
