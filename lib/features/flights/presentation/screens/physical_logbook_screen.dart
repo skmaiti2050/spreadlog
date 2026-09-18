@@ -4,7 +4,9 @@ import '../../../../core/utils/time_utils.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
 import '../../domain/flight.dart';
 import '../../domain/flight_time.dart';
+import '../../domain/instruction_time.dart';
 import '../../domain/ledger_page.dart';
+import '../../domain/ledger_totals.dart';
 
 /// Clean, high-density physical logbook spread screen.
 /// Renders the exact 14 flight rows, Brought Forward, Page Totals, and Carried Forward.
@@ -90,27 +92,41 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
       border: TableBorder.all(color: Colors.white24, width: 0.5),
       headingRowColor: WidgetStateProperty.all(Colors.blueGrey.shade900),
       columns: const [
-        DataColumn(label: Text('DATE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('TYPE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('REG', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('PIC / CREW', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SE DAY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SE NIGHT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ME DAY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ME NIGHT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('FSTD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SE DUAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SE PIC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SE PICUS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SE COPILOT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ME DUAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ME PIC', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ME PICUS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ME COPILOT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('INST ACT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('INST SIM', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('LDGS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('REMARKS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        // Left Page (Columns 1-13)
+        DataColumn(label: Text('DATE (1)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('TYPE (2)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('REG (3)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('PIC (4)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('DETAILS & REMARKS (5)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('NAV (6)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('PLACE (7)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ACT (8)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SIM (9)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE (10)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME (11)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('FSTD (12)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ACT (13)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+
+        // Right Page (Columns 14-32)
+        DataColumn(label: Text('SE DUAL D (14)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE PIC D (15)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE PICUS D (16)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE CO D (17)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE DUAL N (18)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE PIC N (19)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE PICUS N (20)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SE CO N (21)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME DUAL D (22)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME PIC D (23)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME PICUS D (24)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME CO D (25)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME DUAL N (26)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME PIC N (27)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME PICUS N (28)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('ME CO N (29)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('LDG D (30)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('LDG N (31)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('SIGNATURES / CERT (32)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
       ],
       rows: [
         // 14 standard logbook entries
@@ -121,46 +137,14 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
         _buildSummaryRow(
           label: 'BROUGHT FORWARD',
           color: Colors.blueGrey.shade800.withValues(alpha: 0.5),
-          seDay: page.broughtForward.totalSingleEngineDay,
-          seNight: page.broughtForward.totalSingleEngineNight,
-          meDay: page.broughtForward.totalMultiEngineDay,
-          meNight: page.broughtForward.totalMultiEngineNight,
-          fstd: page.broughtForward.fstdActual,
-          seDual: page.broughtForward.seDayDual + page.broughtForward.seNightDual,
-          sePic: page.broughtForward.seDayPic + page.broughtForward.seNightPic,
-          sePicus: page.broughtForward.seDayPicus + page.broughtForward.seNightPicus,
-          seCopilot: page.broughtForward.seDayCopilot + page.broughtForward.seNightCopilot,
-          meDual: page.broughtForward.meDayDual + page.broughtForward.meNightDual,
-          mePic: page.broughtForward.meDayPic + page.broughtForward.meNightPic,
-          mePicus: page.broughtForward.meDayPicus + page.broughtForward.meNightPicus,
-          meCopilot: page.broughtForward.meDayCopilot + page.broughtForward.meNightCopilot,
-          instAct: page.broughtForward.instrumentActual,
-          instSim: page.broughtForward.instrumentFstd,
-          landings: '${page.broughtForward.landingsDay}/${page.broughtForward.landingsNight}',
-          remarks: 'Total: ${TimeUtils.formatMinutesToHhMm(page.broughtForward.totalFlightTimeMinutes)}',
+          totals: page.broughtForward,
         ),
 
         // Page Totals
         _buildSummaryRow(
           label: 'THIS PAGE TOTAL',
           color: Colors.blueGrey.shade900,
-          seDay: page.pageTotals.totalSingleEngineDay,
-          seNight: page.pageTotals.totalSingleEngineNight,
-          meDay: page.pageTotals.totalMultiEngineDay,
-          meNight: page.pageTotals.totalMultiEngineNight,
-          fstd: page.pageTotals.fstdActual,
-          seDual: page.pageTotals.seDayDual + page.pageTotals.seNightDual,
-          sePic: page.pageTotals.seDayPic + page.pageTotals.seNightPic,
-          sePicus: page.pageTotals.seDayPicus + page.pageTotals.seNightPicus,
-          seCopilot: page.pageTotals.seDayCopilot + page.pageTotals.seNightCopilot,
-          meDual: page.pageTotals.meDayDual + page.pageTotals.meNightDual,
-          mePic: page.pageTotals.meDayPic + page.pageTotals.meNightPic,
-          mePicus: page.pageTotals.meDayPicus + page.pageTotals.meNightPicus,
-          meCopilot: page.pageTotals.meDayCopilot + page.pageTotals.meNightCopilot,
-          instAct: page.pageTotals.instrumentActual,
-          instSim: page.pageTotals.instrumentFstd,
-          landings: '${page.pageTotals.landingsDay}/${page.pageTotals.landingsNight}',
-          remarks: 'Page: ${TimeUtils.formatMinutesToHhMm(page.pageTotals.totalFlightTimeMinutes)}',
+          totals: page.pageTotals,
         ),
 
         // Carried Forward
@@ -168,23 +152,7 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
           label: 'CARRIED FORWARD',
           color: Colors.indigo.shade900.withValues(alpha: 0.6),
           isBold: true,
-          seDay: page.carriedForward.totalSingleEngineDay,
-          seNight: page.carriedForward.totalSingleEngineNight,
-          meDay: page.carriedForward.totalMultiEngineDay,
-          meNight: page.carriedForward.totalMultiEngineNight,
-          fstd: page.carriedForward.fstdActual,
-          seDual: page.carriedForward.seDayDual + page.carriedForward.seNightDual,
-          sePic: page.carriedForward.seDayPic + page.carriedForward.seNightPic,
-          sePicus: page.carriedForward.seDayPicus + page.carriedForward.seNightPicus,
-          seCopilot: page.carriedForward.seDayCopilot + page.carriedForward.seNightCopilot,
-          meDual: page.carriedForward.meDayDual + page.carriedForward.meNightDual,
-          mePic: page.carriedForward.meDayPic + page.carriedForward.meNightPic,
-          mePicus: page.carriedForward.meDayPicus + page.carriedForward.meNightPicus,
-          meCopilot: page.carriedForward.meDayCopilot + page.carriedForward.meNightCopilot,
-          instAct: page.carriedForward.instrumentActual,
-          instSim: page.carriedForward.instrumentFstd,
-          landings: '${page.carriedForward.landingsDay}/${page.carriedForward.landingsNight}',
-          remarks: 'Total: ${TimeUtils.formatMinutesToHhMm(page.carriedForward.totalFlightTimeMinutes)}',
+          totals: page.carriedForward,
         ),
       ],
     );
@@ -193,68 +161,101 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
   DataRow _buildDataRow(Flight? flight) {
     if (flight == null) {
       return DataRow(
-        cells: List.generate(21, (_) => const DataCell(Text(''))),
+        cells: List.generate(32, (_) => const DataCell(Text(''))),
       );
     }
 
     final dateStr = '${flight.date.day.toString().padLeft(2, '0')}/${flight.date.month.toString().padLeft(2, '0')}';
-    final seDay = flight.flightTimes
-        .where((ft) => ft.aircraftClass == AircraftClass.singleEngine && ft.period == TimePeriod.day)
-        .fold<int>(0, (s, ft) => s + ft.durationMinutes);
-    final seNight = flight.flightTimes
-        .where((ft) => ft.aircraftClass == AircraftClass.singleEngine && ft.period == TimePeriod.night)
-        .fold<int>(0, (s, ft) => s + ft.durationMinutes);
-    final meDay = flight.flightTimes
-        .where((ft) => ft.aircraftClass == AircraftClass.multiEngine && ft.period == TimePeriod.day)
-        .fold<int>(0, (s, ft) => s + ft.durationMinutes);
-    final meNight = flight.flightTimes
-        .where((ft) => ft.aircraftClass == AircraftClass.multiEngine && ft.period == TimePeriod.night)
-        .fold<int>(0, (s, ft) => s + ft.durationMinutes);
 
-    int seDual = 0, sePic = 0, sePicus = 0, seCopilot = 0;
-    int meDual = 0, mePic = 0, mePicus = 0, meCopilot = 0;
+    int seDayDual = 0, seDayPic = 0, seDayPicus = 0, seDayCopilot = 0;
+    int seNightDual = 0, seNightPic = 0, seNightPicus = 0, seNightCopilot = 0;
+    int meDayDual = 0, meDayPic = 0, meDayPicus = 0, meDayCopilot = 0;
+    int meNightDual = 0, meNightPic = 0, meNightPicus = 0, meNightCopilot = 0;
 
     for (final ft in flight.flightTimes) {
       if (ft.aircraftClass == AircraftClass.singleEngine) {
-        switch (ft.role) {
-          case PilotRole.dual: seDual += ft.durationMinutes; break;
-          case PilotRole.pic: sePic += ft.durationMinutes; break;
-          case PilotRole.picus: sePicus += ft.durationMinutes; break;
-          case PilotRole.copilot: seCopilot += ft.durationMinutes; break;
+        if (ft.period == TimePeriod.day) {
+          switch (ft.role) {
+            case PilotRole.dual: seDayDual += ft.durationMinutes; break;
+            case PilotRole.pic: seDayPic += ft.durationMinutes; break;
+            case PilotRole.picus: seDayPicus += ft.durationMinutes; break;
+            case PilotRole.copilot: seDayCopilot += ft.durationMinutes; break;
+          }
+        } else {
+          switch (ft.role) {
+            case PilotRole.dual: seNightDual += ft.durationMinutes; break;
+            case PilotRole.pic: seNightPic += ft.durationMinutes; break;
+            case PilotRole.picus: seNightPicus += ft.durationMinutes; break;
+            case PilotRole.copilot: seNightCopilot += ft.durationMinutes; break;
+          }
         }
       } else {
-        switch (ft.role) {
-          case PilotRole.dual: meDual += ft.durationMinutes; break;
-          case PilotRole.pic: mePic += ft.durationMinutes; break;
-          case PilotRole.picus: mePicus += ft.durationMinutes; break;
-          case PilotRole.copilot: meCopilot += ft.durationMinutes; break;
+        if (ft.period == TimePeriod.day) {
+          switch (ft.role) {
+            case PilotRole.dual: meDayDual += ft.durationMinutes; break;
+            case PilotRole.pic: meDayPic += ft.durationMinutes; break;
+            case PilotRole.picus: meDayPicus += ft.durationMinutes; break;
+            case PilotRole.copilot: meDayCopilot += ft.durationMinutes; break;
+          }
+        } else {
+          switch (ft.role) {
+            case PilotRole.dual: meNightDual += ft.durationMinutes; break;
+            case PilotRole.pic: meNightPic += ft.durationMinutes; break;
+            case PilotRole.picus: meNightPicus += ft.durationMinutes; break;
+            case PilotRole.copilot: meNightCopilot += ft.durationMinutes; break;
+          }
         }
+      }
+    }
+
+    int instructorSe = 0;
+    int instructorMe = 0;
+    int instructorFstd = 0;
+    for (final it in flight.instructionTimes) {
+      switch (it.category) {
+        case InstructorCategory.singleEngine: instructorSe += it.durationMinutes; break;
+        case InstructorCategory.multiEngine: instructorMe += it.durationMinutes; break;
+        case InstructorCategory.fstd: instructorFstd += it.durationMinutes; break;
       }
     }
 
     return DataRow(
       cells: [
+        // Left Page (1-13)
         DataCell(Text(dateStr, style: const TextStyle(fontSize: 11))),
         DataCell(Text(flight.aircraftModelId ?? 'AIRCRAFT', style: const TextStyle(fontSize: 11))),
         DataCell(Text(flight.registration, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
         DataCell(Text(flight.picName, style: const TextStyle(fontSize: 11))),
-        _timeCell(seDay),
-        _timeCell(seNight),
-        _timeCell(meDay),
-        _timeCell(meNight),
-        _timeCell(flight.fstdActualMinutes),
-        _timeCell(seDual),
-        _timeCell(sePic),
-        _timeCell(sePicus),
-        _timeCell(seCopilot),
-        _timeCell(meDual),
-        _timeCell(mePic),
-        _timeCell(mePicus),
-        _timeCell(meCopilot),
+        DataCell(Text(flight.remarks, style: const TextStyle(fontSize: 11))),
+        DataCell(Text(flight.instrumentTime?.navaids ?? '', style: const TextStyle(fontSize: 11))),
+        DataCell(Text(flight.instrumentTime?.place ?? '', style: const TextStyle(fontSize: 11))),
         _timeCell(flight.instrumentTime?.actualMinutes ?? 0),
         _timeCell(flight.instrumentTime?.fstdMinutes ?? 0),
-        DataCell(Text('${flight.landings.dayCount}/${flight.landings.nightCount}', style: const TextStyle(fontSize: 11))),
-        DataCell(Text(flight.remarks, style: const TextStyle(fontSize: 11))),
+        _timeCell(instructorSe),
+        _timeCell(instructorMe),
+        _timeCell(instructorFstd),
+        _timeCell(flight.fstdActualMinutes),
+
+        // Right Page (14-32)
+        _timeCell(seDayDual),
+        _timeCell(seDayPic),
+        _timeCell(seDayPicus),
+        _timeCell(seDayCopilot),
+        _timeCell(seNightDual),
+        _timeCell(seNightPic),
+        _timeCell(seNightPicus),
+        _timeCell(seNightCopilot),
+        _timeCell(meDayDual),
+        _timeCell(meDayPic),
+        _timeCell(meDayPicus),
+        _timeCell(meDayCopilot),
+        _timeCell(meNightDual),
+        _timeCell(meNightPic),
+        _timeCell(meNightPicus),
+        _timeCell(meNightCopilot),
+        DataCell(Text(flight.landings.dayCount > 0 ? '${flight.landings.dayCount}' : '', style: const TextStyle(fontSize: 11))),
+        DataCell(Text(flight.landings.nightCount > 0 ? '${flight.landings.nightCount}' : '', style: const TextStyle(fontSize: 11))),
+        DataCell(Text(flight.soloCrossCountry ? 'SOLO XC' : '', style: const TextStyle(fontSize: 11))),
       ],
     );
   }
@@ -263,23 +264,7 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
     required String label,
     required Color color,
     bool isBold = false,
-    required int seDay,
-    required int seNight,
-    required int meDay,
-    required int meNight,
-    required int fstd,
-    required int seDual,
-    required int sePic,
-    required int sePicus,
-    required int seCopilot,
-    required int meDual,
-    required int mePic,
-    required int mePicus,
-    required int meCopilot,
-    required int instAct,
-    required int instSim,
-    required String landings,
-    required String remarks,
+    required LedgerTotals totals,
   }) {
     final style = TextStyle(
       fontSize: 11,
@@ -290,27 +275,41 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
     return DataRow(
       color: WidgetStateProperty.all(color),
       cells: [
+        // Left Page (1-13)
         DataCell(Text(label, style: style)),
         const DataCell(Text('')),
         const DataCell(Text('')),
         const DataCell(Text('')),
-        _summaryCell(seDay, style),
-        _summaryCell(seNight, style),
-        _summaryCell(meDay, style),
-        _summaryCell(meNight, style),
-        _summaryCell(fstd, style),
-        _summaryCell(seDual, style),
-        _summaryCell(sePic, style),
-        _summaryCell(sePicus, style),
-        _summaryCell(seCopilot, style),
-        _summaryCell(meDual, style),
-        _summaryCell(mePic, style),
-        _summaryCell(mePicus, style),
-        _summaryCell(meCopilot, style),
-        _summaryCell(instAct, style),
-        _summaryCell(instSim, style),
-        DataCell(Text(landings, style: style)),
-        DataCell(Text(remarks, style: style)),
+        const DataCell(Text('')),
+        const DataCell(Text('')),
+        const DataCell(Text('')),
+        _summaryCell(totals.instrumentActual, style),
+        _summaryCell(totals.instrumentFstd, style),
+        _summaryCell(totals.instructorSe, style),
+        _summaryCell(totals.instructorMe, style),
+        _summaryCell(totals.instructorFstd, style),
+        _summaryCell(totals.fstdActual, style),
+
+        // Right Page (14-32)
+        _summaryCell(totals.seDayDual, style),
+        _summaryCell(totals.seDayPic, style),
+        _summaryCell(totals.seDayPicus, style),
+        _summaryCell(totals.seDayCopilot, style),
+        _summaryCell(totals.seNightDual, style),
+        _summaryCell(totals.seNightPic, style),
+        _summaryCell(totals.seNightPicus, style),
+        _summaryCell(totals.seNightCopilot, style),
+        _summaryCell(totals.meDayDual, style),
+        _summaryCell(totals.meDayPic, style),
+        _summaryCell(totals.meDayPicus, style),
+        _summaryCell(totals.meDayCopilot, style),
+        _summaryCell(totals.meNightDual, style),
+        _summaryCell(totals.meNightPic, style),
+        _summaryCell(totals.meNightPicus, style),
+        _summaryCell(totals.meNightCopilot, style),
+        DataCell(Text(totals.landingsDay > 0 ? '${totals.landingsDay}' : '-', style: style)),
+        DataCell(Text(totals.landingsNight > 0 ? '${totals.landingsNight}' : '-', style: style)),
+        DataCell(Text('Total: ${TimeUtils.formatMinutesToHhMm(totals.totalFlightTimeMinutes)}', style: style)),
       ],
     );
   }
