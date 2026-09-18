@@ -305,7 +305,7 @@ class FlightListScreen extends ConsumerWidget {
             Text('• Registration: ${sampleFlight.registration}'),
             Text('• PIC: ${sampleFlight.picName}'),
             Text('• Duration: ${TimeUtils.formatMinutesToHhMm(sampleFlight.totalDurationMinutes)} (90 mins)'),
-            Text('• Single Engine Day PIC'),
+            const Text('• Single Engine Day PIC'),
             Text('• Landings: ${sampleFlight.landings.dayCount} day'),
           ],
         ),

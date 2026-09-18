@@ -275,7 +275,7 @@ void main() {
     });
 
     test('Pagination with initial brought forward value carries forward accurately', () {
-      final initialBF = const LedgerTotals(
+      const initialBF = LedgerTotals(
         seDayPic: 600, // 10h
         landingsDay: 20,
       );
