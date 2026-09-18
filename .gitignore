@@ -53,3 +53,10 @@ app.*.map.json
 # Web runtime assets (recreated via `dart run tool/update_web_assets.dart`)
 web/drift_worker.js
 web/sqlite3.wasm
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
