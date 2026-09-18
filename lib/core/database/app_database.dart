@@ -1,29 +1,44 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+import 'connection/connection.dart' as conn;
+import 'daos/flights_dao.dart';
+import 'tables/aircraft_models_table.dart';
+import 'tables/flight_times_table.dart';
+import 'tables/flights_table.dart';
+import 'tables/instruction_times_table.dart';
+import 'tables/instrument_times_table.dart';
+import 'tables/landings_table.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [])
+@DriftDatabase(
+  tables: [
+    FlightsTable,
+    FlightTimesTable,
+    InstrumentTimesTable,
+    InstructionTimesTable,
+    LandingsTable,
+    AircraftModelsTable,
+  ],
+  daos: [
+    FlightsDao,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
+  AppDatabase([QueryExecutor? e]) : super(e ?? conn.openConnection());
 
   @override
   int get schemaVersion => 1;
 
-  static LazyDatabase _openConnection() {
-    return LazyDatabase(() async {
-      final dbFolder = await getApplicationDocumentsDirectory();
-      final dbDir = Directory(p.join(dbFolder.path, 'database'));
-      if (!await dbDir.exists()) {
-        await dbDir.create(recursive: true);
-      }
-      final file = File(p.join(dbDir.path, 'app_database.sqlite'));
-      return NativeDatabase.createInBackground(file);
-    });
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      beforeOpen: (details) async {
+        await customStatement('PRAGMA foreign_keys = ON');
+      },
+    );
   }
 }
-
