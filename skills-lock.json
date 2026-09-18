@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "dart-best-practices": {
+      "source": "kevmoo/dash_skills",
+      "sourceType": "github",
+      "skillPath": "skills/dart-best-practices/SKILL.md",
+      "computedHash": "bef12dc34bc172ada836350234702768f7d29fa487114556137513cf5b89b93f"
+    },
+    "dart-matcher-best-practices": {
+      "source": "kevmoo/dash_skills",
+      "sourceType": "github",
+      "skillPath": "skills/dart-matcher-best-practices/SKILL.md",
+      "computedHash": "625f20ef500006d3920543661f3eb70982b71882ad37ecf6c33efc7dadd245ed"
+    },
+    "dart-modern-features": {
+      "source": "kevmoo/dash_skills",
+      "sourceType": "github",
+      "skillPath": "skills/dart-modern-features/SKILL.md",
+      "computedHash": "16b5ffc1e584cb99c2a273ca4f4b7e53921172e5b0610d65ec248a3272047f3d"
+    },
+    "dart-test-fundamentals": {
+      "source": "kevmoo/dash_skills",
+      "sourceType": "github",
+      "skillPath": "skills/dart-test-fundamentals/SKILL.md",
+      "computedHash": "bc55d5c9f84f156866de4de8039940274ecb7eb26dd82b0a8128c9b75adc172c"
+    }
+  }
+}
