@@ -46,3 +46,10 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Generated code (recreated via `dart run build_runner build`)
+*.g.dart
+
+# Web runtime assets (recreated via `dart run tool/update_web_assets.dart`)
+web/drift_worker.js
+web/sqlite3.wasm
