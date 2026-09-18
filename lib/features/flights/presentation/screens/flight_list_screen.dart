@@ -6,7 +6,9 @@ import '../../../aircraft/domain/aircraft_model.dart';
 import '../../domain/flight.dart';
 import '../../domain/flight_time.dart';
 import '../../domain/landings.dart';
+import '../../../reports/presentation/pdf_preview_screen.dart';
 import '../providers/flights_providers.dart';
+import 'physical_logbook_screen.dart';
 
 class FlightListScreen extends ConsumerWidget {
   const FlightListScreen({super.key});
@@ -24,6 +26,30 @@ class FlightListScreen extends ConsumerWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.menu_book),
+            tooltip: 'Physical Logbook View',
+            onPressed: () {
+              final pages = ref.read(ledgerPagesProvider);
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PhysicalLogbookScreen(pages: pages),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Export SACAA PDF',
+            onPressed: () {
+              final pages = ref.read(ledgerPagesProvider);
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PdfPreviewScreen(pages: pages),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add Flight',
