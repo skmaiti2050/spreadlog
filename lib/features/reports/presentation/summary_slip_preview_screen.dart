@@ -1,14 +1,16 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
 
+import '../../profile/presentation/providers/profile_providers.dart';
 import '../../flights/domain/aircraft_type_summary.dart';
 import '../../flights/domain/ledger_totals.dart';
 import '../domain/sacaa_summary_slip_generator.dart';
 
 /// Screen allowing pilots to preview, customize credentials for, and print/export
 /// the official SACAA Career / Renewal Logbook Summary Slip.
-class SummarySlipPreviewScreen extends StatefulWidget {
+class SummarySlipPreviewScreen extends ConsumerStatefulWidget {
   final List<AircraftTypeSummary> typeSummaries;
   final LedgerTotals grandTotals;
   final String initialPilotName;
@@ -23,11 +25,12 @@ class SummarySlipPreviewScreen extends StatefulWidget {
   });
 
   @override
-  State<SummarySlipPreviewScreen> createState() =>
+  ConsumerState<SummarySlipPreviewScreen> createState() =>
       _SummarySlipPreviewScreenState();
 }
 
-class _SummarySlipPreviewScreenState extends State<SummarySlipPreviewScreen> {
+class _SummarySlipPreviewScreenState
+    extends ConsumerState<SummarySlipPreviewScreen> {
   late String _pilotName;
   late String _licenceNumber;
   late DateTime _slipDate;
@@ -79,14 +82,20 @@ class _SummarySlipPreviewScreenState extends State<SummarySlipPreviewScreen> {
           ),
           FilledButton(
             onPressed: () {
+              final newName = nameController.text.trim().isNotEmpty
+                  ? nameController.text.trim()
+                  : 'PILOT IN COMMAND';
+              final newLicence = licenceController.text.trim().isNotEmpty
+                  ? licenceController.text.trim()
+                  : 'ZA-123456';
               setState(() {
-                _pilotName = nameController.text.trim().isNotEmpty
-                    ? nameController.text.trim()
-                    : 'PILOT IN COMMAND';
-                _licenceNumber = licenceController.text.trim().isNotEmpty
-                    ? licenceController.text.trim()
-                    : 'ZA-123456';
+                _pilotName = newName;
+                _licenceNumber = newLicence;
               });
+              ref.read(pilotProfileProvider.notifier).updateProfile(
+                    pilotName: newName,
+                    licenceNumber: newLicence,
+                  );
               Navigator.of(dialogCtx).pop();
             },
             child: const Text('Update'),

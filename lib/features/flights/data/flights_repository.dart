@@ -209,5 +209,10 @@ class FlightsRepository {
   Future<void> deleteFlight(String flightId) async {
     await _dao.deleteFlight(flightId);
   }
+
+  /// Deletes multiple flights in a single transaction.
+  Future<int> deleteFlights(List<String> flightIds) async {
+    return _dao.deleteFlights(flightIds);
+  }
 }
 

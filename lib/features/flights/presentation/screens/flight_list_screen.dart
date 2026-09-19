@@ -2,82 +2,290 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
-import '../../domain/flight.dart';
+import '../../../profile/presentation/providers/profile_providers.dart';
+import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../../reports/presentation/pdf_preview_screen.dart';
 import '../../../reports/presentation/summary_slip_preview_screen.dart';
+import '../../domain/flight.dart';
 import '../providers/flights_providers.dart';
 import '../widgets/log_flight_dialog.dart';
 import 'physical_logbook_screen.dart';
 
-class FlightListScreen extends ConsumerWidget {
+class FlightListScreen extends ConsumerStatefulWidget {
   const FlightListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final flightsAsync = ref.watch(flightsStreamProvider);
-    final totals = ref.watch(grandTotalsProvider);
-    final theme = Theme.of(context);
+  ConsumerState<FlightListScreen> createState() => _FlightListScreenState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Aviation Logbook',
-          style: TextStyle(fontWeight: FontWeight.bold),
+class _FlightListScreenState extends ConsumerState<FlightListScreen> {
+  bool _isSelectionMode = false;
+  final Set<String> _selectedFlightIds = {};
+  String _searchFilter = '';
+
+  Future<void> _openLogFlightDialog() async {
+    try {
+      final flight = await LogFlightDialog.show(context);
+      if (flight != null) {
+        await ref.read(flightsRepositoryProvider).saveFlight(flight);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Flight ${flight.registration} (${TimeUtils.formatMinutesToHhMm(flight.totalDurationMinutes)}) logged successfully',
+              ),
+              backgroundColor: Colors.green.shade800,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save flight: $e'),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDeleteFlight(Flight flight) async {
+    final dateStr =
+        '${flight.date.day.toString().padLeft(2, '0')}/${flight.date.month.toString().padLeft(2, '0')}/${flight.date.year}';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Flight Entry?'),
+        content: Text(
+          'Are you sure you want to delete flight ${flight.registration} on $dateStr (${TimeUtils.formatMinutesToHhMm(flight.totalDurationMinutes)})?\nThis action cannot be undone.',
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.menu_book),
-            tooltip: 'Physical Logbook View',
-            onPressed: () {
-              final pages = ref.read(ledgerPagesProvider);
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => PhysicalLogbookScreen(pages: pages),
-                ),
-              );
-            },
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
           ),
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            tooltip: 'Export SACAA PDF',
-            onPressed: () {
-              final pages = ref.read(ledgerPagesProvider);
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => PdfPreviewScreen(pages: pages),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long),
-            tooltip: 'Career Summary Slip',
-            onPressed: () {
-              final typeSummaries = ref.read(aircraftTypeSummariesProvider);
-              final totals = ref.read(grandTotalsProvider);
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => SummarySlipPreviewScreen(
-                    typeSummaries: typeSummaries,
-                    grandTotals: totals,
-                  ),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Add Flight',
-            onPressed: () => _openLogFlightDialog(context, ref),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade800),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
           ),
         ],
       ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref.read(flightsRepositoryProvider).deleteFlight(flight.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Flight entry deleted')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete flight: $e'),
+              backgroundColor: Colors.red.shade800,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _confirmBatchDelete() async {
+    if (_selectedFlightIds.isEmpty) return;
+    final count = _selectedFlightIds.length;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete $count Flight Entries?'),
+        content: Text(
+          'Are you sure you want to delete $count selected flight entries?\nThis action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade800),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('Delete ($count)'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ref
+            .read(flightsRepositoryProvider)
+            .deleteFlights(_selectedFlightIds.toList());
+        final deletedCount = _selectedFlightIds.length;
+        setState(() {
+          _selectedFlightIds.clear();
+          _isSelectionMode = false;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$deletedCount flights deleted successfully'),
+              backgroundColor: Colors.green.shade800,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete flights: $e'),
+              backgroundColor: Colors.red.shade800,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final flightsAsync = ref.watch(flightsStreamProvider);
+    final totals = ref.watch(grandTotalsProvider);
+    final profile = ref.watch(pilotProfileProvider);
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: _isSelectionMode
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: 'Exit selection mode',
+                onPressed: () {
+                  setState(() {
+                    _isSelectionMode = false;
+                    _selectedFlightIds.clear();
+                  });
+                },
+              ),
+              title: Text('${_selectedFlightIds.length} Selected'),
+              actions: [
+                flightsAsync.maybeWhen(
+                  data: (flights) => IconButton(
+                    icon: const Icon(Icons.select_all),
+                    tooltip: 'Select All',
+                    onPressed: () {
+                      setState(() {
+                        if (_selectedFlightIds.length == flights.length) {
+                          _selectedFlightIds.clear();
+                        } else {
+                          _selectedFlightIds
+                              .addAll(flights.map((f) => f.id));
+                        }
+                      });
+                    },
+                  ),
+                  orElse: () => const SizedBox.shrink(),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_sweep),
+                  tooltip: 'Delete Selected',
+                  onPressed: _selectedFlightIds.isNotEmpty
+                      ? _confirmBatchDelete
+                      : null,
+                ),
+              ],
+            )
+          : AppBar(
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Aviation Logbook',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  Text(
+                    '${profile.pilotName} • ${profile.licenceNumber}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.checklist),
+                  tooltip: 'Select Multiple',
+                  onPressed: () => setState(() => _isSelectionMode = true),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.menu_book),
+                  tooltip: 'Physical Logbook View',
+                  onPressed: () {
+                    final pages = ref.read(ledgerPagesProvider);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PhysicalLogbookScreen(pages: pages),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.picture_as_pdf),
+                  tooltip: 'Export SACAA PDF',
+                  onPressed: () {
+                    final pages = ref.read(ledgerPagesProvider);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PdfPreviewScreen(
+                          pages: pages,
+                          pilotName: profile.pilotName,
+                          licenceNumber: profile.licenceNumber,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.receipt_long),
+                  tooltip: 'Career Summary Slip',
+                  onPressed: () {
+                    final typeSummaries =
+                        ref.read(aircraftTypeSummariesProvider);
+                    final grandTotals = ref.read(grandTotalsProvider);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => SummarySlipPreviewScreen(
+                          typeSummaries: typeSummaries,
+                          grandTotals: grandTotals,
+                          initialPilotName: profile.pilotName,
+                          initialLicenceNumber: profile.licenceNumber,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.account_circle_outlined),
+                  tooltip: 'Pilot Profile',
+                  onPressed: () => EditProfileDialog.show(context),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'Add Flight',
+                  onPressed: _openLogFlightDialog,
+                ),
+              ],
+            ),
       body: Column(
         children: [
           // Totals summary header card
           Container(
             width: double.infinity,
-            margin: const EdgeInsets.all(12),
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
@@ -144,6 +352,28 @@ class FlightListScreen extends ConsumerWidget {
             ),
           ),
 
+          // Search / Filter Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Search by registration, aircraft type, or remarks...',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                suffixIcon: _searchFilter.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () => setState(() => _searchFilter = ''),
+                      )
+                    : null,
+              ),
+              onChanged: (v) => setState(() => _searchFilter = v.trim().toLowerCase()),
+            ),
+          ),
+
           // Flight list
           Expanded(
             child: flightsAsync.when(
@@ -175,8 +405,7 @@ class FlightListScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           FilledButton.icon(
-                            onPressed: () =>
-                                _openLogFlightDialog(context, ref),
+                            onPressed: _openLogFlightDialog,
                             icon: const Icon(Icons.add),
                             label: const Text('Add Flight'),
                           ),
@@ -186,30 +415,51 @@ class FlightListScreen extends ConsumerWidget {
                   );
                 }
 
+                // Apply search filter if present
+                final filteredFlights = _searchFilter.isEmpty
+                    ? flights
+                    : flights.where((f) {
+                        return f.registration.toLowerCase().contains(_searchFilter) ||
+                            (f.aircraftModelId?.toLowerCase().contains(_searchFilter) ?? false) ||
+                            f.remarks.toLowerCase().contains(_searchFilter) ||
+                            f.picName.toLowerCase().contains(_searchFilter);
+                      }).toList();
+
+                if (filteredFlights.isEmpty) {
+                  return const Center(
+                    child: Text('No flights match your search query.'),
+                  );
+                }
+
                 return Scrollbar(
                   thumbVisibility: true,
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    itemCount: flights.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    itemCount: filteredFlights.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
                     itemBuilder: (context, index) {
-                      final flight = flights[index];
-                      return _buildFlightCard(context, ref, flight);
+                      final flight = filteredFlights[index];
+                      return _buildFlightCard(context, flight);
                     },
                   ),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error loading flights: $err')),
+              error: (err, stack) =>
+                  Center(child: Text('Error loading flights: $err')),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openLogFlightDialog(context, ref),
-        icon: const Icon(Icons.add),
-        label: const Text('Log Flight'),
-      ),
+      floatingActionButton: _isSelectionMode
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _openLogFlightDialog,
+              icon: const Icon(Icons.add),
+              label: const Text('Log Flight'),
+            ),
     );
   }
 
@@ -236,107 +486,167 @@ class FlightListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFlightCard(BuildContext context, WidgetRef ref, Flight flight) {
+  Widget _buildFlightCard(BuildContext context, Flight flight) {
     final theme = Theme.of(context);
     final dateStr =
         '${flight.date.day.toString().padLeft(2, '0')}/${flight.date.month.toString().padLeft(2, '0')}/${flight.date.year}';
+    final isSelected = _selectedFlightIds.contains(flight.id);
 
     return Card(
       elevation: 0,
+      color: isSelected
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : null,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: theme.colorScheme.outlineVariant),
+        side: BorderSide(
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outlineVariant,
+          width: isSelected ? 1.5 : 1.0,
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-          foregroundColor: theme.colorScheme.primary,
-          child: const Icon(Icons.flight),
-        ),
-        title: Row(
-          children: [
-            Text(
-              flight.registration,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            if (flight.aircraftModelId != null &&
-                flight.aircraftModelId!.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onLongPress: () {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedFlightIds.add(flight.id);
+          });
+        },
+        onTap: () {
+          if (_isSelectionMode) {
+            setState(() {
+              if (isSelected) {
+                _selectedFlightIds.remove(flight.id);
+                if (_selectedFlightIds.isEmpty) {
+                  _isSelectionMode = false;
+                }
+              } else {
+                _selectedFlightIds.add(flight.id);
+              }
+            });
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              if (_isSelectionMode) ...[
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (checked) {
+                    setState(() {
+                      if (checked == true) {
+                        _selectedFlightIds.add(flight.id);
+                      } else {
+                        _selectedFlightIds.remove(flight.id);
+                        if (_selectedFlightIds.isEmpty) {
+                          _isSelectionMode = false;
+                        }
+                      }
+                    });
+                  },
                 ),
-                child: Text(
-                  flight.aircraftModelId!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSecondaryContainer,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const SizedBox(width: 8),
+              ] else ...[
+                CircleAvatar(
+                  backgroundColor:
+                      theme.colorScheme.primary.withValues(alpha: 0.1),
+                  foregroundColor: theme.colorScheme.primary,
+                  child: const Icon(Icons.flight),
                 ),
-              ),
-            ],
-            const SizedBox(width: 8),
-            Text(
-              dateStr,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text('PIC: ${flight.picName}${flight.remarks.isNotEmpty ? ' • ${flight.remarks}' : ''}'),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 6,
-              children: [
-                Chip(
-                  label: Text(
-                    TimeUtils.formatMinutesToHhMm(flight.totalDurationMinutes),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                ),
-                if (flight.landings.totalCount > 0)
-                  Chip(
-                    avatar: const Icon(Icons.flight_land, size: 16),
-                    label: Text('${flight.landings.totalCount} ldgs'),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                  ),
-                if (flight.soloCrossCountry)
-                  const Chip(
-                    label: Text('Solo XC'),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                  ),
+                const SizedBox(width: 12),
               ],
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete_outline, size: 20),
-          tooltip: 'Delete Flight',
-          onPressed: () async {
-            await ref.read(flightsRepositoryProvider).deleteFlight(flight.id);
-          },
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          flight.registration,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        if (flight.aircraftModelId != null &&
+                            flight.aircraftModelId!.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              flight.aircraftModelId!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color:
+                                    theme.colorScheme.onSecondaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(width: 8),
+                        Text(
+                          dateStr,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'PIC: ${flight.picName}${flight.remarks.isNotEmpty ? ' • ${flight.remarks}' : ''}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        Chip(
+                          label: Text(
+                            TimeUtils.formatMinutesToHhMm(
+                                flight.totalDurationMinutes),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 11),
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                        ),
+                        if (flight.landings.totalCount > 0)
+                          Chip(
+                            avatar: const Icon(Icons.flight_land, size: 14),
+                            label: Text('${flight.landings.totalCount} ldgs',
+                                style: const TextStyle(fontSize: 11)),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                          ),
+                        if (flight.soloCrossCountry)
+                          const Chip(
+                            label: Text('Solo XC',
+                                style: TextStyle(fontSize: 11)),
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (!_isSelectionMode)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  tooltip: 'Delete Flight',
+                  onPressed: () => _confirmDeleteFlight(flight),
+                ),
+            ],
+          ),
         ),
       ),
     );
-  }
-
-  Future<void> _openLogFlightDialog(BuildContext context, WidgetRef ref) async {
-    final flight = await LogFlightDialog.show(context);
-    if (flight != null) {
-      await ref.read(flightsRepositoryProvider).saveFlight(flight);
-    }
   }
 }

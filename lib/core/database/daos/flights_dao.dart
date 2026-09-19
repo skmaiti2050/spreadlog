@@ -62,6 +62,15 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
     LandingsTableCompanion? landings,
   }) {
     return transaction(() async {
+      // Ensure foreign key constraint is satisfied if aircraftModelId is provided
+      if (flight.aircraftModelId.present && flight.aircraftModelId.value != null) {
+        final modelId = flight.aircraftModelId.value!.trim();
+        if (modelId.isNotEmpty) {
+          final acClass = flightTimes.isNotEmpty ? flightTimes.first.aircraftClass.value : 0;
+          await ensureAircraftModelExists(modelId: modelId, aircraftClass: acClass);
+        }
+      }
+
       await into(flightsTable).insert(flight);
       for (final ft in flightTimes) {
         await into(flightTimesTable).insert(ft);
@@ -83,6 +92,18 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
     return (delete(flightsTable)..where((t) => t.id.equals(flightId))).go();
   }
 
+  /// Deletes multiple flights in a single transaction.
+  Future<int> deleteFlights(List<String> flightIds) {
+    if (flightIds.isEmpty) return Future.value(0);
+    return transaction(() async {
+      int count = 0;
+      for (final id in flightIds) {
+        count += await deleteFlight(id);
+      }
+      return count;
+    });
+  }
+
   /// Aircraft Models helpers
   Future<List<AircraftModelsTableData>> getAllAircraftModels() {
     return select(aircraftModelsTable).get();
@@ -93,7 +114,27 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
   }
 
   Future<void> insertAircraftModel(AircraftModelsTableCompanion model) {
-    return into(aircraftModelsTable).insert(model);
+    return into(aircraftModelsTable).insert(model, mode: InsertMode.insertOrIgnore);
+  }
+
+  /// Ensures an aircraft model exists in SQLite database so foreign key never fails.
+  Future<void> ensureAircraftModelExists({
+    required String modelId,
+    int aircraftClass = 0,
+    int category = 0,
+    String? manufacturer,
+  }) async {
+    await into(aircraftModelsTable).insert(
+      AircraftModelsTableCompanion(
+        id: Value(modelId),
+        manufacturer: Value(manufacturer ?? 'SACAA'),
+        model: Value(modelId),
+        aircraftClass: Value(aircraftClass),
+        category: Value(category),
+        createdAt: Value(DateTime.now()),
+      ),
+      mode: InsertMode.insertOrIgnore,
+    );
   }
 }
 
