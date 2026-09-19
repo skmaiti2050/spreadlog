@@ -3,6 +3,7 @@ import 'package:aviation_logbook/features/aircraft/domain/aircraft_model.dart';
 import 'package:aviation_logbook/features/flights/data/flights_repository.dart';
 import 'package:aviation_logbook/features/flights/domain/flight.dart';
 import 'package:aviation_logbook/features/flights/domain/flight_time.dart';
+import 'package:aviation_logbook/features/flights/domain/landings.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -97,6 +98,63 @@ void main() {
       all = await repository.getAllFlights();
       expect(all.length, 1);
       expect(all.first.id, 'flt_2');
+    });
+
+    test('saveFlight updates existing flight and refreshes child records atomically', () async {
+      final now = DateTime(2026, 9, 19, 10, 0);
+      final initialFlight = Flight(
+        id: 'flt_edit_test',
+        date: now,
+        aircraftModelId: 'C172',
+        registration: 'ZS-EXT',
+        picName: 'SELF',
+        remarks: 'Initial flight',
+        flightTimes: const [
+          FlightTime(
+            aircraftClass: AircraftClass.singleEngine,
+            period: TimePeriod.day,
+            role: PilotRole.pic,
+            durationMinutes: 60,
+          ),
+        ],
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await repository.saveFlight(initialFlight);
+
+      final retrieved = (await repository.getAllFlights()).firstWhere((f) => f.id == 'flt_edit_test');
+      expect(retrieved.aircraftModelId, 'C172');
+      expect(retrieved.totalDurationMinutes, 60);
+      expect(retrieved.flightTimes.first.role, PilotRole.pic);
+
+      // Now update the flight with new role, class, time, and landings
+      final updatedFlight = initialFlight.copyWith(
+        aircraftModelId: 'BE76',
+        registration: 'ZS-MEE',
+        remarks: 'Updated to Multi-Engine Dual',
+        flightTimes: const [
+          FlightTime(
+            aircraftClass: AircraftClass.multiEngine,
+            period: TimePeriod.night,
+            role: PilotRole.dual,
+            durationMinutes: 120,
+          ),
+        ],
+        landings: const Landings(dayCount: 0, nightCount: 4),
+      );
+
+      await repository.saveFlight(updatedFlight);
+
+      final afterUpdate = (await repository.getAllFlights()).firstWhere((f) => f.id == 'flt_edit_test');
+      expect(afterUpdate.aircraftModelId, 'BE76');
+      expect(afterUpdate.registration, 'ZS-MEE');
+      expect(afterUpdate.remarks, 'Updated to Multi-Engine Dual');
+      expect(afterUpdate.totalDurationMinutes, 120);
+      expect(afterUpdate.flightTimes.first.aircraftClass, AircraftClass.multiEngine);
+      expect(afterUpdate.flightTimes.first.period, TimePeriod.night);
+      expect(afterUpdate.flightTimes.first.role, PilotRole.dual);
+      expect(afterUpdate.landings.nightCount, 4);
     });
   });
 }

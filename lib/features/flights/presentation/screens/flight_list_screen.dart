@@ -8,6 +8,7 @@ import '../../../reports/presentation/pdf_preview_screen.dart';
 import '../../../reports/presentation/summary_slip_preview_screen.dart';
 import '../../domain/flight.dart';
 import '../providers/flights_providers.dart';
+import '../widgets/flight_details_dialog.dart';
 import '../widgets/log_flight_dialog.dart';
 import 'physical_logbook_screen.dart';
 
@@ -22,6 +23,46 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
   bool _isSelectionMode = false;
   final Set<String> _selectedFlightIds = {};
   String _searchFilter = '';
+
+  Future<void> _openEditFlightDialog(Flight flight) async {
+    try {
+      final updated =
+          await LogFlightDialog.show(context, initialFlight: flight);
+      if (updated != null) {
+        await ref.read(flightsRepositoryProvider).saveFlight(updated);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Flight ${updated.registration} (${TimeUtils.formatMinutesToHhMm(updated.totalDurationMinutes)}) updated successfully',
+              ),
+              backgroundColor: Colors.green.shade800,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update flight: $e'),
+            backgroundColor: Colors.red.shade800,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showFlightDetails(Flight flight) async {
+    final action = await FlightDetailsDialog.show(context, flight: flight);
+    if (!mounted || action == null) return;
+
+    if (action == FlightDetailsAction.edit) {
+      await _openEditFlightDialog(flight);
+    } else if (action == FlightDetailsAction.delete) {
+      await _confirmDeleteFlight(flight);
+    }
+  }
 
   Future<void> _openLogFlightDialog() async {
     try {
@@ -526,6 +567,8 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                 _selectedFlightIds.add(flight.id);
               }
             });
+          } else {
+            _showFlightDetails(flight);
           }
         },
         child: Padding(
@@ -637,12 +680,18 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                   ],
                 ),
               ),
-              if (!_isSelectionMode)
+              if (!_isSelectionMode) ...[
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  tooltip: 'Edit Flight',
+                  onPressed: () => _openEditFlightDialog(flight),
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   tooltip: 'Delete Flight',
                   onPressed: () => _confirmDeleteFlight(flight),
                 ),
+              ],
             ],
           ),
         ),

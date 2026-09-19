@@ -87,6 +87,55 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
     });
   }
 
+  /// Gets a single flight by ID.
+  Future<FlightsTableData?> getFlight(String flightId) {
+    return (select(flightsTable)..where((t) => t.id.equals(flightId))).getSingleOrNull();
+  }
+
+  /// Updates an existing flight and all its related child entries atomically.
+  Future<void> updateCompleteFlight({
+    required FlightsTableCompanion flight,
+    required List<FlightTimesTableCompanion> flightTimes,
+    InstrumentTimesTableCompanion? instrumentTime,
+    List<InstructionTimesTableCompanion> instructionTimes = const [],
+    LandingsTableCompanion? landings,
+  }) {
+    return transaction(() async {
+      // Ensure foreign key constraint is satisfied if aircraftModelId is provided
+      if (flight.aircraftModelId.present && flight.aircraftModelId.value != null) {
+        final modelId = flight.aircraftModelId.value!.trim();
+        if (modelId.isNotEmpty) {
+          final acClass = flightTimes.isNotEmpty ? flightTimes.first.aircraftClass.value : 0;
+          await ensureAircraftModelExists(modelId: modelId, aircraftClass: acClass);
+        }
+      }
+
+      // Update flight record
+      await (update(flightsTable)..where((t) => t.id.equals(flight.id.value))).write(flight);
+
+      // Clean up previous child entries to prevent orphans
+      final flightId = flight.id.value;
+      await (delete(flightTimesTable)..where((t) => t.flightId.equals(flightId))).go();
+      await (delete(instrumentTimesTable)..where((t) => t.flightId.equals(flightId))).go();
+      await (delete(instructionTimesTable)..where((t) => t.flightId.equals(flightId))).go();
+      await (delete(landingsTable)..where((t) => t.flightId.equals(flightId))).go();
+
+      // Insert new child entries
+      for (final ft in flightTimes) {
+        await into(flightTimesTable).insert(ft);
+      }
+      if (instrumentTime != null) {
+        await into(instrumentTimesTable).insert(instrumentTime);
+      }
+      for (final it in instructionTimes) {
+        await into(instructionTimesTable).insert(it);
+      }
+      if (landings != null) {
+        await into(landingsTable).insert(landings);
+      }
+    });
+  }
+
   /// Deletes a flight (foreign keys with cascade handle sub-records).
   Future<int> deleteFlight(String flightId) {
     return (delete(flightsTable)..where((t) => t.id.equals(flightId))).go();

@@ -44,6 +44,9 @@ class Flight {
     return fstdActualMinutes + flightTimeSum;
   }
 
+  /// Returns true if this flight entry represents an FSTD simulator session.
+  bool get isFstd => fstdActualMinutes > 0;
+
   Flight copyWith({
     String? id,
     DateTime? date,

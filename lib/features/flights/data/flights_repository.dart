@@ -137,8 +137,14 @@ class FlightsRepository {
     });
   }
 
-  /// Persists a new flight and all its child components atomically.
+  /// Persists a new flight or updates an existing flight atomically.
   Future<void> saveFlight(Flight flight) async {
+    final existing = await _dao.getFlight(flight.id);
+    if (existing != null) {
+      await updateFlight(flight);
+      return;
+    }
+
     final flightCompanion = FlightsTableCompanion(
       id: Value(flight.id),
       date: Value(flight.date),
@@ -197,6 +203,74 @@ class FlightsRepository {
     }
 
     await _dao.insertCompleteFlight(
+      flight: flightCompanion,
+      flightTimes: flightTimeCompanions,
+      instrumentTime: instrumentCompanion,
+      instructionTimes: instructionCompanions,
+      landings: landingsCompanion,
+    );
+  }
+
+  /// Updates an existing flight and all its child components atomically.
+  Future<void> updateFlight(Flight flight) async {
+    final flightCompanion = FlightsTableCompanion(
+      id: Value(flight.id),
+      date: Value(flight.date),
+      aircraftModelId: Value(flight.aircraftModelId),
+      registration: Value(flight.registration),
+      picName: Value(flight.picName),
+      remarks: Value(flight.remarks),
+      soloCrossCountry: Value(flight.soloCrossCountry),
+      fstdActualMinutes: Value(flight.fstdActualMinutes),
+      createdAt: Value(flight.createdAt),
+      updatedAt: Value(DateTime.now()),
+    );
+
+    final flightTimeCompanions = flight.flightTimes.map((ft) {
+      final ftId = ft.id ?? '${flight.id}_ft_${ft.aircraftClass.index}_${ft.period.index}_${ft.role.index}';
+      return FlightTimesTableCompanion(
+        id: Value(ftId),
+        flightId: Value(flight.id),
+        aircraftClass: Value(ft.aircraftClass.index),
+        period: Value(ft.period.index),
+        role: Value(ft.role.index),
+        durationMinutes: Value(ft.durationMinutes),
+      );
+    }).toList();
+
+    InstrumentTimesTableCompanion? instrumentCompanion;
+    if (flight.instrumentTime != null && !flight.instrumentTime!.isEmpty) {
+      instrumentCompanion = InstrumentTimesTableCompanion(
+        id: Value(flight.instrumentTime!.id ?? '${flight.id}_inst'),
+        flightId: Value(flight.id),
+        navaids: Value(flight.instrumentTime!.navaids),
+        place: Value(flight.instrumentTime!.place),
+        actualMinutes: Value(flight.instrumentTime!.actualMinutes),
+        fstdMinutes: Value(flight.instrumentTime!.fstdMinutes),
+      );
+    }
+
+    final instructionCompanions = flight.instructionTimes.map((it) {
+      final itId = it.id ?? '${flight.id}_instruc_${it.category.index}';
+      return InstructionTimesTableCompanion(
+        id: Value(itId),
+        flightId: Value(flight.id),
+        category: Value(it.category.index),
+        durationMinutes: Value(it.durationMinutes),
+      );
+    }).toList();
+
+    LandingsTableCompanion? landingsCompanion;
+    if (flight.landings.totalCount > 0) {
+      landingsCompanion = LandingsTableCompanion(
+        id: Value('${flight.id}_landings'),
+        flightId: Value(flight.id),
+        dayCount: Value(flight.landings.dayCount),
+        nightCount: Value(flight.landings.nightCount),
+      );
+    }
+
+    await _dao.updateCompleteFlight(
       flight: flightCompanion,
       flightTimes: flightTimeCompanions,
       instrumentTime: instrumentCompanion,
