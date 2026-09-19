@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
-import '../../../aircraft/domain/aircraft_model.dart';
 import '../../domain/flight.dart';
-import '../../domain/flight_time.dart';
-import '../../domain/landings.dart';
 import '../../../reports/presentation/pdf_preview_screen.dart';
+import '../../../reports/presentation/summary_slip_preview_screen.dart';
 import '../providers/flights_providers.dart';
+import '../widgets/log_flight_dialog.dart';
 import 'physical_logbook_screen.dart';
 
 class FlightListScreen extends ConsumerWidget {
@@ -51,9 +50,25 @@ class FlightListScreen extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'Career Summary Slip',
+            onPressed: () {
+              final typeSummaries = ref.read(aircraftTypeSummariesProvider);
+              final totals = ref.read(grandTotalsProvider);
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => SummarySlipPreviewScreen(
+                    typeSummaries: typeSummaries,
+                    grandTotals: totals,
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add Flight',
-            onPressed: () => _showAddSampleFlightDialog(context, ref),
+            onPressed: () => _openLogFlightDialog(context, ref),
           ),
         ],
       ),
@@ -161,9 +176,9 @@ class FlightListScreen extends ConsumerWidget {
                           const SizedBox(height: 16),
                           FilledButton.icon(
                             onPressed: () =>
-                                _showAddSampleFlightDialog(context, ref),
+                                _openLogFlightDialog(context, ref),
                             icon: const Icon(Icons.add),
-                            label: const Text('Add Test Flight'),
+                            label: const Text('Add Flight'),
                           ),
                         ],
                       ),
@@ -191,7 +206,7 @@ class FlightListScreen extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddSampleFlightDialog(context, ref),
+        onPressed: () => _openLogFlightDialog(context, ref),
         icon: const Icon(Icons.add),
         label: const Text('Log Flight'),
       ),
@@ -245,6 +260,25 @@ class FlightListScreen extends ConsumerWidget {
               flight.registration,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
+            if (flight.aircraftModelId != null &&
+                flight.aircraftModelId!.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  flight.aircraftModelId!,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(width: 8),
             Text(
               dateStr,
@@ -299,59 +333,10 @@ class FlightListScreen extends ConsumerWidget {
     );
   }
 
-  void _showAddSampleFlightDialog(BuildContext context, WidgetRef ref) {
-    final now = DateTime.now();
-    final sampleFlight = Flight(
-      id: 'flight_${DateTime.now().millisecondsSinceEpoch}',
-      date: now,
-      registration: 'ZS-EXT',
-      picName: 'SELF',
-      remarks: 'FALA - FAGM Local Training',
-      soloCrossCountry: false,
-      flightTimes: const [
-        FlightTime(
-          aircraftClass: AircraftClass.singleEngine,
-          period: TimePeriod.day,
-          role: PilotRole.pic,
-          durationMinutes: 90, // 01:30
-        ),
-      ],
-      landings: const Landings(dayCount: 2),
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: const Text('Add Flight Entry'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Log a standard flight entry:'),
-            const SizedBox(height: 8),
-            Text('• Registration: ${sampleFlight.registration}'),
-            Text('• PIC: ${sampleFlight.picName}'),
-            Text('• Duration: ${TimeUtils.formatMinutesToHhMm(sampleFlight.totalDurationMinutes)} (90 mins)'),
-            const Text('• Single Engine Day PIC'),
-            Text('• Landings: ${sampleFlight.landings.dayCount} day'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(dialogCtx).pop();
-              await ref.read(flightsRepositoryProvider).saveFlight(sampleFlight);
-            },
-            child: const Text('Save Flight'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _openLogFlightDialog(BuildContext context, WidgetRef ref) async {
+    final flight = await LogFlightDialog.show(context);
+    if (flight != null) {
+      await ref.read(flightsRepositoryProvider).saveFlight(flight);
+    }
   }
 }

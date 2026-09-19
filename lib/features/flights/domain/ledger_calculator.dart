@@ -1,4 +1,5 @@
 import '../../aircraft/domain/aircraft_model.dart';
+import 'aircraft_type_summary.dart';
 import 'flight.dart';
 import 'flight_time.dart';
 import 'instruction_time.dart';
@@ -225,6 +226,42 @@ class LedgerCalculator {
     // 12 months immediately preceding the application date
     final startDate = DateTime(asOfDate.year - 1, asOfDate.month, asOfDate.day);
     return calculateTotals(flights, startDate: startDate, cutoffDate: asOfDate);
+  }
+
+  /// Calculates career totals grouped by aircraft type/model.
+  ///
+  /// Extracts the aircraft type identifier from [Flight.aircraftModelId]
+  /// (defaulting to 'AIRCRAFT' if not specified), accumulates [LedgerTotals]
+  /// per type, tracks [dateLastFlown], and returns a list sorted alphabetically.
+  List<AircraftTypeSummary> calculateTotalsByType(Iterable<Flight> flights) {
+    final Map<String, LedgerTotals> typeTotals = {};
+    final Map<String, DateTime> lastFlownMap = {};
+
+    for (final flight in flights) {
+      final type = (flight.aircraftModelId != null &&
+              flight.aircraftModelId!.trim().isNotEmpty)
+          ? flight.aircraftModelId!.trim()
+          : 'AIRCRAFT';
+
+      final flightTotals = calculateFlightTotals(flight);
+      typeTotals[type] = (typeTotals[type] ?? LedgerTotals.zero) + flightTotals;
+
+      final existingDate = lastFlownMap[type];
+      if (existingDate == null || flight.date.isAfter(existingDate)) {
+        lastFlownMap[type] = flight.date;
+      }
+    }
+
+    final summaries = typeTotals.entries.map((entry) {
+      return AircraftTypeSummary(
+        aircraftType: entry.key,
+        totals: entry.value,
+        dateLastFlown: lastFlownMap[entry.key],
+      );
+    }).toList();
+
+    summaries.sort((a, b) => a.aircraftType.compareTo(b.aircraftType));
+    return summaries;
   }
 }
 

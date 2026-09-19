@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
+import '../../../reports/presentation/summary_slip_preview_screen.dart';
+import '../providers/flights_providers.dart';
 import '../../domain/flight.dart';
 import '../../domain/flight_time.dart';
 import '../../domain/instruction_time.dart';
@@ -10,7 +13,7 @@ import '../../domain/ledger_totals.dart';
 
 /// Clean, high-density physical logbook spread screen.
 /// Renders the exact 14 flight rows, Brought Forward, Page Totals, and Carried Forward.
-class PhysicalLogbookScreen extends StatefulWidget {
+class PhysicalLogbookScreen extends ConsumerStatefulWidget {
   final List<LedgerPage> pages;
 
   const PhysicalLogbookScreen({
@@ -19,10 +22,10 @@ class PhysicalLogbookScreen extends StatefulWidget {
   });
 
   @override
-  State<PhysicalLogbookScreen> createState() => _PhysicalLogbookScreenState();
+  ConsumerState<PhysicalLogbookScreen> createState() => _PhysicalLogbookScreenState();
 }
 
-class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
+class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
   int _currentPageIndex = 0;
   final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
@@ -66,6 +69,22 @@ class _PhysicalLogbookScreenState extends State<PhysicalLogbookScreen> {
             tooltip: 'Next Page',
             icon: const Icon(Icons.chevron_right),
             onPressed: safeIndex < widget.pages.length - 1 ? () => setState(() => _currentPageIndex++) : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'Career Summary Slip',
+            onPressed: () {
+              final typeSummaries = ref.read(aircraftTypeSummariesProvider);
+              final totals = ref.read(grandTotalsProvider);
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => SummarySlipPreviewScreen(
+                    typeSummaries: typeSummaries,
+                    grandTotals: totals,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

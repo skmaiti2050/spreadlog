@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/flights_dao.dart';
 import '../../data/flights_repository.dart';
+import '../../domain/aircraft_type_summary.dart';
 import '../../domain/flight.dart';
 import '../../domain/ledger_calculator.dart';
 import '../../domain/ledger_page.dart';
@@ -62,6 +63,19 @@ final ledgerPagesProvider = Provider<List<LedgerPage>>((ref) {
         carriedForward: LedgerTotals.zero,
       ),
     ],
+    error: (err, stack) => [],
+  );
+});
+
+/// Real-time career totals broken down by aircraft type.
+final aircraftTypeSummariesProvider =
+    Provider<List<AircraftTypeSummary>>((ref) {
+  final flightsAsync = ref.watch(flightsStreamProvider);
+  final calculator = ref.watch(ledgerCalculatorProvider);
+
+  return flightsAsync.when(
+    data: (flights) => calculator.calculateTotalsByType(flights),
+    loading: () => [],
     error: (err, stack) => [],
   );
 });
