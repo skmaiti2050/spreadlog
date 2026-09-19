@@ -775,7 +775,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Class', style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
+                      Text(
+                        'Class',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       SegmentedButton<AircraftClass>(
                         segments: const [
@@ -793,7 +799,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Period', style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
+                      Text(
+                        'Period',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       SegmentedButton<TimePeriod>(
                         segments: const [
@@ -811,7 +823,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             const SizedBox(height: 14),
 
             // Operating Role
-            Text('Pilot Operating Role', style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
+            Text(
+              'Pilot Operating Role',
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 4),
             SegmentedButton<PilotRole>(
               segments: const [
@@ -953,22 +971,33 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               controller: _remarksController,
               decoration: const InputDecoration(labelText: 'Route & Remarks (Column 5)', hintText: 'e.g. FALA - FAGM Local Training', border: OutlineInputBorder(), isDense: true),
             ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.local_airport_outlined, size: 14, color: theme.colorScheme.primary),
+                const SizedBox(width: 4),
+                Text(
+                  'Quick-Add Airfield:',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 6),
             Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                const Text('Airfields: ', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                ..._popularAirfields.map((af) {
-                  return ActionChip(
-                    label: Text(af['code']!, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
-                    tooltip: af['name'],
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    onPressed: () => _appendAirfield(af['code']!),
-                  );
-                }),
-              ],
+              spacing: 6,
+              runSpacing: 6,
+              children: _popularAirfields.map((af) {
+                return ActionChip(
+                  label: Text(af['code']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  tooltip: af['name'],
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  onPressed: () => _appendAirfield(af['code']!),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 14),
 
@@ -1064,9 +1093,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+        color: theme.colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.secondary.withValues(alpha: 0.3)),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Row(
         children: [

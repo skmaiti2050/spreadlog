@@ -91,7 +91,9 @@ class AviationThemes {
   static ThemeData get _cockpitDarkTheme {
     const bg = Color(0xFF101418);
     const surface = Color(0xFF171D22);
+    const surfaceHighest = Color(0xFF222B33);
     const primary = Color(0xFF4A90E2);
+    const outline = Color(0xFF384552);
 
     return ThemeData(
       useMaterial3: true,
@@ -99,12 +101,19 @@ class AviationThemes {
       scaffoldBackgroundColor: bg,
       colorScheme: const ColorScheme.dark(
         primary: primary,
-        secondary: Color(0xFF64B5F6),
-        surface: surface,
+        onPrimary: Colors.white,
         primaryContainer: Color(0xFF1E2E3E),
-        secondaryContainer: Color(0xFF1B2A38),
         onPrimaryContainer: Color(0xFFD6E4FF),
-        outlineVariant: Color(0xFF2C353D),
+        secondary: Color(0xFF64B5F6),
+        onSecondary: Color(0xFF001E36),
+        secondaryContainer: Color(0xFF1E3348),
+        onSecondaryContainer: Color(0xFFBAE3FF),
+        surface: surface,
+        onSurface: Color(0xFFE2E6EB),
+        onSurfaceVariant: Color(0xFFA2ACB8),
+        surfaceContainerHighest: surfaceHighest,
+        outline: outline,
+        outlineVariant: Color(0xFF2A343E),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: bg,
@@ -121,7 +130,31 @@ class AviationThemes {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: surfaceHighest,
+        side: const BorderSide(color: Color(0xFF2C353D)),
+        labelStyle: const TextStyle(color: Color(0xFFE2E6EB), fontSize: 11),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFFBAE3FF);
+            }
+            return const Color(0xFFA2ACB8);
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFF1E3348);
+            }
+            return Colors.transparent;
+          }),
+          side: WidgetStateProperty.all(const BorderSide(color: Color(0xFF2C353D))),
+        ),
       ),
     );
   }
@@ -129,7 +162,9 @@ class AviationThemes {
   static ThemeData get _deepNavyTheme {
     const bg = Color(0xFF0A1118);
     const surface = Color(0xFF101D28);
+    const surfaceHighest = Color(0xFF182A3A);
     const primary = Color(0xFF00B4D8);
+    const outline = Color(0xFF284865);
 
     return ThemeData(
       useMaterial3: true,
@@ -137,11 +172,18 @@ class AviationThemes {
       scaffoldBackgroundColor: bg,
       colorScheme: const ColorScheme.dark(
         primary: primary,
-        secondary: Color(0xFF90E0EF),
-        surface: surface,
+        onPrimary: Color(0xFF001E2B),
         primaryContainer: Color(0xFF122C42),
-        secondaryContainer: Color(0xFF132D44),
         onPrimaryContainer: Color(0xFFCAF0F8),
+        secondary: Color(0xFF90E0EF),
+        onSecondary: Color(0xFF001F28),
+        secondaryContainer: Color(0xFF183850),
+        onSecondaryContainer: Color(0xFFBBE9F9),
+        surface: surface,
+        onSurface: Color(0xFFE0EBF2),
+        onSurfaceVariant: Color(0xFF9CB5C8),
+        surfaceContainerHighest: surfaceHighest,
+        outline: outline,
         outlineVariant: Color(0xFF1E3A52),
       ),
       appBarTheme: const AppBarTheme(
@@ -159,7 +201,31 @@ class AviationThemes {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: surfaceHighest,
+        side: const BorderSide(color: Color(0xFF1E3A52)),
+        labelStyle: const TextStyle(color: Color(0xFFE0EBF2), fontSize: 11),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFFCAF0F8);
+            }
+            return const Color(0xFF9CB5C8);
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFF122C42);
+            }
+            return Colors.transparent;
+          }),
+          side: WidgetStateProperty.all(const BorderSide(color: Color(0xFF1E3A52))),
+        ),
       ),
     );
   }
@@ -167,7 +233,9 @@ class AviationThemes {
   static ThemeData get _sunlightLightTheme {
     const bg = Color(0xFFF6F8FA);
     const surface = Color(0xFFFFFFFF);
+    const surfaceHighest = Color(0xFFEEF2F6);
     const primary = Color(0xFF1565C0);
+    const outline = Color(0xFF8C959F);
 
     return ThemeData(
       useMaterial3: true,
@@ -175,16 +243,23 @@ class AviationThemes {
       scaffoldBackgroundColor: bg,
       colorScheme: const ColorScheme.light(
         primary: primary,
-        secondary: Color(0xFF0D47A1),
-        surface: surface,
+        onPrimary: Colors.white,
         primaryContainer: Color(0xFFD6E4FF),
-        secondaryContainer: Color(0xFFE3EDF7),
         onPrimaryContainer: Color(0xFF001B3E),
+        secondary: Color(0xFF0D47A1),
+        onSecondary: Colors.white,
+        secondaryContainer: Color(0xFFE3EDF7),
+        onSecondaryContainer: Color(0xFF082747),
+        surface: surface,
+        onSurface: Color(0xFF1F2328),
+        onSurfaceVariant: Color(0xFF424A53),
+        surfaceContainerHighest: surfaceHighest,
+        outline: outline,
         outlineVariant: Color(0xFFD0D7DE),
       ),
       appBarTheme: const AppBarTheme(
         backgroundColor: surface,
-        foregroundColor: Colors.black87,
+        foregroundColor: Color(0xFF1F2328),
         elevation: 0,
       ),
       cardTheme: CardThemeData(
@@ -197,7 +272,31 @@ class AviationThemes {
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: surfaceHighest,
+        side: const BorderSide(color: Color(0xFFD0D7DE)),
+        labelStyle: const TextStyle(color: Color(0xFF1F2328), fontSize: 11),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFF0D47A1);
+            }
+            return const Color(0xFF424A53);
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const Color(0xFFE3EDF7);
+            }
+            return Colors.transparent;
+          }),
+          side: WidgetStateProperty.all(const BorderSide(color: Color(0xFFD0D7DE))),
+        ),
       ),
     );
   }

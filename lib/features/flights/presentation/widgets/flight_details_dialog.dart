@@ -132,14 +132,14 @@ class FlightDetailsDialog extends StatelessWidget {
               // Operational Class & Role
               _buildSectionHeader(context, 'Flight Details'),
               const SizedBox(height: 6),
-              _buildInfoRow('PIC Name', flight.picName),
+              _buildInfoRow(context, 'PIC Name', flight.picName),
               if (flight.isFstd) ...[
-                _buildInfoRow('Session Type', 'Flight Simulation Training Device (FSTD)'),
-                _buildInfoRow('FSTD Time', TimeUtils.formatMinutesToHhMm(flight.fstdActualMinutes)),
+                _buildInfoRow(context, 'Session Type', 'Flight Simulation Training Device (FSTD)'),
+                _buildInfoRow(context, 'FSTD Time', TimeUtils.formatMinutesToHhMm(flight.fstdActualMinutes)),
               ] else if (primaryFt != null) ...[
-                _buildInfoRow('Aircraft Class', primaryFt.aircraftClass == AircraftClass.singleEngine ? 'Single Engine (SE)' : 'Multi Engine (ME)'),
-                _buildInfoRow('Operating Role', _roleName(primaryFt.role)),
-                _buildInfoRow('Flight Period', primaryFt.period == TimePeriod.day ? 'Day' : 'Night'),
+                _buildInfoRow(context, 'Aircraft Class', primaryFt.aircraftClass == AircraftClass.singleEngine ? 'Single Engine (SE)' : 'Multi Engine (ME)'),
+                _buildInfoRow(context, 'Operating Role', _roleName(primaryFt.role)),
+                _buildInfoRow(context, 'Flight Period', primaryFt.period == TimePeriod.day ? 'Day' : 'Night'),
               ],
 
               // Instrument Time & Navaids
@@ -148,11 +148,11 @@ class FlightDetailsDialog extends StatelessWidget {
                 _buildSectionHeader(context, 'Instrument Flying & Navaids'),
                 const SizedBox(height: 6),
                 if (flight.instrumentTime!.actualMinutes > 0)
-                  _buildInfoRow('Actual Instrument', TimeUtils.formatMinutesToHhMm(flight.instrumentTime!.actualMinutes)),
+                  _buildInfoRow(context, 'Actual Instrument', TimeUtils.formatMinutesToHhMm(flight.instrumentTime!.actualMinutes)),
                 if (flight.instrumentTime!.fstdMinutes > 0)
-                  _buildInfoRow('FSTD / Sim Instrument', TimeUtils.formatMinutesToHhMm(flight.instrumentTime!.fstdMinutes)),
+                  _buildInfoRow(context, 'FSTD / Sim Instrument', TimeUtils.formatMinutesToHhMm(flight.instrumentTime!.fstdMinutes)),
                 if (flight.instrumentTime!.navaids != null && flight.instrumentTime!.navaids!.isNotEmpty)
-                  _buildInfoRow('Navaids / Approaches', flight.instrumentTime!.navaids!),
+                  _buildInfoRow(context, 'Navaids / Approaches', flight.instrumentTime!.navaids!),
               ],
 
               // Remarks & Route
@@ -164,13 +164,15 @@ class FlightDetailsDialog extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.surface,
+                    color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: theme.colorScheme.outlineVariant),
                   ),
                   child: Text(
                     flight.remarks,
-                    style: theme.textTheme.bodyMedium,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ],
@@ -214,20 +216,39 @@ class FlightDetailsDialog extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
+    final theme = Theme.of(context);
     return Text(
-      title,
-      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey),
+      title.toUpperCase(),
+      style: theme.textTheme.labelSmall?.copyWith(
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.8,
+        color: theme.colorScheme.primary,
+      ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: Colors.black87)),
-          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontSize: 13,
+            ),
+          ),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
         ],
       ),
     );
