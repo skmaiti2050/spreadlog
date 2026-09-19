@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
-import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../reports/presentation/summary_slip_preview_screen.dart';
 import '../providers/flights_providers.dart';
 import '../../domain/flight.dart';
@@ -77,14 +76,11 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
             onPressed: () {
               final typeSummaries = ref.read(aircraftTypeSummariesProvider);
               final totals = ref.read(grandTotalsProvider);
-              final profile = ref.read(pilotProfileProvider);
               Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => SummarySlipPreviewScreen(
                     typeSummaries: typeSummaries,
                     grandTotals: totals,
-                    initialPilotName: profile.pilotName,
-                    initialLicenceNumber: profile.licenceNumber,
                   ),
                 ),
               );

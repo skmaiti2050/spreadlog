@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/aviation_theme.dart';
 import 'router.dart';
-import 'theme/app_theme.dart';
+
 
 class AppScrollBehavior extends MaterialScrollBehavior {
   const AppScrollBehavior();
@@ -28,9 +28,6 @@ class AviationLogbookApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Aviation Logbook',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
       theme: themeData,
       scrollBehavior: const AppScrollBehavior(),
       onGenerateRoute: AppRouter.onGenerateRoute,

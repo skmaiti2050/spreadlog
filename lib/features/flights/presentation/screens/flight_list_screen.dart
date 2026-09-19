@@ -311,8 +311,6 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                                   builder: (_) => SummarySlipPreviewScreen(
                                     typeSummaries: typeSummaries,
                                     grandTotals: grandTotals,
-                                    initialPilotName: profile.pilotName,
-                                    initialLicenceNumber: profile.licenceNumber,
                                   ),
                                 ),
                               );
@@ -422,8 +420,6 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                               builder: (_) => SummarySlipPreviewScreen(
                                 typeSummaries: typeSummaries,
                                 grandTotals: grandTotals,
-                                initialPilotName: profile.pilotName,
-                                initialLicenceNumber: profile.licenceNumber,
                               ),
                             ),
                           );
