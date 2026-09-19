@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
+import '../../../../core/widgets/hint_banner.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
 import '../../../reports/presentation/summary_slip_preview_screen.dart';
 import '../providers/flights_providers.dart';
@@ -88,38 +89,53 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
           ),
         ],
       ),
-      body: Scrollbar(
-        controller: _verticalController,
-        thumbVisibility: true,
-        trackVisibility: true,
-        notificationPredicate: (notif) => notif.metrics.axis == Axis.vertical,
-        child: Scrollbar(
-          controller: _horizontalController,
-          thumbVisibility: true,
-          trackVisibility: true,
-          notificationPredicate: (notif) => notif.metrics.axis == Axis.horizontal,
-          child: SingleChildScrollView(
-            controller: _verticalController,
-            scrollDirection: Axis.vertical,
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: SingleChildScrollView(
-              controller: _horizontalController,
-              scrollDirection: Axis.horizontal,
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: _buildSpreadTable(page),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: HintBanner(
+              hintKey: 'hint_physical_logbook_zoom',
+              message: 'Scroll horizontally & vertically to navigate the 32-column ledger • Use top arrows to flip pages • Pinch or double-tap to zoom.',
+              margin: EdgeInsets.zero,
+            ),
+          ),
+          Expanded(
+            child: Scrollbar(
+              controller: _verticalController,
+              thumbVisibility: true,
+              trackVisibility: true,
+              notificationPredicate: (notif) => notif.metrics.axis == Axis.vertical,
+              child: Scrollbar(
+                controller: _horizontalController,
+                thumbVisibility: true,
+                trackVisibility: true,
+                notificationPredicate: (notif) => notif.metrics.axis == Axis.horizontal,
+                child: SingleChildScrollView(
+                  controller: _verticalController,
+                  scrollDirection: Axis.vertical,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SingleChildScrollView(
+                    controller: _horizontalController,
+                    scrollDirection: Axis.horizontal,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: _buildSpreadTable(page),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

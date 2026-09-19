@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/aviation_theme.dart';
 import '../../../../core/utils/time_utils.dart';
+import '../../../../core/widgets/hint_banner.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../../reports/presentation/pdf_preview_screen.dart';
@@ -631,19 +632,33 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                   );
                 }
 
-                return Scrollbar(
-                  thumbVisibility: true,
-                  child: ListView.separated(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    itemCount: filteredFlights.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final flight = filteredFlights[index];
-                      return _buildFlightCard(context, flight);
-                    },
-                  ),
+                return Column(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      child: HintBanner(
+                        hintKey: 'hint_flight_card_details',
+                        message: 'Tap any flight card for its briefing breakdown • Tap the pencil icon to edit in place.',
+                        margin: EdgeInsets.zero,
+                      ),
+                    ),
+                    Expanded(
+                      child: Scrollbar(
+                        thumbVisibility: true,
+                        child: ListView.separated(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          itemCount: filteredFlights.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final flight = filteredFlights[index];
+                            return _buildFlightCard(context, flight);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
 
+import '../../../../core/widgets/hint_banner.dart';
 import '../../profile/presentation/providers/profile_providers.dart';
 import '../../flights/domain/aircraft_type_summary.dart';
 import '../../flights/domain/ledger_totals.dart';
@@ -36,22 +37,37 @@ class SummarySlipPreviewScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: PdfPreview(
-        build: (format) async {
-          final bytes = await SacaaSummarySlipPdfGenerator.generateSlip(
-            typeSummaries: typeSummaries,
-            grandTotals: grandTotals,
-            pilotName: profile.pilotName,
-            licenceNumber: profile.licenceNumber,
-            date: slipDate,
-          );
-          return Uint8List.fromList(bytes);
-        },
-        canChangeOrientation: false,
-        canChangePageFormat: false,
-        allowPrinting: true,
-        allowSharing: true,
-        pdfFileName: 'SACAA_Career_Summary_Slip_${slipDate.year}.pdf',
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: HintBanner(
+              hintKey: 'hint_summary_slip_purpose',
+              message: 'The Career Summary Slip aggregates hours by aircraft type for SACAA Form CA 61-01 renewals. Use the print icon to export or save as PDF.',
+              margin: EdgeInsets.zero,
+            ),
+          ),
+          Expanded(
+            child: PdfPreview(
+              build: (format) async {
+                final bytes = await SacaaSummarySlipPdfGenerator.generateSlip(
+                  typeSummaries: typeSummaries,
+                  grandTotals: grandTotals,
+                  pilotName: profile.pilotName,
+                  licenceNumber: profile.licenceNumber,
+                  date: slipDate,
+                );
+                return Uint8List.fromList(bytes);
+              },
+              canChangeOrientation: false,
+              canChangePageFormat: false,
+              allowPrinting: true,
+              allowSharing: true,
+              pdfFileName: 'SACAA_Career_Summary_Slip_${slipDate.year}.pdf',
+            ),
+          ),
+        ],
       ),
     );
   }

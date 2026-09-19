@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
+import '../../../../core/widgets/hint_banner.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/flight.dart';
@@ -550,6 +551,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const HintBanner(
+              hintKey: 'hint_step1_presets',
+              message: 'Tap a Quick Syllabus Preset below to auto-fill aircraft model, class, and flight rules.',
+            ),
             // SACAA Syllabus Presets
             Container(
               padding: const EdgeInsets.all(10),
@@ -694,6 +699,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const HintBanner(
+              hintKey: 'hint_step2_block_calc',
+              message: 'Tap the calculator icon (🖩) next to Duration to compute flight time from Off/On block times.',
+            ),
             // Flight Duration
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -904,6 +913,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const HintBanner(
+              hintKey: 'hint_step3_sacaa_audit',
+              message: 'Tap airport chips to append to your route. The live banner at the bottom audits your SACAA column tally.',
+            ),
             // Instrument Flying Card
             Container(
               padding: const EdgeInsets.all(12),

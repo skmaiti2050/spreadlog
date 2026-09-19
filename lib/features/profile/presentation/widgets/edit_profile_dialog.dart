@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/hints/hints_service.dart';
 import '../providers/profile_providers.dart';
 
 /// Modal dialog for viewing and updating Pilot Profile credentials.
@@ -58,6 +59,9 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hintsState = ref.watch(hintsProvider);
+
     return AlertDialog(
       title: const Row(
         children: [
@@ -68,48 +72,91 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
       ),
       content: SizedBox(
         width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'These credentials are automatically applied to your official SACAA Logbook PDF, Career Summary Slip, and flight logs.',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Pilot Full Name',
-                hintText: 'e.g. CAPT J. DOE',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person_outline),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'These credentials are automatically applied to your official SACAA Logbook PDF, Career Summary Slip, and flight logs.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _licenceController,
-              decoration: const InputDecoration(
-                labelText: 'SACAA Licence Number',
-                hintText: 'e.g. ZA-123456',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.credit_card_outlined),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Pilot Full Name',
+                  hintText: 'e.g. CAPT J. DOE',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                textCapitalization: TextCapitalization.characters,
               ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _picController,
-              decoration: const InputDecoration(
-                labelText: 'Default PIC Name',
-                hintText: 'e.g. SELF or CAPT DOE',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.flight_takeoff_outlined),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _licenceController,
+                decoration: const InputDecoration(
+                  labelText: 'SACAA Licence Number',
+                  hintText: 'e.g. ZA-123456',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.credit_card_outlined),
+                ),
+                textCapitalization: TextCapitalization.characters,
               ),
-              textCapitalization: TextCapitalization.characters,
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _picController,
+                decoration: const InputDecoration(
+                  labelText: 'Default PIC Name',
+                  hintText: 'e.g. SELF or CAPT DOE',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.flight_takeoff_outlined),
+                ),
+                textCapitalization: TextCapitalization.characters,
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+
+              // Operational Hints & Gestures Section
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.lightbulb_outline, size: 18, color: theme.colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Show Operational Hints',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Switch.adaptive(
+                    value: hintsState.hintsEnabled,
+                    onChanged: (val) => ref.read(hintsProvider.notifier).setHintsEnabled(val),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Reset All Dismissed Hints'),
+                onPressed: () async {
+                  await ref.read(hintsProvider.notifier).resetAllHints();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('All operational hints have been reset')),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
