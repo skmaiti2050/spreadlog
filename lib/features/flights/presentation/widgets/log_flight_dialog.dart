@@ -11,15 +11,45 @@ import '../../domain/landings.dart';
 
 /// Modal dialog for logging a flight with robust aviation validations,
 /// SACAA syllabus templates, block time calculator, and smart auto-filling.
+/// Progressive multi-step card modal for logging flights.
+/// Adapts seamlessly from ultra-narrow 320px mobile screens to spacious desktop tablets.
 class LogFlightDialog extends ConsumerStatefulWidget {
   final Flight? initialFlight;
+  final bool isFullScreen;
 
   const LogFlightDialog({super.key, this.initialFlight});
+  const LogFlightDialog({
+    super.key,
+    this.initialFlight,
+    this.isFullScreen = false,
+  });
 
   static Future<Flight?> show(BuildContext context, {Flight? initialFlight}) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+    if (isMobile) {
+      return Navigator.of(context).push<Flight>(
+        MaterialPageRoute<Flight>(
+          fullscreenDialog: true,
+          builder: (context) => LogFlightDialog(
+            initialFlight: initialFlight,
+            isFullScreen: true,
+          ),
+        ),
+      );
+    }
     return showDialog<Flight>(
       context: context,
       builder: (context) => LogFlightDialog(initialFlight: initialFlight),
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560, maxHeight: 680),
+          child: LogFlightDialog(
+            initialFlight: initialFlight,
+            isFullScreen: false,
+          ),
+        ),
+      ),
     );
   }
 
@@ -29,6 +59,12 @@ class LogFlightDialog extends ConsumerStatefulWidget {
 
 class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _pageController = PageController();
+  int _currentStep = 0;
+
+  final _formKeyStep1 = GlobalKey<FormState>();
+  final _formKeyStep2 = GlobalKey<FormState>();
+  final _formKeyStep3 = GlobalKey<FormState>();
 
   bool get _isEditing => widget.initialFlight != null;
 
@@ -143,6 +179,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
   @override
   void dispose() {
+    _pageController.dispose();
     _typeController.dispose();
     _regController.dispose();
     _picController.dispose();
@@ -163,6 +200,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       initialDate: _date.isAfter(now) ? now : _date,
       firstDate: DateTime(1980),
       lastDate: now, // Prevents logging future flights!
+      lastDate: now,
     );
     if (picked != null) {
       setState(() => _date = picked);
@@ -201,6 +239,11 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       } else {
         _aircraftClass = AircraftClass.singleEngine;
         _isFstd = false;
+        if (['BE76', 'DA42', 'PA34'].contains(type)) {
+          _aircraftClass = AircraftClass.multiEngine;
+        } else {
+          _aircraftClass = AircraftClass.singleEngine;
+        }
       }
     });
   }
@@ -216,6 +259,12 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       setState(() {
         _durationController.text = TimeUtils.formatMinutesToHhMm(diff);
       });
+  void _appendAirfield(String code) {
+    final current = _remarksController.text.trim();
+    if (current.isEmpty) {
+      _remarksController.text = code;
+    } else if (!current.contains(code)) {
+      _remarksController.text = '$current - $code';
     }
   }
 
@@ -226,8 +275,29 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         _remarksController.text = code;
       } else if (!current.contains(code)) {
         _remarksController.text = '$current - $code';
+  void _applyBlockTimes() {
+    final offText = _offBlocksController.text.trim();
+    final onText = _onBlocksController.text.trim();
+    final offMins = TimeUtils.tryParseHhMmToMinutes(offText);
+    final onMins = TimeUtils.tryParseHhMmToMinutes(onText);
+
+    if (offMins != null && onMins != null) {
+      int diff = onMins - offMins;
+      if (diff < 0) diff += 24 * 60; // Rolled over midnight
+      if (diff > 0) {
+        setState(() {
+          _durationController.text = TimeUtils.formatMinutesToHhMm(diff);
+          _showBlockTimes = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Calculated flight time: ${TimeUtils.formatMinutesToHhMm(diff)} ($diff mins)'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     });
+    }
   }
 
   void _applySyllabusTemplate(String templateName) {
@@ -238,6 +308,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
           _aircraftClass = AircraftClass.singleEngine;
           _isFstd = false;
           _role = PilotRole.pic; // CAR 61.01.5: Solo XC must be PIC
+          _role = PilotRole.pic;
           _period = TimePeriod.day;
           _durationController.text = '02:30';
           _dayLandings = 3;
@@ -288,8 +359,68 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     });
   }
 
+  bool _validateStep(int step) {
+    if (step == 0) {
+      return _formKeyStep1.currentState?.validate() ?? true;
+    } else if (step == 1) {
+      if (!(_formKeyStep2.currentState?.validate() ?? true)) return false;
+      if (_soloCrossCountry && _role == PilotRole.dual) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Solo Cross-Country (CAR 61.01.5) cannot be logged as Dual'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+      return true;
+    } else if (step == 2) {
+      if (!(_formKeyStep3.currentState?.validate() ?? true)) return false;
+      final durationMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
+      final instActualMins = TimeUtils.tryParseHhMmToMinutes(_instActualController.text.trim()) ?? 0;
+      if (!_isFstd && instActualMins > durationMins) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error: Actual instrument time cannot exceed total flight duration'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+      return true;
+    }
+    return true;
+  }
+
+  void _nextStep() {
+    if (_validateStep(_currentStep)) {
+      if (_currentStep < 2) {
+        setState(() => _currentStep++);
+        _pageController.animateToPage(
+          _currentStep,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        _onSave();
+      }
+    }
+  }
+
+  void _previousStep() {
+    if (_currentStep > 0) {
+      setState(() => _currentStep--);
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   void _onSave() {
     if (!_formKey.currentState!.validate()) return;
+    if (!_validateStep(0) || !_validateStep(1) || !_validateStep(2)) return;
 
     final durationMins =
         TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
@@ -370,13 +501,102 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
     final isDualWithSelf = _role == PilotRole.dual &&
         _picController.text.trim().toUpperCase() == 'SELF';
+    final title = _isEditing ? 'Edit Flight Entry' : 'Log Flight Entry';
 
     return AlertDialog(
       title: Row(
+    final bodyContent = Column(
+      children: [
+        // Step progress header
+        _buildStepHeader(theme),
+        const Divider(height: 1),
+
+        // Multi-step pages
+        Expanded(
+          child: PageView(
+            controller: _pageController,
+            physics: const BouncingScrollPhysics(),
+            onPageChanged: (page) => setState(() => _currentStep = page),
+            children: [
+              _buildStep1Aircraft(theme),
+              _buildStep2TimesAndRole(theme),
+              _buildStep3InstrumentAndReview(theme),
+            ],
+          ),
+        ),
+
+        // Bottom Navigation Bar
+        _buildBottomBar(theme),
+      ],
+    );
+
+    if (widget.isFullScreen) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        body: SafeArea(child: bodyContent),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: bodyContent,
+    );
+  }
+
+  Widget _buildStepHeader(ThemeData theme) {
+    final steps = ['Aircraft', 'Time & Role', 'Review & Log'];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: theme.colorScheme.surface,
+      child: Column(
         children: [
           Icon(_isEditing ? Icons.edit_note : Icons.flight_takeoff),
           const SizedBox(width: 8),
           Text(_isEditing ? 'Edit Flight Entry' : 'Log Flight Entry'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'STEP ${_currentStep + 1} OF 3: ${steps[_currentStep].toUpperCase()}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.1,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              Row(
+                children: List.generate(3, (i) {
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    width: i == _currentStep ? 14 : 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: i <= _currentStep
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: (_currentStep + 1) / 3,
+              minHeight: 3,
+              backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
+            ),
+          ),
         ],
       ),
       content: SizedBox(
@@ -398,6 +618,32 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildStep1Aircraft(ThemeData theme) {
+    final dateStr =
+        '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKeyStep1,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // SACAA Syllabus Presets
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
                       Row(
                         children: [
@@ -412,6 +658,14 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                             ),
                           ),
                         ],
+                      Icon(Icons.school_outlined, size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'SACAA Syllabus Quick Fill',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Wrap(
@@ -428,6 +682,21 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _templateChip('PPL Solo XC', Icons.flight_takeoff),
+                      _templateChip('Night Rating Dual', Icons.nightlight_round),
+                      _templateChip('Multi-Engine Dual', Icons.airplanemode_active),
+                      _templateChip('IF Sim (FNPT II)', Icons.computer),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
 
                 // Date Picker Row
                 Row(
@@ -444,8 +713,22 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                       onPressed: _pickDate,
                     ),
                   ],
+            // Flight Date Picker
+            InkWell(
+              onTap: _pickDate,
+              borderRadius: BorderRadius.circular(8),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Flight Date',
+                  prefixIcon: Icon(Icons.calendar_today, size: 18),
+                  border: OutlineInputBorder(),
+                  isDense: true,
                 ),
                 const SizedBox(height: 8),
+                child: Text(dateStr, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 12),
 
                 // Aircraft Type & Registration
                 Row(
@@ -498,6 +781,34 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   ],
                 ),
                 const SizedBox(height: 6),
+            // Aircraft Model
+            TextFormField(
+              controller: _typeController,
+              decoration: const InputDecoration(
+                labelText: 'Aircraft Model / Type',
+                hintText: 'e.g. C172, BE76, FNPT II',
+                prefixIcon: Icon(Icons.airplanemode_active, size: 18),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              textCapitalization: TextCapitalization.characters,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              onChanged: _onTypeSelected,
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              children: _popularTypes.map((type) {
+                return ChoiceChip(
+                  label: Text(type, style: const TextStyle(fontSize: 10)),
+                  selected: _typeController.text.toUpperCase() == type,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  onSelected: (_) => _onTypeSelected(type),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
 
                 // Registration Prefix Helpers & Aircraft Type Chips
                 Wrap(
@@ -523,8 +834,38 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                       );
                     }),
                   ],
+            // Registration
+            TextFormField(
+              controller: _regController,
+              decoration: const InputDecoration(
+                labelText: 'Aircraft Registration',
+                hintText: 'e.g. ZS-EXT',
+                prefixIcon: Icon(Icons.badge_outlined, size: 18),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              textCapitalization: TextCapitalization.characters,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              onChanged: _onRegChanged,
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              children: [
+                ActionChip(
+                  label: const Text('ZS- (Standard)', style: TextStyle(fontSize: 10)),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _onRegChanged('ZS-'),
                 ),
                 const SizedBox(height: 10),
+                ActionChip(
+                  label: const Text('ZU- (NTCA)', style: TextStyle(fontSize: 10)),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _onRegChanged('ZU-'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
                 // PIC Name & Duration
                 Row(
@@ -541,7 +882,51 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                         textCapitalization: TextCapitalization.characters,
                         validator: (v) =>
                             v == null || v.trim().isEmpty ? 'Required' : null,
+            // PIC Name
+            TextFormField(
+              controller: _picController,
+              decoration: const InputDecoration(
+                labelText: 'Pilot in Command (PIC)',
+                hintText: 'e.g. SELF or CAPT J. DOE',
+                prefixIcon: Icon(Icons.person_outline, size: 18),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              textCapitalization: TextCapitalization.characters,
+              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep2TimesAndRole(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKeyStep2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Flight Duration
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _durationController,
+                    decoration: InputDecoration(
+                      labelText: _isFstd ? 'FSTD Actual Time (Col 13)' : 'Total Flight Duration',
+                      hintText: 'HH:MM or 1.5',
+                      prefixIcon: const Icon(Icons.schedule, size: 18),
+                      suffixIcon: IconButton(
+                        icon: Icon(_showBlockTimes ? Icons.calculate : Icons.calculate_outlined, size: 20),
+                        tooltip: 'Calculate from Off/On Blocks',
+                        onPressed: () => setState(() => _showBlockTimes = !_showBlockTimes),
                       ),
+                      border: const OutlineInputBorder(),
+                      isDense: true,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -565,7 +950,16 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                       ),
                     ),
                   ],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Required';
+                      final mins = TimeUtils.tryParseHhMmToMinutes(v);
+                      if (mins == null || mins <= 0) return 'Enter > 0 mins';
+                      return null;
+                    },
+                  ),
                 ),
+              ],
+            ),
 
                 // Dual Instruction Advisory Warning
                 if (isDualWithSelf) ...[
@@ -587,6 +981,18 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
                 // Block Times Calculator (Optional)
                 Row(
+            // Block Time Calculator Dropdown
+            if (_showBlockTimes) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextButton.icon(
                       icon: Icon(
@@ -613,9 +1019,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                       border: Border.all(color: theme.colorScheme.outlineVariant),
                     ),
                     child: Row(
+                    Text('Block Time Calculator', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Row(
                       children: [
                         Expanded(
                           child: TextFormField(
+                          child: TextField(
                             controller: _offBlocksController,
                             decoration: const InputDecoration(
                               labelText: 'Off-Blocks (HH:MM)',
@@ -624,11 +1034,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                               isDense: true,
                             ),
                             onChanged: (_) => _recalculateBlockTime(),
+                            decoration: const InputDecoration(labelText: 'Off Blocks', hintText: '09:00', border: OutlineInputBorder(), isDense: true),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextFormField(
+                          child: TextField(
                             controller: _onBlocksController,
                             decoration: const InputDecoration(
                               labelText: 'On-Blocks (HH:MM)',
@@ -637,7 +1049,14 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                               isDense: true,
                             ),
                             onChanged: (_) => _recalculateBlockTime(),
+                            decoration: const InputDecoration(labelText: 'On Blocks', hintText: '10:30', border: OutlineInputBorder(), isDense: true),
                           ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed: _applyBlockTimes,
+                          style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                          child: const Text('Apply'),
                         ),
                       ],
                     ),
@@ -685,10 +1104,19 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   ],
                 ),
                 const SizedBox(height: 8),
+              ),
+            ],
+            const SizedBox(height: 14),
 
                 // Role & Period (only when not FSTD)
                 if (!_isFstd) ...[
                   Row(
+            // Aircraft Class & Period
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('Role: ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       Wrap(
@@ -709,11 +1137,25 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                             },
                           );
                         }).toList(),
+                      Text('Class', style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      SegmentedButton<AircraftClass>(
+                        segments: const [
+                          ButtonSegment(value: AircraftClass.singleEngine, label: Text('SE', style: TextStyle(fontSize: 11))),
+                          ButtonSegment(value: AircraftClass.multiEngine, label: Text('ME', style: TextStyle(fontSize: 11))),
+                        ],
+                        selected: {_aircraftClass},
+                        onSelectionChanged: _isFstd ? null : (s) => setState(() => _aircraftClass = s.first),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Row(
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text('Period: ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       ChoiceChip(
@@ -722,6 +1164,15 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                         onSelected: (s) {
                           if (s) setState(() => _period = TimePeriod.day);
                         },
+                      Text('Period', style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
+                      const SizedBox(height: 4),
+                      SegmentedButton<TimePeriod>(
+                        segments: const [
+                          ButtonSegment(value: TimePeriod.day, label: Text('Day', style: TextStyle(fontSize: 11))),
+                          ButtonSegment(value: TimePeriod.night, label: Text('Night', style: TextStyle(fontSize: 11))),
+                        ],
+                        selected: {_period},
+                        onSelectionChanged: _isFstd ? null : (s) => setState(() => _period = s.first),
                       ),
                       const SizedBox(width: 6),
                       ChoiceChip(
@@ -777,6 +1228,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   ],
                 ),
                 const SizedBox(height: 8),
+              ],
+            ),
+            const SizedBox(height: 14),
 
                 // Solo Cross-Country Switch (CAR 61.01.5)
                 SwitchListTile(
@@ -793,8 +1247,52 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                       }
                     });
                   },
+            // Operating Role
+            Text('Pilot Operating Role', style: theme.textTheme.labelSmall?.copyWith(color: Colors.grey)),
+            const SizedBox(height: 4),
+            SegmentedButton<PilotRole>(
+              segments: const [
+                ButtonSegment(value: PilotRole.dual, label: Text('DUAL', style: TextStyle(fontSize: 10))),
+                ButtonSegment(value: PilotRole.pic, label: Text('PIC', style: TextStyle(fontSize: 10))),
+                ButtonSegment(value: PilotRole.picus, label: Text('PICUS', style: TextStyle(fontSize: 10))),
+                ButtonSegment(value: PilotRole.copilot, label: Text('COPILOT', style: TextStyle(fontSize: 10))),
+              ],
+              selected: {_role},
+              onSelectionChanged: (s) {
+                setState(() {
+                  _role = s.first;
+                  if (_role != PilotRole.pic && _soloCrossCountry) {
+                    _soloCrossCountry = false;
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 14),
+
+            // Landings
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    initialValue: _dayLandings,
+                    decoration: const InputDecoration(labelText: 'Day Landings (Col 30)', border: OutlineInputBorder(), isDense: true),
+                    items: List.generate(21, (i) => DropdownMenuItem(value: i, child: Text('$i'))),
+                    onChanged: (v) => setState(() => _dayLandings = v ?? 0),
+                  ),
                 ),
                 const SizedBox(height: 10),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonFormField<int>(
+                    initialValue: _nightLandings,
+                    decoration: const InputDecoration(labelText: 'Night Landings (Col 31)', border: OutlineInputBorder(), isDense: true),
+                    items: List.generate(21, (i) => DropdownMenuItem(value: i, child: Text('$i'))),
+                    onChanged: (v) => setState(() => _nightLandings = v ?? 0),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
 
                 // Instrument Flying & Navaids (Clean Card with zero overlap!)
                 Container(
@@ -802,9 +1300,58 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   decoration: BoxDecoration(
                     border: Border.all(color: theme.colorScheme.outlineVariant),
                     borderRadius: BorderRadius.circular(8),
+            // Solo Cross-Country (CAR 61.01.5)
+            SwitchListTile.adaptive(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Solo Cross-Country (CAR 61.01.5)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              subtitle: const Text('Must be flown as PIC. Required for SACAA licence renewal.', style: TextStyle(fontSize: 11)),
+              value: _soloCrossCountry,
+              dense: true,
+              onChanged: (v) {
+                setState(() {
+                  _soloCrossCountry = v;
+                  if (v && _role != PilotRole.pic) {
+                    _role = PilotRole.pic;
+                  }
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep3InstrumentAndReview(ThemeData theme) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Form(
+        key: _formKeyStep3,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Instrument Flying Card
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.tune, size: 16, color: theme.colorScheme.primary),
+                      const SizedBox(width: 6),
+                      Text('Instrument Flying & Navaids (Optional)', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 10),
+                  Row(
                     children: [
                       Row(
                         children: [
@@ -819,6 +1366,19 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                             ),
                           ),
                         ],
+                      Expanded(
+                        child: TextFormField(
+                          controller: _instActualController,
+                          decoration: const InputDecoration(labelText: 'Actual Inst (Col 9)', hintText: '00:00', border: OutlineInputBorder(), isDense: true),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            final instMins = TimeUtils.tryParseHhMmToMinutes(v);
+                            if (instMins == null) return 'HH:MM';
+                            final durMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
+                            if (!_isFstd && instMins > durMins) return 'Exceeds flight ($durMins m)';
+                            return null;
+                          },
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -874,6 +1434,19 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                           hintText: 'e.g. ILS RWY 03, VOR, RNAV GNSS',
                           border: OutlineInputBorder(),
                           isDense: true,
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _instFstdController,
+                          decoration: const InputDecoration(labelText: 'FSTD / Sim (Col 10)', hintText: '00:00', border: OutlineInputBorder(), isDense: true),
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) return null;
+                            final instMins = TimeUtils.tryParseHhMmToMinutes(v);
+                            if (instMins == null) return 'HH:MM';
+                            final durMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
+                            if (_isFstd && instMins > durMins) return 'Exceeds sim ($durMins m)';
+                            return null;
+                          },
                         ),
                       ),
                     ],
@@ -889,9 +1462,17 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                     hintText: 'e.g. FALA - FAGM Local Training',
                     border: OutlineInputBorder(),
                     isDense: true,
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _navaidsController,
+                    decoration: const InputDecoration(labelText: 'Navaids / Approaches (Col 11)', hintText: 'e.g. ILS RWY 03, VOR, RNAV', border: OutlineInputBorder(), isDense: true),
                   ),
                 ),
                 const SizedBox(height: 6),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
 
                 // Common South African Airfield Chips
                 Wrap(
@@ -914,9 +1495,34 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
                 // Live Column Target Pill
                 _buildLiveColumnPill(theme),
+            // Remarks & Route
+            TextFormField(
+              controller: _remarksController,
+              decoration: const InputDecoration(labelText: 'Route & Remarks (Column 5)', hintText: 'e.g. FALA - FAGM Local Training', border: OutlineInputBorder(), isDense: true),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                const Text('Airfields: ', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                ..._popularAirfields.map((af) {
+                  return ActionChip(
+                    label: Text(af['code']!, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold)),
+                    tooltip: af['name'],
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    onPressed: () => _appendAirfield(af['code']!),
+                  );
+                }),
               ],
             ),
           ),
+            const SizedBox(height: 14),
+
+            // Live SACAA 32-Column Allocation Badge
+            _buildLiveColumnPill(theme),
+          ],
         ),
       ),
       actions: [
@@ -933,11 +1539,43 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     );
   }
 
+  Widget _buildBottomBar(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (_currentStep > 0)
+            OutlinedButton.icon(
+              icon: const Icon(Icons.arrow_back, size: 16),
+              label: const Text('Back'),
+              onPressed: _previousStep,
+            )
+          else
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+          FilledButton.icon(
+            icon: Icon(_currentStep == 2 ? Icons.check : Icons.arrow_forward, size: 16),
+            label: Text(_currentStep == 2 ? (_isEditing ? 'Save Changes' : 'Log Flight') : 'Next'),
+            onPressed: _nextStep,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _templateChip(String label, IconData icon) {
     return ActionChip(
       avatar: Icon(icon, size: 14),
       label: Text(label, style: const TextStyle(fontSize: 10)),
       visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
       onPressed: () => _applySyllabusTemplate(label),
     );
   }
@@ -984,6 +1622,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
@@ -992,16 +1631,20 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       child: Row(
         children: [
           Icon(Icons.table_chart_outlined, size: 16, color: theme.colorScheme.onSecondaryContainer),
+          Icon(Icons.table_chart_outlined, size: 18, color: theme.colorScheme.onSecondaryContainer),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'Recording to: $colTarget: ${TimeUtils.formatMinutesToHhMm(durMins)}'
+              'SACAA 32-Column Allocation Target:\n$colTarget: ${TimeUtils.formatMinutesToHhMm(durMins)}'
               '${_dayLandings > 0 ? " • Col 30: $_dayLandings Day Ldg" : ""}'
               '${_nightLandings > 0 ? " • Col 31: $_nightLandings Night Ldg" : ""}'
               '${_soloCrossCountry ? " • Solo XC" : ""}',
+              '${_soloCrossCountry ? " • Solo XC (CAR 61.01.5)" : ""}',
               style: theme.textTheme.labelSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSecondaryContainer,
+                height: 1.3,
               ),
             ),
           ),

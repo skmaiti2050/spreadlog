@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/theme/aviation_theme.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
@@ -198,6 +199,10 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
     final totals = ref.watch(grandTotalsProvider);
     final profile = ref.watch(pilotProfileProvider);
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 460;
+    final isUltraNarrow = screenWidth < 380;
+    final activeTheme = ref.watch(aviationThemeProvider);
 
     return Scaffold(
       appBar: _isSelectionMode
@@ -243,83 +248,200 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
           : AppBar(
               title: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
                     'Aviation Logbook',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     '${profile.pilotName} • ${profile.licenceNumber}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.checklist),
-                  tooltip: 'Select Multiple',
-                  onPressed: () => setState(() => _isSelectionMode = true),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.menu_book),
-                  tooltip: 'Physical Logbook View',
-                  onPressed: () {
-                    final pages = ref.read(ledgerPagesProvider);
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => PhysicalLogbookScreen(pages: pages),
+              actions: isNarrow
+                  ? [
+                      IconButton(
+                        icon: const Icon(Icons.account_circle_outlined),
+                        tooltip: 'Pilot Profile',
+                        onPressed: () => EditProfileDialog.show(context),
                       ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.picture_as_pdf),
-                  tooltip: 'Export SACAA PDF',
-                  onPressed: () {
-                    final pages = ref.read(ledgerPagesProvider);
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => PdfPreviewScreen(
-                          pages: pages,
-                          pilotName: profile.pilotName,
-                          licenceNumber: profile.licenceNumber,
-                        ),
+                      PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        tooltip: 'Actions & Views',
+                        onSelected: (action) {
+                          switch (action) {
+                            case 'checklist':
+                              setState(() => _isSelectionMode = true);
+                              break;
+                            case 'logbook':
+                              final pages = ref.read(ledgerPagesProvider);
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      PhysicalLogbookScreen(pages: pages),
+                                ),
+                              );
+                              break;
+                            case 'pdf':
+                              final pages = ref.read(ledgerPagesProvider);
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => PdfPreviewScreen(
+                                    pages: pages,
+                                    pilotName: profile.pilotName,
+                                    licenceNumber: profile.licenceNumber,
+                                  ),
+                                ),
+                              );
+                              break;
+                            case 'slip':
+                              final typeSummaries =
+                                  ref.read(aircraftTypeSummariesProvider);
+                              final grandTotals = ref.read(grandTotalsProvider);
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => SummarySlipPreviewScreen(
+                                    typeSummaries: typeSummaries,
+                                    grandTotals: grandTotals,
+                                    initialPilotName: profile.pilotName,
+                                    initialLicenceNumber: profile.licenceNumber,
+                                  ),
+                                ),
+                              );
+                              break;
+                            case 'theme':
+                              ref
+                                  .read(aviationThemeProvider.notifier)
+                                  .cycleNext();
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'checklist',
+                            child: ListTile(
+                              leading: Icon(Icons.checklist),
+                              title: Text('Select Multiple'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'logbook',
+                            child: ListTile(
+                              leading: Icon(Icons.menu_book),
+                              title: Text('Physical Logbook (SACAA)'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'pdf',
+                            child: ListTile(
+                              leading: Icon(Icons.picture_as_pdf),
+                              title: Text('Export SACAA PDF'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'slip',
+                            child: ListTile(
+                              leading: Icon(Icons.receipt_long),
+                              title: Text('Career Summary Slip'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuDivider(),
+                          PopupMenuItem(
+                            value: 'theme',
+                            child: ListTile(
+                              leading: Icon(activeTheme.icon),
+                              title: Text(
+                                  'Theme: ${activeTheme.displayName.split(" ").first}'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.receipt_long),
-                  tooltip: 'Career Summary Slip',
-                  onPressed: () {
-                    final typeSummaries =
-                        ref.read(aircraftTypeSummariesProvider);
-                    final grandTotals = ref.read(grandTotalsProvider);
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => SummarySlipPreviewScreen(
-                          typeSummaries: typeSummaries,
-                          grandTotals: grandTotals,
-                          initialPilotName: profile.pilotName,
-                          initialLicenceNumber: profile.licenceNumber,
-                        ),
+                    ]
+                  : [
+                      IconButton(
+                        icon: const Icon(Icons.checklist),
+                        tooltip: 'Select Multiple',
+                        onPressed: () => setState(() => _isSelectionMode = true),
                       ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.account_circle_outlined),
-                  tooltip: 'Pilot Profile',
-                  onPressed: () => EditProfileDialog.show(context),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  tooltip: 'Add Flight',
-                  onPressed: _openLogFlightDialog,
-                ),
-              ],
+                      IconButton(
+                        icon: const Icon(Icons.menu_book),
+                        tooltip: 'Physical Logbook View',
+                        onPressed: () {
+                          final pages = ref.read(ledgerPagesProvider);
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  PhysicalLogbookScreen(pages: pages),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf),
+                        tooltip: 'Export SACAA PDF',
+                        onPressed: () {
+                          final pages = ref.read(ledgerPagesProvider);
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => PdfPreviewScreen(
+                                pages: pages,
+                                pilotName: profile.pilotName,
+                                licenceNumber: profile.licenceNumber,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.receipt_long),
+                        tooltip: 'Career Summary Slip',
+                        onPressed: () {
+                          final typeSummaries =
+                              ref.read(aircraftTypeSummariesProvider);
+                          final grandTotals = ref.read(grandTotalsProvider);
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => SummarySlipPreviewScreen(
+                                typeSummaries: typeSummaries,
+                                grandTotals: grandTotals,
+                                initialPilotName: profile.pilotName,
+                                initialLicenceNumber: profile.licenceNumber,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(activeTheme.icon),
+                        tooltip:
+                            'Switch Theme (${activeTheme.displayName.split(" ").first})',
+                        onPressed: () =>
+                            ref.read(aviationThemeProvider.notifier).cycleNext(),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.account_circle_outlined),
+                        tooltip: 'Pilot Profile',
+                        onPressed: () => EditProfileDialog.show(context),
+                      ),
+                    ],
             ),
       body: Column(
         children: [
@@ -327,7 +449,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
           Container(
             width: double.infinity,
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
@@ -363,32 +485,73 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                     color: theme.colorScheme.onPrimaryContainer,
                   ),
                 ),
-                const Divider(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildMetricColumn(
-                      context,
-                      'Single Engine',
-                      TimeUtils.formatMinutesToHhMm(totals.totalSingleEngine),
-                    ),
-                    _buildMetricColumn(
-                      context,
-                      'Multi Engine',
-                      TimeUtils.formatMinutesToHhMm(totals.totalMultiEngine),
-                    ),
-                    _buildMetricColumn(
-                      context,
-                      'Day / Night',
-                      '${TimeUtils.formatMinutesToHhMm(totals.totalDay)} / ${TimeUtils.formatMinutesToHhMm(totals.totalNight)}',
-                    ),
-                    _buildMetricColumn(
-                      context,
-                      'Landings',
-                      '${totals.totalLandings}',
-                    ),
-                  ],
-                ),
+                const Divider(height: 16),
+                if (isUltraNarrow)
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildMetricColumn(
+                            context,
+                            'Single Engine',
+                            TimeUtils.formatMinutesToHhMm(
+                                totals.totalSingleEngine),
+                          ),
+                          _buildMetricColumn(
+                            context,
+                            'Multi Engine',
+                            TimeUtils.formatMinutesToHhMm(
+                                totals.totalMultiEngine),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildMetricColumn(
+                            context,
+                            'Day / Night',
+                            '${TimeUtils.formatMinutesToHhMm(totals.totalDay)} / ${TimeUtils.formatMinutesToHhMm(totals.totalNight)}',
+                          ),
+                          _buildMetricColumn(
+                            context,
+                            'Landings',
+                            '${totals.totalLandings}',
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildMetricColumn(
+                        context,
+                        'Single Engine',
+                        TimeUtils.formatMinutesToHhMm(
+                            totals.totalSingleEngine),
+                      ),
+                      _buildMetricColumn(
+                        context,
+                        'Multi Engine',
+                        TimeUtils.formatMinutesToHhMm(
+                            totals.totalMultiEngine),
+                      ),
+                      _buildMetricColumn(
+                        context,
+                        'Day / Night',
+                        '${TimeUtils.formatMinutesToHhMm(totals.totalDay)} / ${TimeUtils.formatMinutesToHhMm(totals.totalNight)}',
+                      ),
+                      _buildMetricColumn(
+                        context,
+                        'Landings',
+                        '${totals.totalLandings}',
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
