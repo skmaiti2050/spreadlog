@@ -232,7 +232,7 @@ class FlightDetailsDialog extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
@@ -241,12 +241,16 @@ class FlightDetailsDialog extends StatelessWidget {
               fontSize: 13,
             ),
           ),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-              color: theme.colorScheme.onSurface,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ),
         ],
@@ -326,6 +330,7 @@ class FlightDetailsDialog extends StatelessWidget {
           Expanded(
             child: Text(
               'SACAA 32-Column Logbook Allocation:\n$colTarget: ${TimeUtils.formatMinutesToHhMm(totalMins)}'
+              'Standard 32-Column Logbook Allocation:\n$colTarget: ${TimeUtils.formatMinutesToHhMm(totalMins)}'
               '${flight.landings.dayCount > 0 ? " • Col 30: ${flight.landings.dayCount} Day Ldg" : ""}'
               '${flight.landings.nightCount > 0 ? " • Col 31: ${flight.landings.nightCount} Night Ldg" : ""}',
               style: theme.textTheme.labelSmall?.copyWith(

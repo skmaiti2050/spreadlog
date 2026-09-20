@@ -22,7 +22,7 @@ class PdfPreviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Logbook PDF Preview (SACAA Appendix A)'),
+        title: const Text('Logbook PDF Preview'),
         actions: [
           IconButton(
             tooltip: 'Close',
@@ -44,7 +44,7 @@ class PdfPreviewScreen extends StatelessWidget {
         canChangePageFormat: false,
         allowPrinting: true,
         allowSharing: true,
-        pdfFileName: 'SACAA_Logbook_${DateTime.now().year}.pdf',
+        pdfFileName: 'Pilot_Logbook_${DateTime.now().year}.pdf',
       ),
     );
   }

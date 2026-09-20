@@ -28,7 +28,7 @@ class SummarySlipPreviewScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Career Summary Slip (SACAA)'),
+        title: const Text('Career Summary Slip'),
         actions: [
           IconButton(
             icon: const Icon(Icons.close),
@@ -43,9 +43,8 @@ class SummarySlipPreviewScreen extends ConsumerWidget {
           const Padding(
             padding: EdgeInsets.fromLTRB(12, 8, 12, 10),
             child: HintBanner(
-
               hintKey: 'hint_summary_slip_purpose',
-              message: 'The Career Summary Slip aggregates hours by aircraft type for SACAA Form CA 61-01 renewals. Use the print icon to export or save as PDF.',
+              message: 'The Career Summary Slip aggregates career hours by aircraft type. Use the print icon to export or save as PDF.',
               margin: EdgeInsets.zero,
             ),
           ),
@@ -66,7 +65,7 @@ class SummarySlipPreviewScreen extends ConsumerWidget {
               canChangePageFormat: false,
               allowPrinting: true,
               allowSharing: true,
-              pdfFileName: 'SACAA_Career_Summary_Slip_${slipDate.year}.pdf',
+              pdfFileName: 'Career_Summary_Slip_${slipDate.year}.pdf',
             ),
           ),
         ],

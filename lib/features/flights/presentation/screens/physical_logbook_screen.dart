@@ -52,7 +52,7 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('SACAA Appendix A — Page ${page.pageNumber} of ${widget.pages.length}'),
+        title: Text('Physical Logbook — Page ${page.pageNumber} of ${widget.pages.length}'),
         actions: [
           IconButton(
             tooltip: 'Previous Page',

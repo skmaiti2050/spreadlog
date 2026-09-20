@@ -111,6 +111,72 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
     }
   }
 
+  Future<void> _selectCategory() async {
+    final picked = await showModalBottomSheet<EndorsementCategory>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Endorsement Category',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: EndorsementCategory.values.map((cat) {
+                    final isSelected = cat == _selectedCategory;
+                    return ListTile(
+                      dense: true,
+                      title: Text(
+                        cat.label,
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                          : null,
+                      onTap: () => Navigator.of(context).pop(cat),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _selectedCategory = picked);
+    }
+  }
+
   Future<void> _save() async {
     if (_capturedBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -330,22 +396,21 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                     const SizedBox(height: 20),
 
                     // Endorsement Category
-                    DropdownButtonFormField<EndorsementCategory>(
-                      initialValue: _selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: 'Endorsement Category *',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.category),
+                    InkWell(
+                      onTap: _selectCategory,
+                      borderRadius: BorderRadius.circular(4),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Endorsement Category *',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.category),
+                          suffixIcon: Icon(Icons.arrow_drop_down),
+                        ),
+                        child: Text(
+                          _selectedCategory.label,
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
-                      items: EndorsementCategory.values.map((cat) {
-                        return DropdownMenuItem(
-                          value: cat,
-                          child: Text(cat.label),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedCategory = val);
-                      },
                     ),
 
                     const SizedBox(height: 16),

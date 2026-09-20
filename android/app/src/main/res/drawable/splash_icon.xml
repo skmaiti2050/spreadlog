@@ -1,0 +1,33 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Circular subtle glow background -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M54,54m-42,0a42,42 0 1,0 84,0a42,42 0 1,0 -84,0" />
+    
+    <!-- Outer accent ring -->
+    <path
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="1.5"
+        android:pathData="M54,54m-40,0a40,40 0 1,0 80,0a40,40 0 1,0 -80,0" />
+
+    <!-- Jet / Aviation Wing Icon -->
+    <!-- Main Swept Wings & Body -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M54,26 L58,46 L82,60 L82,64 L58,56 L58,74 L66,80 L66,84 L54,80 L42,84 L42,80 L50,74 L50,56 L26,64 L26,60 L50,46 Z" />
+
+    <!-- Nose Cone and Fuselage Highlight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,26 L57,46 L54,52 L51,46 Z" />
+
+    <!-- Aviator Gold Star / Compass pip in center -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M54,50 L55.5,53.5 L59,54 L56.5,56.5 L57,60 L54,58 L51,60 L51.5,56.5 L49,54 L52.5,53.5 Z" />
+</vector>
+

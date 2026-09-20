@@ -263,7 +263,10 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                         ),
                         const SizedBox(height: 6),
                         // Live verify button
-                        Row(
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
                           children: [
                             OutlinedButton.icon(
                               onPressed: _isVerifying ? null : _verifyIntegrity,
@@ -274,17 +277,17 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                                       child: CircularProgressIndicator(strokeWidth: 2),
                                     )
                                   : const Icon(Icons.verified, size: 16),
-                              label: Text(_isVerifying ? 'Verifying...' : 'Verify Cryptographic Integrity'),
+                              label: Text(_isVerifying ? 'Verifying...' : 'Verify Integrity'),
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                                 textStyle: const TextStyle(fontSize: 12),
                               ),
                             ),
-                            const SizedBox(width: 10),
                             if (_integrityResult == true)
                               const Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.check_circle, color: Colors.green, size: 18),
+                                  Icon(Icons.check_circle, color: Colors.green, size: 16),
                                   SizedBox(width: 4),
                                   Text(
                                     'Verified Intact',
@@ -298,8 +301,9 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                               )
                             else if (_integrityResult == false)
                               const Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.error, color: Colors.red, size: 18),
+                                  Icon(Icons.error, color: Colors.red, size: 16),
                                   SizedBox(width: 4),
                                   Text(
                                     'Hash Mismatch / Corrupted',
@@ -320,8 +324,11 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                   const SizedBox(height: 12),
 
                   // Actions row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       TextButton.icon(
                         style: TextButton.styleFrom(foregroundColor: Colors.red),

@@ -78,7 +78,7 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'These credentials are automatically applied to your official SACAA Logbook PDF, Career Summary Slip, and flight logs.',
+                'These credentials are automatically applied to your official Logbook PDF, Career Summary Slip, and flight logs.',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -98,7 +98,7 @@ class _EditProfileDialogState extends ConsumerState<EditProfileDialog> {
               TextField(
                 controller: _licenceController,
                 decoration: const InputDecoration(
-                  labelText: 'SACAA Licence Number',
+                  labelText: 'Licence Number',
                   hintText: 'e.g. ZA-123456',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.credit_card_outlined),

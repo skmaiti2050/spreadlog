@@ -354,7 +354,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             value: 'logbook',
                             child: ListTile(
                               leading: Icon(Icons.menu_book),
-                              title: Text('Physical Logbook (SACAA)'),
+                              title: Text('Physical Logbook'),
                               dense: true,
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -363,7 +363,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             value: 'pdf',
                             child: ListTile(
                               leading: Icon(Icons.picture_as_pdf),
-                              title: Text('Export SACAA PDF'),
+                              title: Text('Export Logbook PDF'),
                               dense: true,
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -423,7 +423,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.picture_as_pdf),
-                        tooltip: 'Export SACAA PDF',
+                        tooltip: 'Export Logbook PDF',
                         onPressed: () {
                           final pages = ref.read(ledgerPagesProvider);
                           Navigator.of(context).push(
