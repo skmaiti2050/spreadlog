@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/aviation_theme.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/hint_banner.dart';
+import '../../../aircraft/presentation/screens/aircraft_register_screen.dart';
 import '../../../endorsements/presentation/screens/endorsement_vault_screen.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
@@ -317,6 +318,13 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                                 ),
                               );
                               break;
+                            case 'aircraft':
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const AircraftRegisterScreen(),
+                                ),
+                              );
+                              break;
                             case 'vault':
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
@@ -337,6 +345,15 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             child: ListTile(
                               leading: Icon(Icons.checklist),
                               title: Text('Select Multiple'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'aircraft',
+                            child: ListTile(
+                              leading: Icon(Icons.airplanemode_active),
+                              title: Text('Aircraft Register'),
                               dense: true,
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -396,6 +413,17 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                         icon: const Icon(Icons.checklist),
                         tooltip: 'Select Multiple',
                         onPressed: () => setState(() => _isSelectionMode = true),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.airplanemode_active),
+                        tooltip: 'Aircraft Register',
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AircraftRegisterScreen(),
+                            ),
+                          );
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.folder_special_outlined),

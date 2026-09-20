@@ -5,6 +5,7 @@ import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/duration_picker_dialog.dart';
 import '../../../../core/widgets/hint_banner.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
+import '../../../aircraft/presentation/providers/aircraft_providers.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/flight.dart';
 import '../../domain/flight_time.dart';
@@ -223,17 +224,22 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     }
   }
 
-  void _onTypeSelected(String type) {
+  void _onTypeSelected(String type, [AircraftModel? model]) {
     setState(() {
       _typeController.text = type;
-      if (type == 'FNPT II') {
-        _isFstd = true;
+      if (model != null) {
+        _isFstd = model.category == AircraftCategory.fstd || type == 'FNPT II';
+        _aircraftClass = model.aircraftClass;
       } else {
-        _isFstd = false;
-        if (['BE76', 'DA42', 'PA34'].contains(type)) {
-          _aircraftClass = AircraftClass.multiEngine;
+        if (type == 'FNPT II') {
+          _isFstd = true;
         } else {
-          _aircraftClass = AircraftClass.singleEngine;
+          _isFstd = false;
+          if (['BE76', 'DA42', 'PA34'].contains(type)) {
+            _aircraftClass = AircraftClass.multiEngine;
+          } else {
+            _aircraftClass = AircraftClass.singleEngine;
+          }
         }
       }
     });
@@ -609,6 +615,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   Widget _buildStep1Aircraft(ThemeData theme) {
+    final aircraftEntries = ref.watch(endorsedAircraftListProvider);
     final dateStr =
         '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
 
@@ -695,14 +702,41 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             ),
             const SizedBox(height: 6),
             Wrap(
-              spacing: 4,
-              children: _popularTypes.map((type) {
+              spacing: 6,
+              runSpacing: 6,
+              children: (aircraftEntries.isNotEmpty
+                      ? aircraftEntries
+                      : _popularTypes.map((t) => EndorsedAircraftEntry(
+                            model: AircraftModel(
+                              id: t,
+                              manufacturer: '',
+                              model: t,
+                              aircraftClass: ['BE76', 'DA42', 'PA34'].contains(t)
+                                  ? AircraftClass.multiEngine
+                                  : AircraftClass.singleEngine,
+                              category: t == 'FNPT II'
+                                  ? AircraftCategory.fstd
+                                  : AircraftCategory.aeroplane,
+                            ),
+                          )))
+                  .map((entry) {
+                final isSelected = _typeController.text.toUpperCase() == entry.model.id;
                 return ChoiceChip(
-                  label: Text(type, style: const TextStyle(fontSize: 10)),
-                  selected: _typeController.text.toUpperCase() == type,
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (entry.isEndorsed) ...[
+                        const Icon(Icons.check, size: 12, color: Colors.green),
+                        const SizedBox(width: 3),
+                      ],
+                      Text(entry.model.id, style: const TextStyle(fontSize: 10)),
+                    ],
+                  ),
+                  tooltip: entry.model.displayName.isNotEmpty ? entry.model.displayName : entry.model.id,
+                  selected: isSelected,
                   visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  onSelected: (_) => _onTypeSelected(type),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  onSelected: (_) => _onTypeSelected(entry.model.id, entry.model),
                 );
               }).toList(),
             ),
