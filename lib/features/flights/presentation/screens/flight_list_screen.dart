@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/aviation_theme.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/hint_banner.dart';
+import '../../../endorsements/presentation/screens/endorsement_vault_screen.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../../reports/presentation/pdf_preview_screen.dart';
@@ -316,6 +317,13 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                                 ),
                               );
                               break;
+                            case 'vault':
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const EndorsementVaultScreen(),
+                                ),
+                              );
+                              break;
                             case 'theme':
                               ref
                                   .read(aviationThemeProvider.notifier)
@@ -329,6 +337,15 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             child: ListTile(
                               leading: Icon(Icons.checklist),
                               title: Text('Select Multiple'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'vault',
+                            child: ListTile(
+                              leading: Icon(Icons.folder_special_outlined),
+                              title: Text('Endorsement Vault'),
                               dense: true,
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -379,6 +396,17 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                         icon: const Icon(Icons.checklist),
                         tooltip: 'Select Multiple',
                         onPressed: () => setState(() => _isSelectionMode = true),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.folder_special_outlined),
+                        tooltip: 'Endorsement Vault',
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const EndorsementVaultScreen(),
+                            ),
+                          );
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.menu_book),

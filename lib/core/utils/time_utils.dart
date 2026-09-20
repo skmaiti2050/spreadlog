@@ -90,5 +90,30 @@ class TimeUtils {
         return formatMinutesToDecimal(minutes);
     }
   }
+
+  static const List<String> _monthNames = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  static const List<String> _monthNamesFull = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+
+  /// Formats [dt] into "dd MMM yyyy" (e.g. "15 Aug 2026").
+  static String formatDate(DateTime dt) {
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = _monthNames[dt.month - 1];
+    return '$day $month ${dt.year}';
+  }
+
+  /// Formats [dt] into "dd MMMM yyyy" (e.g. "15 August 2026").
+  static String formatDateFull(DateTime dt) {
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = _monthNamesFull[dt.month - 1];
+    return '$day $month ${dt.year}';
+  }
 }
+
 

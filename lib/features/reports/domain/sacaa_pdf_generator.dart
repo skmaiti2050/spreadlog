@@ -97,14 +97,50 @@ class SacaaPdfGenerator {
         ),
         pw.SizedBox(height: 4),
 
+        // Super Header Row 1 (Tier 1)
+        pw.Table(
+          border: const pw.TableBorder(
+            top: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            left: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            right: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            bottom: pw.BorderSide.none,
+            verticalInside: pw.BorderSide(color: PdfColors.black, width: 0.5),
+          ),
+          columnWidths: const {
+            0: pw.FixedColumnWidth(48), // Col 1: Date
+            1: pw.FixedColumnWidth(47), // Col 2: Type
+            2: pw.FixedColumnWidth(60), // Col 3: Registration
+            3: pw.FixedColumnWidth(82), // Col 4: PIC Name
+            4: pw.FlexColumnWidth(1),   // Col 5: Details & Remarks
+            5: pw.FixedColumnWidth(156), // Cols 6-9: 45 + 45 + 33 + 33 = 156 Instrument Flying
+            6: pw.FixedColumnWidth(99),  // Cols 10-12: 33 + 33 + 33 = 99 Flight Instructor
+            7: pw.FixedColumnWidth(36),  // Col 13: FSTD Actual
+          },
+          children: [
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                _cell('DATE', bold: true, height: 16),
+                _cell('TYPE', bold: true),
+                _cell('REGISTRATION', bold: true, fontSize: 6.5),
+                _cell('PILOT IN COMMAND', bold: true, fontSize: 6.5),
+                _cell('DETAILS OF FLIGHT & REMARKS', bold: true, fontSize: 6.5),
+                _cell('INSTRUMENT FLYING', bold: true, fontSize: 6.5),
+                _cell('FLIGHT INSTRUCTOR', bold: true, fontSize: 6.5),
+                _cell('FSTD', bold: true, fontSize: 6.5),
+              ],
+            ),
+          ],
+        ),
+
         // 13-column Left Grid Table
         pw.Expanded(
           child: pw.Table(
             border: pw.TableBorder.all(color: PdfColors.black, width: 0.5),
             columnWidths: const {
               0: pw.FixedColumnWidth(48), // Col 1: Date
-              1: pw.FixedColumnWidth(55), // Col 2: Type
-              2: pw.FixedColumnWidth(52), // Col 3: Registration
+              1: pw.FixedColumnWidth(47), // Col 2: Type
+              2: pw.FixedColumnWidth(60), // Col 3: Registration
               3: pw.FixedColumnWidth(82), // Col 4: PIC Name
               4: pw.FlexColumnWidth(1),   // Col 5: Details & Remarks
               5: pw.FixedColumnWidth(45), // Col 6: Navaids
@@ -116,26 +152,8 @@ class SacaaPdfGenerator {
               11: pw.FixedColumnWidth(33), // Col 12: Instructor FSTD
               12: pw.FixedColumnWidth(36), // Col 13: FSTD Actual
             },
+
             children: [
-              // Header Row 1
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                children: [
-                  _cell('DATE', bold: true, height: 16),
-                  _cell('TYPE', bold: true),
-                  _cell('REGISTRATION', bold: true),
-                  _cell('PILOT IN COMMAND', bold: true),
-                  _cell('DETAILS OF FLIGHT & REMARKS', bold: true),
-                  _cell('INSTRUMENT FLYING', bold: true, colSpan: 4),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell('FLIGHT INSTRUCTOR', bold: true, colSpan: 3),
-                  _cell(''),
-                  _cell(''),
-                  _cell('FSTD', bold: true),
-                ],
-              ),
               // Header Row 2 (Columns 1-13)
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.grey300),
@@ -155,6 +173,7 @@ class SacaaPdfGenerator {
                   _cell('Actual (13)', fontSize: 6),
                 ],
               ),
+
 
               // 14 Flight Rows
               for (int i = 0; i < rowCount; i++)
@@ -320,6 +339,69 @@ class SacaaPdfGenerator {
         ),
         pw.SizedBox(height: 4),
 
+        // Super Header Row 1 (Tier 1)
+        pw.Table(
+
+          border: const pw.TableBorder(
+            top: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            left: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            right: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            bottom: pw.BorderSide.none,
+            verticalInside: pw.BorderSide(color: PdfColors.black, width: 0.5),
+          ),
+          columnWidths: const {
+            0: pw.FixedColumnWidth(272), // Cols 14-21: 8 * 34 = 272 Single-Engine
+            1: pw.FixedColumnWidth(272), // Cols 22-29: 8 * 34 = 272 Multi-Engine
+            2: pw.FixedColumnWidth(52),  // Cols 30-31: 26 + 26 = 52 Landings
+            3: pw.FlexColumnWidth(1),    // Col 32: Remarks & Endorsements
+          },
+          children: [
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                _cell('SINGLE-ENGINE AIRCRAFT (14-21)', bold: true, height: 16),
+                _cell('MULTI-ENGINE AIRCRAFT (22-29)', bold: true, height: 16),
+                _cell('LANDINGS', bold: true, height: 16),
+                _cell('REMARKS / ENDORSEMENTS', bold: true, height: 16),
+              ],
+            ),
+          ],
+        ),
+
+        // Super Header Row 2 (Tier 2 - Day / Night groups)
+        pw.Table(
+          border: const pw.TableBorder(
+            top: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            left: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            right: pw.BorderSide(color: PdfColors.black, width: 0.5),
+            bottom: pw.BorderSide.none,
+            verticalInside: pw.BorderSide(color: PdfColors.black, width: 0.5),
+          ),
+          columnWidths: const {
+            0: pw.FixedColumnWidth(136), // Cols 14-17: 4 * 34 = 136 Day SE
+            1: pw.FixedColumnWidth(136), // Cols 18-21: 4 * 34 = 136 Night SE
+            2: pw.FixedColumnWidth(136), // Cols 22-25: 4 * 34 = 136 Day ME
+            3: pw.FixedColumnWidth(136), // Cols 26-29: 4 * 34 = 136 Night ME
+            4: pw.FixedColumnWidth(26),  // Col 30: Day Ldg
+            5: pw.FixedColumnWidth(26),  // Col 31: Night Ldg
+            6: pw.FlexColumnWidth(1),    // Col 32: Certifications
+          },
+          children: [
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                _cell('DAY (14-17)', bold: true),
+                _cell('NIGHT (18-21)', bold: true),
+                _cell('DAY (22-25)', bold: true),
+                _cell('NIGHT (26-29)', bold: true),
+                _cell('Day', fontSize: 6),
+                _cell('Night', fontSize: 6),
+                _cell('Certifications & Signatures (32)', fontSize: 6),
+              ],
+            ),
+          ],
+        ),
+
         // 19-column Right Grid Table (Columns 14-32)
         pw.Expanded(
           child: pw.Table(
@@ -346,56 +428,6 @@ class SacaaPdfGenerator {
               18: pw.FlexColumnWidth(1),   // Col 32: Remarks & Endorsements
             },
             children: [
-              // Header Row 1
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                children: [
-                  _cell('SINGLE-ENGINE AIRCRAFT (14-21)', bold: true, colSpan: 8),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell('MULTI-ENGINE AIRCRAFT (22-29)', bold: true, colSpan: 8),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell('LANDINGS', bold: true, colSpan: 2),
-                  _cell(''),
-                  _cell('REMARKS / ENDORSEMENTS', bold: true),
-                ],
-              ),
-              // Header Row 2
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.grey200),
-                children: [
-                  _cell('DAY (14-17)', bold: true, colSpan: 4),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell('NIGHT (18-21)', bold: true, colSpan: 4),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell('DAY (22-25)', bold: true, colSpan: 4),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell('NIGHT (26-29)', bold: true, colSpan: 4),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell('Day', fontSize: 6),
-                  _cell('Night', fontSize: 6),
-                  _cell('Certifications & Signatures (32)', fontSize: 6),
-                ],
-              ),
               // Header Row 3 (Specific column names)
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.grey300),
@@ -421,6 +453,7 @@ class SacaaPdfGenerator {
                   _cell('Remarks / Endorsement Box', fontSize: 6),
                 ],
               ),
+
 
               // 14 Flight Rows
               for (int i = 0; i < rowCount; i++)

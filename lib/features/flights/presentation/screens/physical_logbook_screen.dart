@@ -95,11 +95,13 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
           const Padding(
             padding: EdgeInsets.fromLTRB(12, 8, 12, 8),
             child: HintBanner(
+
               hintKey: 'hint_physical_logbook_zoom',
               message: 'Scroll horizontally & vertically to navigate the 32-column ledger • Use top arrows to flip pages • Pinch or double-tap to zoom.',
               margin: EdgeInsets.zero,
             ),
           ),
+
           Expanded(
             child: Scrollbar(
               controller: _verticalController,
