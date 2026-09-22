@@ -5,6 +5,7 @@ import '../../../../core/theme/aviation_theme.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/hint_banner.dart';
 import '../../../aircraft/presentation/screens/aircraft_register_screen.dart';
+import '../../../backups/presentation/screens/backup_restore_screen.dart';
 import '../../../endorsements/presentation/screens/endorsement_vault_screen.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
@@ -332,6 +333,13 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                                 ),
                               );
                               break;
+                            case 'backup':
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const BackupRestoreScreen(),
+                                ),
+                              );
+                              break;
                             case 'theme':
                               ref
                                   .read(aviationThemeProvider.notifier)
@@ -390,6 +398,15 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             child: ListTile(
                               leading: Icon(Icons.receipt_long),
                               title: Text('Career Summary Slip'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'backup',
+                            child: ListTile(
+                              leading: Icon(Icons.backup_outlined),
+                              title: Text('Backup & Restore'),
                               dense: true,
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -478,6 +495,17 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                                 typeSummaries: typeSummaries,
                                 grandTotals: grandTotals,
                               ),
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.backup_outlined),
+                        tooltip: 'Backup & Restore',
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const BackupRestoreScreen(),
                             ),
                           );
                         },
