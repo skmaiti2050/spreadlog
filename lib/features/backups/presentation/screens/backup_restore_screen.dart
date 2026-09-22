@@ -504,10 +504,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       await backupService.restoreBackup(
         backupBytes: fileBytes,
         passphrase: passphrase,
-        onDatabaseReplaced: () {
-          ref.invalidate(databaseProvider);
-        },
+        preExtractedBackup: inspection.extractedBackup,
       );
+
+      ref.invalidate(databaseProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

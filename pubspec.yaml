@@ -52,6 +52,8 @@ dependencies:
   shared_preferences: ^2.5.5
   file_picker: ^13.1.0
   mailer: ^7.2.0
+  typed_data: ^1.4.0
+  sqlite3: ^3.5.2
 
 dev_dependencies:
   flutter_test:
