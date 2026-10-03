@@ -15,11 +15,16 @@ class GoogleAuthService {
     gmailSendSelfScope,
   ];
 
+  /// Client ID configured for web deployment in Google Cloud Console.
+  static const String webClientId =
+      '200978100975-hp3kmikut8rpn9prvv973u9p66s2238g.apps.googleusercontent.com';
+
   final GoogleSignIn _googleSignIn;
 
   GoogleAuthService({GoogleSignIn? googleSignIn})
       : _googleSignIn = googleSignIn ??
             GoogleSignIn(
+              clientId: kIsWeb ? webClientId : null,
               scopes: defaultScopes,
             );
 
