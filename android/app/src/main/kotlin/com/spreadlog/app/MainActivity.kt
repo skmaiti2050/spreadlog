@@ -14,15 +14,20 @@ class MainActivity : FlutterActivity() {
     private var pendingBackupPath: String? = null
     private var methodChannel: MethodChannel? = null
 
+    override fun getInitialRoute(): String {
+        return "/"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
         handleIntent(intent)
+        // Prevent Flutter engine from pushing raw content:// URIs to the Navigator
+        val sanitizedIntent = Intent(intent).apply { data = null }
+        super.onNewIntent(sanitizedIntent)
     }
 
     private fun handleIntent(intent: Intent?) {

@@ -14,7 +14,18 @@ class AppRouter {
   static const String backupsRoute = '/backups';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    switch (settings.name) {
+    final routeName = settings.name ?? '';
+
+    // Catch any OS content:// or file:// URIs passed directly as deep links
+    if (routeName.startsWith('content://') || routeName.startsWith('file://')) {
+      final filePath = settings.arguments as String?;
+      return MaterialPageRoute<void>(
+        builder: (_) => BackupRestoreScreen(initialFilePath: filePath),
+        settings: settings,
+      );
+    }
+
+    switch (routeName) {
       case '/':
         return MaterialPageRoute<void>(
           builder: (_) => const SplashScreen(),
