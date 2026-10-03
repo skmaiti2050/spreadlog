@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../features/endorsements/presentation/screens/endorsement_vault_screen.dart';
-import '../features/flights/presentation/screens/flight_list_screen.dart';
+import '../features/shell/presentation/screens/app_navigation_shell.dart';
 import '../features/splash/presentation/screens/splash_screen.dart';
 
 class AppRouter {
@@ -20,7 +20,7 @@ class AppRouter {
         );
       case '/flights':
         return MaterialPageRoute<void>(
-          builder: (_) => const FlightListScreen(),
+          builder: (_) => const AppNavigationShell(),
           settings: settings,
         );
       case '/endorsements':

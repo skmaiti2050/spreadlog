@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../domain/endorsement_category.dart';
 import '../../domain/endorsement_document.dart';
 import '../providers/endorsements_providers.dart';
@@ -55,6 +56,7 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
 
 
     return Scaffold(
+      drawer: const AviationAppDrawer(),
       appBar: AppBar(
         title: const Text('Endorsement Vault'),
         actions: [
@@ -210,6 +212,7 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'endorsement_vault_fab',
         onPressed: () => _openScanDialog(),
         icon: const Icon(Icons.document_scanner),
         label: const Text('Scan Endorsement'),

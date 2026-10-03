@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../flights/presentation/providers/flights_providers.dart';
-import '../../../flights/presentation/screens/flight_list_screen.dart';
+import '../../../shell/presentation/screens/app_navigation_shell.dart';
 
 /// Professional aviation splash and pre-warm screen.
 class SplashScreen extends ConsumerStatefulWidget {
@@ -53,7 +53,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
-        pageBuilder: (context, anim, secondaryAnim) => const FlightListScreen(),
+        pageBuilder: (context, anim, secondaryAnim) => const AppNavigationShell(),
         transitionsBuilder: (context, anim, secondaryAnim, child) {
           return FadeTransition(opacity: anim, child: child);
         },

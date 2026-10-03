@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/aviation_theme.dart';
 import '../../../../core/utils/time_utils.dart';
+import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../../../core/widgets/hint_banner.dart';
-import '../../../aircraft/presentation/screens/aircraft_register_screen.dart';
 import '../../../backups/presentation/screens/backup_restore_screen.dart';
-import '../../../endorsements/presentation/screens/endorsement_vault_screen.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../../reports/presentation/pdf_preview_screen.dart';
@@ -15,7 +14,6 @@ import '../../domain/flight.dart';
 import '../providers/flights_providers.dart';
 import '../widgets/flight_details_dialog.dart';
 import '../widgets/log_flight_dialog.dart';
-import 'physical_logbook_screen.dart';
 
 class FlightListScreen extends ConsumerStatefulWidget {
   const FlightListScreen({super.key});
@@ -204,11 +202,11 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
     final profile = ref.watch(pilotProfileProvider);
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
-    final isNarrow = screenWidth < 460;
     final isUltraNarrow = screenWidth < 380;
     final activeTheme = ref.watch(aviationThemeProvider);
 
     return Scaffold(
+      drawer: const AviationAppDrawer(),
       appBar: _isSelectionMode
           ? AppBar(
               leading: IconButton(
@@ -270,259 +268,105 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                   ),
                 ],
               ),
-              actions: isNarrow
-                  ? [
-                      IconButton(
-                        icon: const Icon(Icons.account_circle_outlined),
-                        tooltip: 'Pilot Profile',
-                        onPressed: () => EditProfileDialog.show(context),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.checklist),
+                  tooltip: 'Select Multiple',
+                  onPressed: () => setState(() => _isSelectionMode = true),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.picture_as_pdf),
+                  tooltip: 'Export Logbook PDF',
+                  onPressed: () {
+                    final pages = ref.read(ledgerPagesProvider);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => PdfPreviewScreen(
+                          pages: pages,
+                          pilotName: profile.pilotName,
+                          licenceNumber: profile.licenceNumber,
+                        ),
                       ),
-                      PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_vert),
-                        tooltip: 'Actions & Views',
-                        onSelected: (action) {
-                          switch (action) {
-                            case 'checklist':
-                              setState(() => _isSelectionMode = true);
-                              break;
-                            case 'logbook':
-                              final pages = ref.read(ledgerPagesProvider);
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      PhysicalLogbookScreen(pages: pages),
-                                ),
-                              );
-                              break;
-                            case 'pdf':
-                              final pages = ref.read(ledgerPagesProvider);
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => PdfPreviewScreen(
-                                    pages: pages,
-                                    pilotName: profile.pilotName,
-                                    licenceNumber: profile.licenceNumber,
-                                  ),
-                                ),
-                              );
-                              break;
-                            case 'slip':
-                              final typeSummaries =
-                                  ref.read(aircraftTypeSummariesProvider);
-                              final grandTotals = ref.read(grandTotalsProvider);
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => SummarySlipPreviewScreen(
-                                    typeSummaries: typeSummaries,
-                                    grandTotals: grandTotals,
-                                  ),
-                                ),
-                              );
-                              break;
-                            case 'aircraft':
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const AircraftRegisterScreen(),
-                                ),
-                              );
-                              break;
-                            case 'vault':
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const EndorsementVaultScreen(),
-                                ),
-                              );
-                              break;
-                            case 'backup':
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => const BackupRestoreScreen(),
-                                ),
-                              );
-                              break;
-                            case 'theme':
-                              ref
-                                  .read(aviationThemeProvider.notifier)
-                                  .cycleNext();
-                              break;
-                          }
-                        },
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'checklist',
-                            child: ListTile(
-                              leading: Icon(Icons.checklist),
-                              title: Text('Select Multiple'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  tooltip: 'More Cockpit Actions',
+                  onSelected: (action) {
+                    switch (action) {
+                      case 'profile':
+                        EditProfileDialog.show(context);
+                        break;
+                      case 'slip':
+                        final typeSummaries =
+                            ref.read(aircraftTypeSummariesProvider);
+                        final grandTotals = ref.read(grandTotalsProvider);
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => SummarySlipPreviewScreen(
+                              typeSummaries: typeSummaries,
+                              grandTotals: grandTotals,
                             ),
                           ),
-                          const PopupMenuItem(
-                            value: 'aircraft',
-                            child: ListTile(
-                              leading: Icon(Icons.airplanemode_active),
-                              title: Text('Aircraft Register'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
+                        );
+                        break;
+                      case 'backup':
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const BackupRestoreScreen(),
                           ),
-                          const PopupMenuItem(
-                            value: 'vault',
-                            child: ListTile(
-                              leading: Icon(Icons.folder_special_outlined),
-                              title: Text('Endorsement Vault'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'logbook',
-                            child: ListTile(
-                              leading: Icon(Icons.menu_book),
-                              title: Text('Physical Logbook'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'pdf',
-                            child: ListTile(
-                              leading: Icon(Icons.picture_as_pdf),
-                              title: Text('Export Logbook PDF'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'slip',
-                            child: ListTile(
-                              leading: Icon(Icons.receipt_long),
-                              title: Text('Career Summary Slip'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'backup',
-                            child: ListTile(
-                              leading: Icon(Icons.backup_outlined),
-                              title: Text('Backup & Restore'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                          const PopupMenuDivider(),
-                          PopupMenuItem(
-                            value: 'theme',
-                            child: ListTile(
-                              leading: Icon(activeTheme.icon),
-                              title: Text(
-                                  'Theme: ${activeTheme.displayName.split(" ").first}'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                          ),
-                        ],
+                        );
+                        break;
+                      case 'theme':
+                        ref
+                            .read(aviationThemeProvider.notifier)
+                            .cycleNext();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'profile',
+                      child: ListTile(
+                        leading: Icon(Icons.account_circle_outlined),
+                        title: Text('Pilot Profile'),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                    ]
-                  : [
-                      IconButton(
-                        icon: const Icon(Icons.checklist),
-                        tooltip: 'Select Multiple',
-                        onPressed: () => setState(() => _isSelectionMode = true),
+                    ),
+                    const PopupMenuItem(
+                      value: 'slip',
+                      child: ListTile(
+                        leading: Icon(Icons.receipt_long),
+                        title: Text('Career Summary Slip'),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.airplanemode_active),
-                        tooltip: 'Aircraft Register',
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const AircraftRegisterScreen(),
-                            ),
-                          );
-                        },
+                    ),
+                    const PopupMenuItem(
+                      value: 'backup',
+                      child: ListTile(
+                        leading: Icon(Icons.backup_outlined),
+                        title: Text('Backup & Restore'),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.folder_special_outlined),
-                        tooltip: 'Endorsement Vault',
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const EndorsementVaultScreen(),
-                            ),
-                          );
-                        },
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem(
+                      value: 'theme',
+                      child: ListTile(
+                        leading: Icon(activeTheme.icon),
+                        title: Text(
+                            'Theme: ${activeTheme.displayName.split(" ").first}'),
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.menu_book),
-                        tooltip: 'Physical Logbook View',
-                        onPressed: () {
-                          final pages = ref.read(ledgerPagesProvider);
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) =>
-                                  PhysicalLogbookScreen(pages: pages),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.picture_as_pdf),
-                        tooltip: 'Export Logbook PDF',
-                        onPressed: () {
-                          final pages = ref.read(ledgerPagesProvider);
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => PdfPreviewScreen(
-                                pages: pages,
-                                pilotName: profile.pilotName,
-                                licenceNumber: profile.licenceNumber,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.receipt_long),
-                        tooltip: 'Career Summary Slip',
-                        onPressed: () {
-                          final typeSummaries =
-                              ref.read(aircraftTypeSummariesProvider);
-                          final grandTotals = ref.read(grandTotalsProvider);
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => SummarySlipPreviewScreen(
-                                typeSummaries: typeSummaries,
-                                grandTotals: grandTotals,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.backup_outlined),
-                        tooltip: 'Backup & Restore',
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const BackupRestoreScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(activeTheme.icon),
-                        tooltip:
-                            'Switch Theme (${activeTheme.displayName.split(" ").first})',
-                        onPressed: () =>
-                            ref.read(aviationThemeProvider.notifier).cycleNext(),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.account_circle_outlined),
-                        tooltip: 'Pilot Profile',
-                        onPressed: () => EditProfileDialog.show(context),
-                      ),
-                    ],
+                    ),
+                  ],
+                ),
+              ],
             ),
       body: Column(
         children: [
@@ -665,9 +509,10 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
               data: (flights) {
                 if (flights.isEmpty) {
                   return Center(
-                    child: Padding(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.all(24.0),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
@@ -755,6 +600,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
       floatingActionButton: _isSelectionMode
           ? null
           : FloatingActionButton.extended(
+              heroTag: 'flight_list_fab',
               onPressed: _openLogFlightDialog,
               icon: const Icon(Icons.add),
               label: const Text('Log Flight'),

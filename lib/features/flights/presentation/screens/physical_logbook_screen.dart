@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/hint_banner.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
@@ -15,11 +16,11 @@ import '../../domain/ledger_totals.dart';
 /// Clean, high-density physical logbook spread screen.
 /// Renders the exact 14 flight rows, Brought Forward, Page Totals, and Carried Forward.
 class PhysicalLogbookScreen extends ConsumerStatefulWidget {
-  final List<LedgerPage> pages;
+  final List<LedgerPage>? pages;
 
   const PhysicalLogbookScreen({
     super.key,
-    required this.pages,
+    this.pages,
   });
 
   @override
@@ -40,19 +41,23 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.pages.isEmpty) {
+    final List<LedgerPage> effectivePages =
+        widget.pages ?? ref.watch(ledgerPagesProvider);
+    if (effectivePages.isEmpty) {
       return Scaffold(
+        drawer: const AviationAppDrawer(),
         appBar: AppBar(title: const Text('Physical Logbook')),
         body: const Center(child: Text('No flights logged yet.')),
       );
     }
 
-    final safeIndex = _currentPageIndex.clamp(0, widget.pages.length - 1);
-    final page = widget.pages[safeIndex];
+    final safeIndex = _currentPageIndex.clamp(0, effectivePages.length - 1);
+    final page = effectivePages[safeIndex];
 
     return Scaffold(
+      drawer: const AviationAppDrawer(),
       appBar: AppBar(
-        title: Text('Physical Logbook — Page ${page.pageNumber} of ${widget.pages.length}'),
+        title: Text('Physical Logbook — Page ${page.pageNumber} of ${effectivePages.length}'),
         actions: [
           IconButton(
             tooltip: 'Previous Page',
@@ -62,14 +67,14 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
             child: Text(
-              '${page.pageNumber} / ${widget.pages.length}',
+              '${page.pageNumber} / ${effectivePages.length}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           IconButton(
             tooltip: 'Next Page',
             icon: const Icon(Icons.chevron_right),
-            onPressed: safeIndex < widget.pages.length - 1 ? () => setState(() => _currentPageIndex++) : null,
+            onPressed: safeIndex < effectivePages.length - 1 ? () => setState(() => _currentPageIndex++) : null,
           ),
           IconButton(
             icon: const Icon(Icons.receipt_long),

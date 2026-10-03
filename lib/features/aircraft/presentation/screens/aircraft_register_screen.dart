@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
+import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../../endorsements/presentation/providers/endorsements_providers.dart';
 import '../../../endorsements/presentation/widgets/endorsement_details_dialog.dart';
 import '../../domain/aircraft_model.dart';
@@ -125,6 +126,7 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
     }).toList();
 
     return Scaffold(
+      drawer: const AviationAppDrawer(),
       appBar: AppBar(
         title: const Text('Aircraft Model Register'),
         actions: [
@@ -228,6 +230,7 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'aircraft_register_fab',
         onPressed: () => _openAddEditDialog(),
         icon: const Icon(Icons.add),
         label: const Text('Add Aircraft'),
