@@ -315,13 +315,24 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: const Icon(Icons.share),
-                label: const Text('Export / Share .spbackup File'),
-                onPressed: () => _handleExport(),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.download),
+                    label: const Text('Save / Download'),
+                    onPressed: () => _handleSaveToDevice(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.share),
+                    label: const Text('Share File'),
+                    onPressed: () => _handleExport(),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1009,6 +1020,76 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gmail dispatch failed: $e'),
+            backgroundColor: _accentError,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleSaveToDevice() async {
+    final repo = ref.read(backupSettingsRepositoryProvider);
+    String? passphrase = await repo.getMasterPassphrase();
+
+    if (!mounted) return;
+
+    if (passphrase == null || passphrase.isEmpty) {
+      passphrase = await _promptEnterPassphraseDialog(
+        title: 'Encryption Passphrase Required',
+        message: 'Enter a master passphrase to encrypt this backup archive.',
+      );
+    }
+
+    if (passphrase == null || passphrase.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _loadingMessage = 'Creating encrypted backup archive...';
+    });
+
+    try {
+      final backupService = ref.read(backupServiceProvider);
+      final encryptedBytes = await backupService.createEncryptedBackup(passphrase: passphrase);
+
+      final nowStr = DateTime.now().toIso8601String().substring(0, 10);
+      final fileName = 'spreadlog_backup_$nowStr.spbackup';
+
+      if (!mounted) return;
+
+      setState(() {
+        _loadingMessage = 'Selecting save location...';
+      });
+
+      final resultUri = await FilePicker.saveFile(
+        dialogTitle: 'Save Encrypted Backup',
+        fileName: fileName,
+        bytes: encryptedBytes,
+        type: FileType.custom,
+        allowedExtensions: const ['spbackup'],
+      );
+
+      if (resultUri != null) {
+        await repo.recordBackupResult(timestamp: DateTime.now().toUtc(), status: 'Saved to Device');
+        ref.invalidate(backupSettingsProvider);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Backup saved successfully: $fileName'),
+              backgroundColor: _accentGreen,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Save failed: $e'),
             backgroundColor: _accentError,
           ),
         );

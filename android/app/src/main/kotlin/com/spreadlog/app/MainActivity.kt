@@ -26,8 +26,16 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        if (intent == null || intent.action != Intent.ACTION_VIEW) return
-        val uri: Uri = intent.data ?: return
+        if (intent == null) return
+        val action = intent.action
+        if (action != Intent.ACTION_VIEW && action != Intent.ACTION_SEND) return
+
+        @Suppress("DEPRECATION")
+        val uri: Uri = if (action == Intent.ACTION_SEND) {
+            intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM) ?: intent.data
+        } else {
+            intent.data
+        } ?: return
 
         try {
             var fileName = "incoming_backup.spbackup"
@@ -43,6 +51,12 @@ class MainActivity : FlutterActivity() {
                 }
             } else if (!uri.lastPathSegment.isNullOrBlank()) {
                 fileName = File(uri.lastPathSegment!!).name
+            }
+
+            // Only process Spreadlog backup archives
+            if (!fileName.endsWith(".spbackup", ignoreCase = true) &&
+                !fileName.endsWith(".spreadlog", ignoreCase = true)) {
+                return
             }
 
             contentResolver.openInputStream(uri)?.use { inputStream ->
