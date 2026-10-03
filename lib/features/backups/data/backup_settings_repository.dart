@@ -14,6 +14,9 @@ class BackupSettings {
   final bool smtpUseTls;
   final DateTime? lastBackupDate;
   final String? lastBackupStatus;
+  final bool autoSyncGoogleDrive;
+  final String preferredBackupMethod;
+  final String? googleAccountEmail;
 
   const BackupSettings({
     required this.hasMasterPassphrase,
@@ -27,6 +30,9 @@ class BackupSettings {
     this.smtpUseTls = true,
     this.lastBackupDate,
     this.lastBackupStatus,
+    this.autoSyncGoogleDrive = false,
+    this.preferredBackupMethod = 'local',
+    this.googleAccountEmail,
   });
 
   BackupSettings copyWith({
@@ -41,6 +47,9 @@ class BackupSettings {
     bool? smtpUseTls,
     DateTime? lastBackupDate,
     String? lastBackupStatus,
+    bool? autoSyncGoogleDrive,
+    String? preferredBackupMethod,
+    String? googleAccountEmail,
   }) {
     return BackupSettings(
       hasMasterPassphrase: hasMasterPassphrase ?? this.hasMasterPassphrase,
@@ -54,6 +63,9 @@ class BackupSettings {
       smtpUseTls: smtpUseTls ?? this.smtpUseTls,
       lastBackupDate: lastBackupDate ?? this.lastBackupDate,
       lastBackupStatus: lastBackupStatus ?? this.lastBackupStatus,
+      autoSyncGoogleDrive: autoSyncGoogleDrive ?? this.autoSyncGoogleDrive,
+      preferredBackupMethod: preferredBackupMethod ?? this.preferredBackupMethod,
+      googleAccountEmail: googleAccountEmail ?? this.googleAccountEmail,
     );
   }
 }
@@ -73,6 +85,9 @@ class BackupSettingsRepository {
   static const String _prefSmtpUseTls = 'sp_smtp_use_tls';
   static const String _prefLastBackupDate = 'sp_last_backup_date';
   static const String _prefLastBackupStatus = 'sp_last_backup_status';
+  static const String _prefAutoSyncGoogleDrive = 'sp_auto_sync_google_drive';
+  static const String _prefPreferredBackupMethod = 'sp_preferred_backup_method';
+  static const String _prefGoogleAccountEmail = 'sp_google_account_email';
 
   final FlutterSecureStorage _secureStorage;
   final SharedPreferencesAsync _prefs;
@@ -96,6 +111,9 @@ class BackupSettingsRepository {
     final useTls = await _prefs.getBool(_prefSmtpUseTls) ?? true;
     final lastDateStr = await _prefs.getString(_prefLastBackupDate);
     final lastStatus = await _prefs.getString(_prefLastBackupStatus);
+    final autoSyncDrive = await _prefs.getBool(_prefAutoSyncGoogleDrive) ?? false;
+    final preferredMethod = await _prefs.getString(_prefPreferredBackupMethod) ?? 'local';
+    final googleEmail = await _prefs.getString(_prefGoogleAccountEmail);
 
     final lastDate = lastDateStr != null ? DateTime.tryParse(lastDateStr) : null;
 
@@ -111,6 +129,9 @@ class BackupSettingsRepository {
       smtpUseTls: useTls,
       lastBackupDate: lastDate,
       lastBackupStatus: lastStatus,
+      autoSyncGoogleDrive: autoSyncDrive,
+      preferredBackupMethod: preferredMethod,
+      googleAccountEmail: googleEmail,
     );
   }
 
@@ -165,6 +186,13 @@ class BackupSettingsRepository {
       await _prefs.remove(_prefSmtpUsername);
     }
     await _prefs.setBool(_prefSmtpUseTls, settings.smtpUseTls);
+    await _prefs.setBool(_prefAutoSyncGoogleDrive, settings.autoSyncGoogleDrive);
+    await _prefs.setString(_prefPreferredBackupMethod, settings.preferredBackupMethod);
+    if (settings.googleAccountEmail != null) {
+      await _prefs.setString(_prefGoogleAccountEmail, settings.googleAccountEmail!);
+    } else {
+      await _prefs.remove(_prefGoogleAccountEmail);
+    }
   }
 
   /// Records the outcome of a backup run.
