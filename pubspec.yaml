@@ -47,7 +47,6 @@ dependencies:
   archive: ^4.0.9
   cryptography: ^2.9.0
   workmanager: ^0.10.10
-  in_app_purchase: ^3.3.0
   path: ^1.9.1
   shared_preferences: ^2.5.5
   file_picker: ^13.1.0

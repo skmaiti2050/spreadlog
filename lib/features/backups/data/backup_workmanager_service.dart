@@ -10,7 +10,7 @@ import 'transports/google_drive_backup_transport.dart';
 import 'transports/smtp_backup_transport.dart';
 
 /// Unique task identifier for periodic automated backups.
-const String periodicBackupTaskKey = 'com.example.aviation_logbook.periodic_backup';
+const String periodicBackupTaskKey = 'com.spreadlog.app.periodic_backup';
 
 /// Callback dispatcher invoked by Android/iOS background Workmanager.
 @pragma('vm:entry-point')
