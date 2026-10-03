@@ -7,7 +7,6 @@
   },
   "assets": {
     "directory": "build/web",
-    "not_found_handling": "single-page-application",
-    "html_handling": "none"
+    "not_found_handling": "single-page-application"
   }
 }
