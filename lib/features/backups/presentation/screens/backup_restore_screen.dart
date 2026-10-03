@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../flights/presentation/providers/flights_providers.dart';
+import '../../data/backup_intent_service.dart';
 import '../../data/backup_service.dart';
 import '../../data/backup_settings_repository.dart';
 import '../../data/backup_workmanager_service.dart';
@@ -16,7 +17,15 @@ import '../providers/google_auth_providers.dart';
 import '../widgets/google_sign_in_button.dart';
 
 class BackupRestoreScreen extends ConsumerStatefulWidget {
-  const BackupRestoreScreen({super.key});
+  final String? initialFilePath;
+
+  const BackupRestoreScreen({
+    super.key,
+    this.initialFilePath,
+  });
+
+  /// Tracks if the screen is currently mounted and active.
+  static bool isScreenActive = false;
 
   @override
   ConsumerState<BackupRestoreScreen> createState() => _BackupRestoreScreenState();
@@ -35,14 +44,34 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
   List<GoogleDriveBackupItem>? _driveBackups;
   bool _isLoadingDriveBackups = false;
+  StreamSubscription<String>? _backupIntentSub;
 
   @override
   void initState() {
     super.initState();
+    BackupRestoreScreen.isScreenActive = true;
+
+    // Listen for incoming backup files while this screen is active
+    _backupIntentSub = BackupIntentService.onBackupFileReceived.listen((path) {
+      if (mounted) {
+        _restoreFromPath(path);
+      }
+    });
+
     // Silently attempt Google sign-in on screen open
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _trySilentGoogleSignIn();
+      if (widget.initialFilePath != null) {
+        _restoreFromPath(widget.initialFilePath!);
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    BackupRestoreScreen.isScreenActive = false;
+    _backupIntentSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _trySilentGoogleSignIn() async {
@@ -1067,6 +1096,24 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final fileBytes = await pickedFile.readAsBytes();
 
     await _performRestore(fileBytes, originName: pickedFile.name);
+  }
+
+  Future<void> _restoreFromPath(String path) async {
+    final bytes = await BackupIntentService.readFileBytes(path);
+    if (bytes == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not read backup file at $path'),
+            backgroundColor: _accentError,
+          ),
+        );
+      }
+      return;
+    }
+
+    final fileName = BackupIntentService.getFileName(path);
+    await _performRestore(bytes, originName: fileName);
   }
 
   Future<void> _performRestore(Uint8List fileBytes, {String originName = 'archive'}) async {

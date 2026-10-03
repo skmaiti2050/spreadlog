@@ -4,7 +4,19 @@ import 'package:aviation_logbook/features/flights/presentation/providers/flights
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:flutter/services.dart';
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('com.spreadlog.app/backup_intent'),
+      (call) async => null,
+    );
+  });
+
   testWidgets('App smoke test shows splash and navigates to flight deck', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -17,10 +29,11 @@ void main() {
 
     // Initial splash frame
     await tester.pump();
-    expect(find.text('Aviation Logbook'), findsOneWidget);
+    expect(find.text('Spreadlog'), findsOneWidget);
 
-    // Advance past splash transition (1400ms + transition)
-    await tester.pump(const Duration(milliseconds: 1600));
+    // Advance past splash timer (1400ms)
+    await tester.pump(const Duration(milliseconds: 1400));
+    await tester.pump(const Duration(milliseconds: 50));
     await tester.pumpAndSettle();
 
     expect(find.text('TOTAL FLIGHT TIME'), findsOneWidget);

@@ -2,8 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/router.dart';
 import '../../../flights/presentation/providers/flights_providers.dart';
 import '../../../shell/presentation/screens/app_navigation_shell.dart';
+import '../../../backups/data/backup_intent_service.dart';
 
 /// Professional aviation splash and pre-warm screen.
 class SplashScreen extends ConsumerStatefulWidget {
@@ -49,9 +51,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _navTimer = Timer(const Duration(milliseconds: 1400), _navigateToHome);
   }
 
-  void _navigateToHome() {
+  Future<void> _navigateToHome() async {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
+
+    // Check if cold-started with a backup archive
+    final pendingPath = await BackupIntentService.getPendingBackupPath();
+    if (!mounted) return;
+
+    await Navigator.of(context).pushReplacement(
       PageRouteBuilder<void>(
         pageBuilder: (context, anim, secondaryAnim) => const AppNavigationShell(),
         transitionsBuilder: (context, anim, secondaryAnim, child) {
@@ -60,6 +67,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
         transitionDuration: const Duration(milliseconds: 350),
       ),
     );
+
+    if (pendingPath != null && pendingPath.isNotEmpty && mounted) {
+      unawaited(
+        Navigator.of(context).pushNamed(
+          AppRouter.backupsRoute,
+          arguments: pendingPath,
+        ),
+      );
+    }
   }
 
   @override
