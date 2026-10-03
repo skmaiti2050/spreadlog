@@ -1089,7 +1089,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   }
 
   Future<void> _handlePickAndRestore() async {
-    final pickedFiles = await FilePicker.pickFiles(type: FileType.any);
+    final pickedFiles = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['spbackup', 'spreadlog'],
+    );
     if (pickedFiles.isEmpty) return;
 
     final pickedFile = pickedFiles.first;
