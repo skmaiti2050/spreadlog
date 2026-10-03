@@ -329,7 +329,8 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // ==========================================
   Widget _buildGoogleDriveSyncCard(BuildContext context, BackupSettings settings) {
     final authService = ref.watch(googleAuthServiceProvider);
-    final user = authService.currentUser;
+    final userAsync = ref.watch(googleUserStreamProvider);
+    final user = userAsync.value ?? authService.currentUser;
     final isSignedIn = user != null;
 
     return Column(
@@ -524,7 +525,8 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // ==========================================
   Widget _buildEmailDispatchCard(BuildContext context, BackupSettings settings) {
     final authService = ref.watch(googleAuthServiceProvider);
-    final user = authService.currentUser;
+    final userAsync = ref.watch(googleUserStreamProvider);
+    final user = userAsync.value ?? authService.currentUser;
     final isSignedIn = user != null;
 
     return Column(
@@ -648,25 +650,36 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // ==========================================
 
   Future<void> _handleGoogleSignIn() async {
+    final authService = ref.read(googleAuthServiceProvider);
     try {
-      final authService = ref.read(googleAuthServiceProvider);
       final account = await authService.signIn();
-      if (account != null && mounted) {
+      final resolvedUser = account ?? authService.currentUser;
+      if (resolvedUser != null && mounted) {
         final repo = ref.read(backupSettingsRepositoryProvider);
         final settings = await repo.loadSettings();
-        await repo.updateSettings(settings.copyWith(googleAccountEmail: account.email));
+        await repo.updateSettings(settings.copyWith(googleAccountEmail: resolvedUser.email));
         ref.invalidate(backupSettingsProvider);
         await _loadDriveBackups();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Connected to Google as ${account.email}'),
+              content: Text('Connected to Google as ${resolvedUser.email}'),
               backgroundColor: _accentGreen,
             ),
           );
         }
       }
     } catch (e) {
+      final resolvedUser = authService.currentUser;
+      if (resolvedUser != null && mounted) {
+        // User is actually signed in (e.g. through One Tap or parallel selection)
+        final repo = ref.read(backupSettingsRepositoryProvider);
+        final settings = await repo.loadSettings();
+        await repo.updateSettings(settings.copyWith(googleAccountEmail: resolvedUser.email));
+        ref.invalidate(backupSettingsProvider);
+        await _loadDriveBackups();
+        return;
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

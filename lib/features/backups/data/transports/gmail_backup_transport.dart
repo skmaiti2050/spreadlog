@@ -37,7 +37,7 @@ class GmailBackupTransport implements BackupTransport {
       final client = await _authService.getAuthenticatedClient();
       if (client == null) {
         throw const BackupTransportException(
-          'Google account is not signed in. Please sign in to Google first.',
+          'Google account is not connected or Gmail permissions were not granted. Please sign in and allow access.',
         );
       }
 

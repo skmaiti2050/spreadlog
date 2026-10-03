@@ -41,11 +41,37 @@ class GoogleAuthService {
   /// Interactive sign in flow.
   Future<GoogleSignInAccount?> signIn() async {
     try {
-      final account = await _googleSignIn.signIn();
+      var account = await _googleSignIn.signIn();
+      account ??= _googleSignIn.currentUser;
+      if (account != null && kIsWeb) {
+        await ensureScopes();
+      }
       return account;
     } catch (e) {
-      debugPrint('Google Sign-In failed: $e');
+      debugPrint('Google Sign-In note: $e');
+      // If popup_closed or dismissed, check if user was resolved (e.g. via One Tap)
+      final existingUser = _googleSignIn.currentUser;
+      if (existingUser != null) {
+        if (kIsWeb) {
+          try {
+            await ensureScopes();
+          } catch (_) {}
+        }
+        return existingUser;
+      }
       rethrow;
+    }
+  }
+
+  /// Ensures required OAuth scopes (Drive, Gmail) are granted on Web.
+  Future<bool> ensureScopes() async {
+    try {
+      final hasAccess = await _googleSignIn.canAccessScopes(defaultScopes);
+      if (hasAccess) return true;
+      return await _googleSignIn.requestScopes(defaultScopes);
+    } catch (e) {
+      debugPrint('Error ensuring scopes: $e');
+      return false;
     }
   }
 
@@ -72,6 +98,25 @@ class GoogleAuthService {
   /// Obtains an authenticated HTTP client for Google APIs (Drive, Gmail).
   Future<AuthClient?> getAuthenticatedClient() async {
     try {
+      var user = _googleSignIn.currentUser;
+      user ??= await signInSilently();
+      if (user == null) {
+        debugPrint('getAuthenticatedClient: No user logged in');
+        return null;
+      }
+
+      // On Web, Google Identity Services (GIS) requires requesting scopes to generate accessToken
+      if (kIsWeb) {
+        final hasAccess = await _googleSignIn.canAccessScopes(defaultScopes);
+        if (!hasAccess) {
+          final granted = await _googleSignIn.requestScopes(defaultScopes);
+          if (!granted) {
+            debugPrint('OAuth scopes not granted by user on web');
+            return null;
+          }
+        }
+      }
+
       return await _googleSignIn.authenticatedClient();
     } catch (e) {
       debugPrint('Failed to obtain authenticated client: $e');
