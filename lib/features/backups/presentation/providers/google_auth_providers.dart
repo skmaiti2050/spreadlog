@@ -25,5 +25,6 @@ final googleDriveTransportProvider = Provider<GoogleDriveBackupTransport>((ref) 
 /// Provider supplying the GmailBackupTransport.
 final gmailTransportProvider = Provider<GmailBackupTransport>((ref) {
   final authService = ref.watch(googleAuthServiceProvider);
-  return GmailBackupTransport(authService);
+  final driveTransport = ref.watch(googleDriveTransportProvider);
+  return GmailBackupTransport(authService, driveTransport);
 });

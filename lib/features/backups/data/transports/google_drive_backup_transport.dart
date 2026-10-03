@@ -71,11 +71,10 @@ class GoogleDriveBackupTransport implements BackupTransport {
     }
   }
 
-  @override
-  Future<void> dispatchBackup({
+  /// Uploads backup file to Google Drive and returns the created file ID.
+  Future<String> uploadBackupFile({
     required Uint8List encryptedBytes,
     required String suggestedFileName,
-    String? recipientEmail,
   }) async {
     try {
       final api = await _getDriveApi();
@@ -93,14 +92,27 @@ class GoogleDriveBackupTransport implements BackupTransport {
         encryptedBytes.length,
       );
 
-      await api.files.create(
+      final created = await api.files.create(
         fileMetadata,
         uploadMedia: media,
       );
+      return created.id ?? '';
     } catch (e) {
       if (e is BackupTransportException) rethrow;
       throw BackupTransportException('Failed to upload backup to Google Drive: $e', e);
     }
+  }
+
+  @override
+  Future<void> dispatchBackup({
+    required Uint8List encryptedBytes,
+    required String suggestedFileName,
+    String? recipientEmail,
+  }) async {
+    await uploadBackupFile(
+      encryptedBytes: encryptedBytes,
+      suggestedFileName: suggestedFileName,
+    );
   }
 
   /// Lists all `.spreadlog` encrypted backup archives stored in Google Drive.

@@ -72,5 +72,9 @@ void main() {
       expect(updated.preferredBackupMethod, equals('drive'));
       expect(updated.googleAccountEmail, equals('captain@spreadlog.com'));
     });
+
+    test('GmailBackupTransport defines 20 MB ceiling for direct attachments before Drive link', () {
+      expect(GmailBackupTransport.maxDirectAttachmentBytes, equals(20 * 1024 * 1024));
+    });
   });
 }
