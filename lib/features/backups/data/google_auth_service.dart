@@ -2,14 +2,17 @@ import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sig
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
-import 'package:googleapis/gmail/v1.dart' as gmail;
 import 'package:googleapis_auth/googleapis_auth.dart';
 
 /// Service responsible for managing Google OAuth authentication for Drive & Gmail APIs.
 class GoogleAuthService {
+  /// Restricted scope allowing sending emails solely to the authenticated user's own inbox.
+  static const String gmailSendSelfScope =
+      'https://www.googleapis.com/auth/gmail.send.self';
+
   static const List<String> defaultScopes = [
     drive.DriveApi.driveFileScope,
-    gmail.GmailApi.gmailSendScope,
+    gmailSendSelfScope,
   ];
 
   final GoogleSignIn _googleSignIn;
