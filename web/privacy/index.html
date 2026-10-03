@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - Spreadlog</title>
+  <meta name="description" content="Privacy Policy for Spreadlog Aviation Logbook.">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <style>
+    :root {
+      --bg: #0b111e;
+      --surface: #131c2e;
+      --border: #23334d;
+      --primary: #00e5ff;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #10b981;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.7;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+    .header h1 {
+      font-size: 30px;
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header h1 span {
+      color: var(--primary);
+    }
+    .header .meta {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+    h2 {
+      font-size: 21px;
+      color: #ffffff;
+      margin-top: 36px;
+      margin-bottom: 14px;
+      border-left: 3px solid var(--primary);
+      padding-left: 12px;
+    }
+    h3 {
+      font-size: 17px;
+      color: #e2e8f0;
+      margin-top: 20px;
+      margin-bottom: 10px;
+    }
+    p, li {
+      color: var(--text);
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    .highlight-box {
+      background: rgba(0, 229, 255, 0.08);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    .highlight-box strong {
+      color: var(--primary);
+    }
+    code {
+      background: #1e293b;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #38bdf8;
+      font-size: 13px;
+    }
+    a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .footer {
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+      padding-top: 24px;
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><span>Spreadlog</span> Privacy Policy</h1>
+      <div class="meta">Effective Date: October 3, 2026 | Last Updated: October 3, 2026</div>
+    </div>
+
+    <p>
+      This Privacy Policy describes how <strong>Spreadlog</strong> ("Spreadlog", "Application", "we", "us", or "our") collects, uses, stores, and protects your information when you use the Spreadlog mobile application (Android) and the web application hosted at <a href="https://spreadlog.incognitos.workers.dev">https://spreadlog.incognitos.workers.dev</a>.
+    </p>
+
+    <h2>1. Overview and Local-First Architecture</h2>
+    <p>
+      Spreadlog is designed from the ground up as a <strong>privacy-first, local-first electronic aviation logbook</strong> for pilots. All your statutory flight records, pilot profile attributes, aircraft models, endorsements, and flight hours are stored locally on your device in a secure SQLite database.
+    </p>
+    <ul>
+      <li>We <strong>do not</strong> operate tracking servers, marketing databases, or advertising platforms.</li>
+      <li>We <strong>do not</strong> sell, rent, monetize, or broker your personal or flight data.</li>
+      <li>We <strong>do not</strong> embed third-party analytics trackers, social media pixels, or behavioral tracking libraries.</li>
+    </ul>
+
+    <h2>2. Information We Collect and Process</h2>
+
+    <h3>A. Flight Logbook Information (Stored Locally)</h3>
+    <p>
+      When you use Spreadlog, you enter flight log records required for aviation regulatory compliance (e.g., SACAA, FAA, EASA, DGCA). This data includes:
+    </p>
+    <ul>
+      <li>Flight dates, departure and arrival aerodromes, and intermediate waypoints.</li>
+      <li>Aircraft registration markings, type ratings, engine configurations, and categories.</li>
+      <li>Flight duration times categorized by flight condition (e.g., Single-Engine, Multi-Engine, Pilot-in-Command, Dual Received, Instrument, Night, Cross-Country).</li>
+      <li>Instructor endorsements, license numbers, signatures, and scanned endorsement certificates.</li>
+    </ul>
+    <p>
+      This information resides exclusively in your device's local application storage and is never uploaded to any Spreadlog-operated backend servers.
+    </p>
+
+    <h3>B. Google Account Information (Optional Cloud Features)</h3>
+    <p>
+      If you choose to enable automated cloud backups or email dispatch using Google Sign-In, Spreadlog requests minimal user information through official Google Identity Services:
+    </p>
+    <ul>
+      <li><strong>Email Address and Basic Profile:</strong> To display your connected Google account in the backup settings and verify recipient identity.</li>
+      <li><strong>OAuth Access Tokens:</strong> Temporary, short-lived cryptographic tokens issued directly by Google to authorize backup uploads to your Google Drive or self-dispatches via Gmail.</li>
+    </ul>
+
+    <h2>3. Google API Scopes and Limited Use Disclosure</h2>
+    <p>
+      Spreadlog requests only the specific, least-privileged OAuth scopes necessary to deliver user-requested backup functionality:
+    </p>
+    <ul>
+      <li>
+        <strong>Google Drive API (<code>https://www.googleapis.com/auth/drive.file</code>):</strong><br>
+        This scope allows Spreadlog to view, create, upload, and update <em>only</em> files and folders that the Spreadlog application creates (specifically, the <code>Spreadlog Aviation Backups</code> directory and encrypted <code>.spbackup</code> archives). Spreadlog <strong>cannot</strong> read, search, modify, or delete any other documents, sheets, or photos stored in your Google Drive.
+      </li>
+      <li>
+        <strong>Gmail API (<code>https://www.googleapis.com/auth/gmail.send.self</code>):</strong><br>
+        This restricted scope allows Spreadlog to send automated backup archives <em>exclusively</em> to your own authenticated Google email inbox. Spreadlog <strong>cannot</strong> read your incoming or existing emails, browse your drafts, delete messages, or send emails to any external third-party recipients.
+      </li>
+    </ul>
+
+    <div class="highlight-box">
+      <strong>Google API Services User Data Policy Compliance:</strong><br>
+      Spreadlog's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.
+    </div>
+
+    <h2>4. Client-Side Cryptography & Security Measures</h2>
+    <p>
+      Security is central to Spreadlog. All backup archives uploaded to Google Drive or dispatched via Gmail are protected with military-grade <strong>AES-256-GCM</strong> authenticated encryption before transmission:
+    </p>
+    <ul>
+      <li>Encryption keys are derived locally on your device from a private master passphrase using PBKDF2/Argon2.</li>
+      <li>Passphrases are never transmitted over the network or stored in plaintext.</li>
+      <li>Google servers only store and transmit encrypted ciphertext. Even in cloud storage, your flight logbook records remain completely confidential.</li>
+    </ul>
+
+    <h2>5. How We Share Your Information</h2>
+    <p>
+      <strong>We do not share your information with any third parties.</strong> Spreadlog does not have backend application servers, advertising partners, or affiliate networks. Data transmission occurs strictly between your device and Google APIs (for cloud backups) at your explicit direction.
+    </p>
+
+    <h2>6. User Controls, Data Retention & Deletion</h2>
+    <ul>
+      <li><strong>Local Data Deletion:</strong> You can purge all flight records, endorsements, and settings at any time directly through the app's settings or by uninstalling the application.</li>
+      <li><strong>Cloud Backup Deletion:</strong> You have full control over your Google Drive. You can delete any individual <code>.spbackup</code> file or the entire <code>Spreadlog Aviation Backups</code> folder directly within your Google Drive at any time.</li>
+      <li><strong>Revoking Access:</strong> You can disconnect your Google account from Spreadlog at any time via the in-app backup settings, or revoke Spreadlog's access globally through your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account Security Permissions</a>.</li>
+    </ul>
+
+    <h2>7. Children's Privacy</h2>
+    <p>
+      Spreadlog is designed for licensed aviators and student pilots undergoing flight training. Spreadlog does not knowingly collect or solicit personal information from children under the age of 13 (or under 16 in the European Union).
+    </p>
+
+    <h2>8. Changes to this Privacy Policy</h2>
+    <p>
+      We may update this Privacy Policy from time to time to reflect improvements or regulatory changes. Any modifications will be posted directly to this URL with an updated "Last Updated" timestamp. Continued use of Spreadlog after any changes signifies your agreement to the updated policy.
+    </p>
+
+    <h2>9. Contact Information</h2>
+    <p>
+      If you have questions, feedback, or concerns regarding this Privacy Policy or your data privacy, please contact the developer:
+    </p>
+    <p style="margin-top: 10px;">
+      <strong>Developer Support:</strong> <a href="mailto:skmaiti2050@gmail.com">skmaiti2050@gmail.com</a><br>
+      <strong>Application URL:</strong> <a href="https://spreadlog.incognitos.workers.dev">https://spreadlog.incognitos.workers.dev</a>
+    </p>
+
+    <div class="footer">
+      <div>&copy; 2026 Spreadlog. All rights reserved.</div>
+      <div>
+        <a href="/terms">Terms of Service</a> &bull;
+        <a href="/">Launch App</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
