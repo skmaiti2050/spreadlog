@@ -1,6 +1,6 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,6 +13,7 @@ import '../../data/transports/smtp_backup_transport.dart';
 import '../../domain/backup_exceptions.dart';
 import '../providers/backup_providers.dart';
 import '../providers/google_auth_providers.dart';
+import '../widgets/google_sign_in_button.dart';
 
 class BackupRestoreScreen extends ConsumerStatefulWidget {
   const BackupRestoreScreen({super.key});
@@ -55,6 +56,19 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   Future<void> _loadDriveBackups() async {
     final authService = ref.read(googleAuthServiceProvider);
     if (!authService.isSignedIn) return;
+
+    if (kIsWeb) {
+      final hasAccess = await authService.canAccessScopes();
+      if (!hasAccess) {
+        if (mounted) {
+          setState(() {
+            _driveBackups = null;
+            _isLoadingDriveBackups = false;
+          });
+        }
+        return;
+      }
+    }
 
     setState(() => _isLoadingDriveBackups = true);
     try {
@@ -377,9 +391,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                         onPressed: _handleGoogleSignOut,
                       )
                     else
-                      FilledButton.icon(
-                        icon: const Icon(Icons.login),
-                        label: const Text('Sign in with Google'),
+                      buildGoogleSignInButton(
                         onPressed: _handleGoogleSignIn,
                       ),
                   ],
@@ -390,6 +402,48 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     'Connect your Google Account to automatically store and sync your AES-256 encrypted '
                     'flight logbook in Google Drive. Zero passwords stored, and only Spreadlog files are accessed.',
                     style: TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+                if (isSignedIn && kIsWeb) ...[
+                  const SizedBox(height: 12),
+                  FutureBuilder<bool>(
+                    future: authService.canAccessScopes(),
+                    builder: (context, snapshot) {
+                      final hasScopes = snapshot.data ?? false;
+                      if (!hasScopes) {
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade900.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber.shade700),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.shield_outlined, color: Colors.amber, size: 22),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Google Drive permission required to sync files.',
+                                  style: TextStyle(fontSize: 12, color: Colors.white),
+                                ),
+                              ),
+                              FilledButton.tonal(
+                                onPressed: () async {
+                                  final ok = await authService.requestScopes();
+                                  if (ok && mounted) {
+                                    setState(() {});
+                                    await _loadDriveBackups();
+                                  }
+                                },
+                                child: const Text('Authorize'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
                   ),
                 ],
               ],
@@ -709,6 +763,25 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   }
 
   Future<void> _handleBackupToDrive() async {
+    final authService = ref.read(googleAuthServiceProvider);
+    if (kIsWeb) {
+      final hasAccess = await authService.canAccessScopes();
+      if (!hasAccess) {
+        final granted = await authService.requestScopes();
+        if (!granted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Google Drive permission is required to upload backups.'),
+                backgroundColor: _accentWarning,
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
     final repo = ref.read(backupSettingsRepositoryProvider);
     String? passphrase = await repo.getMasterPassphrase();
 
@@ -839,6 +912,25 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   }
 
   Future<void> _handleSendGmailBackup(String recipientEmail) async {
+    final authService = ref.read(googleAuthServiceProvider);
+    if (kIsWeb) {
+      final hasAccess = await authService.canAccessScopes();
+      if (!hasAccess) {
+        final granted = await authService.requestScopes();
+        if (!granted) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Gmail permission is required to send backups.'),
+                backgroundColor: _accentWarning,
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
     final repo = ref.read(backupSettingsRepositoryProvider);
     String? passphrase = await repo.getMasterPassphrase();
 

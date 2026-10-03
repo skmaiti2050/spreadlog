@@ -55,6 +55,8 @@ dependencies:
   typed_data: ^1.4.0
   sqlite3: ^3.5.2
   google_sign_in: ^6.2.2
+  google_sign_in_web: ^0.12.4+4
+  google_sign_in_platform_interface: ^2.5.0
   googleapis: ^13.2.0
   googleapis_auth: ^1.6.0
   http: ^1.2.0

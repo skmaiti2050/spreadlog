@@ -41,36 +41,36 @@ class GoogleAuthService {
   /// Interactive sign in flow.
   Future<GoogleSignInAccount?> signIn() async {
     try {
-      var account = await _googleSignIn.signIn();
-      account ??= _googleSignIn.currentUser;
-      if (account != null && kIsWeb) {
-        await ensureScopes();
-      }
-      return account;
+      final account = await _googleSignIn.signIn();
+      return account ?? _googleSignIn.currentUser;
     } catch (e) {
       debugPrint('Google Sign-In note: $e');
       // If popup_closed or dismissed, check if user was resolved (e.g. via One Tap)
       final existingUser = _googleSignIn.currentUser;
       if (existingUser != null) {
-        if (kIsWeb) {
-          try {
-            await ensureScopes();
-          } catch (_) {}
-        }
         return existingUser;
       }
       rethrow;
     }
   }
 
-  /// Ensures required OAuth scopes (Drive, Gmail) are granted on Web.
-  Future<bool> ensureScopes() async {
+  /// Checks whether required scopes are authorized without showing any UI or popups.
+  Future<bool> canAccessScopes() async {
     try {
-      final hasAccess = await _googleSignIn.canAccessScopes(defaultScopes);
-      if (hasAccess) return true;
+      if (_googleSignIn.currentUser == null) return false;
+      return await _googleSignIn.canAccessScopes(defaultScopes);
+    } catch (e) {
+      debugPrint('canAccessScopes check error: $e');
+      return false;
+    }
+  }
+
+  /// Explicitly requests Drive and Gmail scopes via user-gesture popup.
+  Future<bool> requestScopes() async {
+    try {
       return await _googleSignIn.requestScopes(defaultScopes);
     } catch (e) {
-      debugPrint('Error ensuring scopes: $e');
+      debugPrint('requestScopes error: $e');
       return false;
     }
   }
@@ -105,15 +105,12 @@ class GoogleAuthService {
         return null;
       }
 
-      // On Web, Google Identity Services (GIS) requires requesting scopes to generate accessToken
+      // On Web, check if OAuth scopes have been authorized before requesting client
       if (kIsWeb) {
         final hasAccess = await _googleSignIn.canAccessScopes(defaultScopes);
         if (!hasAccess) {
-          final granted = await _googleSignIn.requestScopes(defaultScopes);
-          if (!granted) {
-            debugPrint('OAuth scopes not granted by user on web');
-            return null;
-          }
+          debugPrint('getAuthenticatedClient: Scopes not yet authorized on Web');
+          return null;
         }
       }
 
