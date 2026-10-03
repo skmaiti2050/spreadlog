@@ -253,7 +253,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Aviation Logbook',
+                    'Spreadlog',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

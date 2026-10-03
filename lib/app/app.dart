@@ -27,7 +27,7 @@ class AviationLogbookApp extends ConsumerWidget {
     final themeData = AviationThemes.getThemeData(activeThemeMode);
 
     return MaterialApp(
-      title: 'Aviation Logbook',
+      title: 'Spreadlog',
       theme: themeData,
       scrollBehavior: const AppScrollBehavior(),
       onGenerateRoute: AppRouter.onGenerateRoute,
