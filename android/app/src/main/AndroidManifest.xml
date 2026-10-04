@@ -38,25 +38,20 @@
             </intent-filter>
 
             <!-- Intent filters for opening Spreadlog backup archives (.spbackup & .spreadlog) -->
-            <!-- 1. Path-based matching for content:// and file:// schemes -->
+            <!-- 1. Handle file:// and content:// URIs when mimeType is passed by file managers -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
                 <data android:pathPattern=".*\\.spbackup" />
                 <data android:pathPattern=".*\\..*\\.spbackup" />
                 <data android:pathPattern=".*\\..*\\..*\\.spbackup" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.spbackup" />
                 <data android:pathSuffix=".spbackup" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
                 <data android:pathPattern=".*\\.spreadlog" />
                 <data android:pathPattern=".*\\..*\\.spreadlog" />
                 <data android:pathPattern=".*\\..*\\..*\\.spreadlog" />
@@ -64,57 +59,24 @@
                 <data android:pathSuffix=".spreadlog" />
             </intent-filter>
 
-            <!-- 2. MIME-type with path pattern/suffix for file managers that pass mimeType -->
+            <!-- 2. Handle file:// and content:// URIs when no mimeType is specified -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:scheme="file" />
-                <data android:mimeType="*/*" />
+                <data android:host="*" />
                 <data android:pathPattern=".*\\.spbackup" />
                 <data android:pathPattern=".*\\..*\\.spbackup" />
                 <data android:pathPattern=".*\\..*\\..*\\.spbackup" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.spbackup" />
                 <data android:pathSuffix=".spbackup" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:mimeType="*/*" />
                 <data android:pathPattern=".*\\.spreadlog" />
                 <data android:pathPattern=".*\\..*\\.spreadlog" />
                 <data android:pathPattern=".*\\..*\\..*\\.spreadlog" />
                 <data android:pathPattern=".*\\..*\\..*\\..*\\.spreadlog" />
                 <data android:pathSuffix=".spreadlog" />
-            </intent-filter>
-
-            <!-- 3. Binary streams for file managers that use opaque content URIs (like Files by Google) -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:mimeType="application/octet-stream" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:mimeType="application/x-binary" />
-            </intent-filter>
-
-            <!-- 4. Handle "Share to / Send to" Spreadlog from WhatsApp, Gmail, Drive -->
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" />
-                <data android:mimeType="*/*" />
-                <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
