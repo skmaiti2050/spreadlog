@@ -221,6 +221,8 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
           createdAt: existingEndorsement?.createdAt ?? DateTime.now(),
         );
         await repo.saveEndorsement(endorsement);
+      } else if (widget.initialEndorsement != null) {
+        await repo.deleteEndorsement(widget.initialEndorsement!.id);
       }
 
       if (mounted) {
