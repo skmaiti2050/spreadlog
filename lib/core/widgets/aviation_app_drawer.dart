@@ -241,7 +241,7 @@ class AviationAppDrawer extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '1.0.2 (3)\n${const String.fromEnvironment('BUILD_COMMIT', defaultValue: 'local')}',
+                    '1.0.3 (4)\n${const String.fromEnvironment('BUILD_COMMIT', defaultValue: 'local')}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
