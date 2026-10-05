@@ -1,5 +1,10 @@
 import 'dart:io';
 
+import 'package:sqlite3/sqlite3.dart' as sql;
+import 'package:aviation_logbook/features/endorsements/data/endorsements_repository.dart';
+import 'package:aviation_logbook/features/endorsements/domain/endorsement_category.dart';
+import 'package:aviation_logbook/features/endorsements/domain/endorsement_page.dart';
+
 import 'package:aviation_logbook/core/database/app_database.dart';
 import 'package:aviation_logbook/features/backups/data/backup_archive_service.dart';
 import 'package:aviation_logbook/features/backups/data/backup_service.dart';
@@ -22,9 +27,9 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp('backup_test_');
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
-        const MethodChannel('plugins.flutter.io/path_provider'),
-        (MethodCall methodCall) async => tempDir.path,
-      );
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            (MethodCall methodCall) async => tempDir.path,
+          );
 
       db = AppDatabase(NativeDatabase.memory());
       // Seed initial models
@@ -70,11 +75,7 @@ void main() {
       );
 
       final fastEncryptor = BackupEncryptor(
-        kdf: Pbkdf2(
-          macAlgorithm: Hmac.sha256(),
-          iterations: 1000,
-          bits: 256,
-        ),
+        kdf: Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: 1000, bits: 256),
       );
 
       final encryptedBackup = await fastEncryptor.encrypt(
@@ -107,11 +108,7 @@ void main() {
       );
 
       final fastEncryptor = BackupEncryptor(
-        kdf: Pbkdf2(
-          macAlgorithm: Hmac.sha256(),
-          iterations: 1000,
-          bits: 256,
-        ),
+        kdf: Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: 1000, bits: 256),
       );
 
       final encrypted = await fastEncryptor.encrypt(
@@ -131,8 +128,12 @@ void main() {
     test('restoreBackup with preExtractedBackup bypasses redundant decryption and returns manifest', () async {
       const passphrase = 'PilotSafeSecret2026!';
 
+      final fixture = File('${tempDir.path}/fixture.sqlite');
+      final fixtureDb = sql.sqlite3.open(fixture.path);
+      fixtureDb.execute('CREATE TABLE fixture (id INTEGER)');
+      fixtureDb.close();
       final zipBytes = await BackupArchiveService().createZipArchive(
-        databaseBytes: Uint8List.fromList([1, 2, 3, 4, 5]),
+        databaseBytes: await fixture.readAsBytes(),
         documentFiles: [
           ArchiveFileItem(
             path: 'endorsements/stamp.jpg',
@@ -145,11 +146,7 @@ void main() {
       );
 
       final fastEncryptor = BackupEncryptor(
-        kdf: Pbkdf2(
-          macAlgorithm: Hmac.sha256(),
-          iterations: 1000,
-          bits: 256,
-        ),
+        kdf: Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: 1000, bits: 256),
       );
 
       final encrypted = await fastEncryptor.encrypt(
@@ -173,6 +170,54 @@ void main() {
       expect(manifest.flightCount, equals(3));
       expect(manifest.documentCount, equals(1));
     });
+    test('grouped backup restores every page at a new device path', () async {
+      await db.close();
+      final sourceDir = tempDir;
+      await Directory('${sourceDir.path}/database').create();
+      db = AppDatabase(
+        NativeDatabase(File('${sourceDir.path}/database/app_database.sqlite')),
+      );
+      final repo = EndorsementsRepository(dao: db.endorsementsDao);
+      final original = await repo.saveDocument(
+        category: EndorsementCategory.tw,
+        endorsementDate: DateTime(2026, 10, 5),
+        pages: [
+          DocumentPageInput(imageBytes: [1, 2, 3], fileExtension: 'jpg'),
+          DocumentPageInput(imageBytes: [4, 5, 6], fileExtension: 'png'),
+        ],
+      );
+      final encryptor = BackupEncryptor(
+        kdf: Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: 1000, bits: 256),
+      );
+      backupService = BackupService(db: db, encryptor: encryptor);
+      final bytes = await backupService.createEncryptedBackup(
+        passphrase: 'test-secret',
+      );
+      final inspection = await backupService.inspectBackup(
+        backupBytes: bytes,
+        passphrase: 'test-secret',
+      );
+      expect(inspection.manifest.documentCount, 2);
+      tempDir = await Directory.systemTemp.createTemp('restored_groups_');
+      addTearDown(() => sourceDir.delete(recursive: true));
+      await backupService.restoreBackup(
+        backupBytes: bytes,
+        passphrase: 'test-secret',
+        preExtractedBackup: inspection.extractedBackup,
+      );
+      db = AppDatabase(
+        NativeDatabase(File('${tempDir.path}/database/app_database.sqlite')),
+      );
+      final restoredRepo = EndorsementsRepository(dao: db.endorsementsDao);
+      final restored = (await restoredRepo.getEndorsements()).single;
+      expect(restored.id, original.id);
+      expect(restored.pageCount, 2);
+      expect(restored.documentHash, original.documentHash);
+      expect(
+        restored.pages.every((p) => p.originalPath.startsWith(tempDir.path)),
+        isTrue,
+      );
+      expect(await restoredRepo.verifyIntegrity(restored.id), isTrue);
+    });
   });
 }
-

@@ -1422,7 +1422,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               '• Created: ${inspection.manifest.createdAt.toLocal().toString().substring(0, 16)}',
             ),
             Text('• Total Flights: ${inspection.manifest.flightCount}'),
-            Text('• Endorsement Scans: ${inspection.manifest.documentCount}'),
+            Text('• Endorsement Page Images: ${inspection.manifest.documentCount}'),
             Text(
               '• Aircraft Models: ${inspection.manifest.aircraftModelCount}',
             ),

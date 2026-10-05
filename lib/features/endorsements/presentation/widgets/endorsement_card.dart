@@ -21,9 +21,10 @@ class EndorsementCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final shortSha = document.sha256.length > 12
-        ? '${document.sha256.substring(0, 6)}...${document.sha256.substring(document.sha256.length - 6)}'
-        : document.sha256;
+    final fingerprint = document.documentHash ?? document.sha256;
+    final shortSha = fingerprint.length > 12
+        ? '${fingerprint.substring(0, 6)}...${fingerprint.substring(fingerprint.length - 6)}'
+        : fingerprint;
 
     final formattedDate = TimeUtils.formatDate(document.endorsementDate);
 
@@ -67,7 +68,10 @@ class EndorsementCard extends StatelessWidget {
                           color: Colors.black.withAlpha(120),
                           alignment: Alignment.center,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.amber.shade800,
                               borderRadius: BorderRadius.circular(4),
@@ -97,15 +101,21 @@ class EndorsementCard extends StatelessWidget {
                       children: [
                         _buildCategoryChip(context, document.category),
                         const Spacer(),
-                        if (document.pageNumber != null)
+                        if (document.pageCount > 1 ||
+                            document.pageNumber != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              'Pg. ${document.pageNumber}',
+                              document.pageCount > 1
+                                  ? '${document.pageCount} pages'
+                                  : 'Pg. ${document.pageNumber}',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
@@ -118,10 +128,13 @@ class EndorsementCard extends StatelessWidget {
                       formattedDate,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: document.isSuperseded ? colorScheme.onSurface.withAlpha(140) : null,
+                        color: document.isSuperseded
+                            ? colorScheme.onSurface.withAlpha(140)
+                            : null,
                       ),
                     ),
-                    if (document.notes != null && document.notes!.isNotEmpty) ...[
+                    if (document.notes != null &&
+                        document.notes!.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
                         document.notes!,
@@ -135,13 +148,16 @@ class EndorsementCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     // Tamper-proof SHA badge
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.teal.shade900.withAlpha(120) : Colors.teal.shade50,
+                        color: isDark
+                            ? Colors.teal.shade900.withAlpha(120)
+                            : Colors.teal.shade50,
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: Colors.teal.withAlpha(80),
-                        ),
+                        border: Border.all(color: Colors.teal.withAlpha(80)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -149,7 +165,9 @@ class EndorsementCard extends StatelessWidget {
                           Icon(
                             Icons.verified_user_outlined,
                             size: 13,
-                            color: isDark ? Colors.tealAccent : Colors.teal.shade700,
+                            color: isDark
+                                ? Colors.tealAccent
+                                : Colors.teal.shade700,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -158,7 +176,9 @@ class EndorsementCard extends StatelessWidget {
                               fontSize: 11,
                               fontFamily: 'monospace',
                               fontWeight: FontWeight.w500,
-                              color: isDark ? Colors.tealAccent : Colors.teal.shade800,
+                              color: isDark
+                                  ? Colors.tealAccent
+                                  : Colors.teal.shade800,
                             ),
                           ),
                         ],
@@ -174,7 +194,10 @@ class EndorsementCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryChip(BuildContext context, EndorsementCategory category) {
+  Widget _buildCategoryChip(
+    BuildContext context,
+    EndorsementCategory category,
+  ) {
     final theme = Theme.of(context);
     final color = _getCategoryColor(category);
 
@@ -219,4 +242,3 @@ class EndorsementCard extends StatelessWidget {
     }
   }
 }
-

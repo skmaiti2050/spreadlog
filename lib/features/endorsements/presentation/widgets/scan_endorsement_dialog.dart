@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../domain/endorsement_category.dart';
 import '../../domain/endorsement_document.dart';
+import '../../domain/endorsement_page.dart';
 import '../providers/endorsements_providers.dart';
 import '../utils/sample_endorsement_generator.dart';
 
@@ -32,7 +33,6 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
 
   Uint8List? _capturedBytes;
   final List<(Uint8List, String)> _pages = [];
-  int _savedPages = 0;
   String? _scannerError;
   bool _isSaving = false;
   bool _isScanning = false;
@@ -229,24 +229,20 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
       final repo = ref.read(endorsementsRepositoryProvider);
       final pageNum = int.tryParse(_pageNumberController.text.trim());
 
-      while (_savedPages < _pages.length) {
-        final page = _pages[_savedPages];
-        await repo.saveEndorsement(
-          category: _selectedCategory,
-          endorsementDate: _endorsementDate,
-          pageNumber: pageNum == null ? null : pageNum + _savedPages,
-          imageBytes: page.$1,
-          fileExtension: page.$2,
-          notes: _notesController.text.trim().isEmpty
-              ? null
-              : _notesController.text.trim(),
-          supersedesId: _savedPages == 0
-              ? widget.supersedingDocument?.id
-              : null,
-        );
-
-        _savedPages++;
-      }
+      await repo.saveDocument(
+        category: _selectedCategory,
+        endorsementDate: _endorsementDate,
+        pageNumber: pageNum,
+        pages: _pages
+            .map(
+              (p) => DocumentPageInput(imageBytes: p.$1, fileExtension: p.$2),
+            )
+            .toList(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+        supersedesId: widget.supersedingDocument?.id,
+      );
       if (mounted) {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -254,7 +250,7 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
             content: Text(
               widget.supersedingDocument != null
                   ? 'Replacement endorsement saved successfully'
-                  : 'Endorsement scan saved to vault',
+                  : 'Document saved to Vault (${_pages.length} pages)',
             ),
           ),
         );
@@ -498,7 +494,7 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                       ),
                     if (_pages.isNotEmpty) ...[
                       Text(
-                        '${_pages.length} page(s) ready; $_savedPages saved',
+                        '${_pages.length} ${_pages.length == 1 ? 'page' : 'pages'} • saved together as one document',
                       ),
                       Wrap(
                         spacing: 8,
@@ -506,8 +502,11 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                           for (var i = 0; i < _pages.length; i++)
                             ActionChip(
                               label: Text('Page ${i + 1}'),
-                              onPressed: () =>
-                                  setState(() => _capturedBytes = _pages[i].$1),
+                              onPressed: _isSaving
+                                  ? null
+                                  : () => setState(
+                                      () => _capturedBytes = _pages[i].$1,
+                                    ),
                             ),
                         ],
                       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/utils/time_utils.dart';
 import '../../domain/endorsement_document.dart';
 import '../providers/endorsements_providers.dart';
@@ -17,10 +18,13 @@ class EndorsementDetailsDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EndorsementDetailsDialog> createState() => _EndorsementDetailsDialogState();
+  ConsumerState<EndorsementDetailsDialog> createState() =>
+      _EndorsementDetailsDialogState();
 }
 
-class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDialog> {
+class _EndorsementDetailsDialogState
+    extends ConsumerState<EndorsementDetailsDialog> {
+  int _pageIndex = 0;
   bool _isVerifying = false;
   bool? _integrityResult;
 
@@ -55,7 +59,7 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Endorsement?'),
         content: const Text(
-          'Are you sure you want to delete this endorsement scan? This action cannot be undone.',
+          'Delete this document and all its pages? This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -86,10 +90,11 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
   @override
   Widget build(BuildContext context) {
     final doc = widget.document;
+    final page = doc.pages[_pageIndex];
+    final fingerprint = doc.documentHash ?? doc.sha256;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final formattedDate = TimeUtils.formatDateFull(doc.endorsementDate);
-
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -136,11 +141,12 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
               child: Container(
                 color: Colors.black,
                 child: InteractiveViewer(
+                  key: ValueKey(_pageIndex),
                   minScale: 0.8,
                   maxScale: 5.0,
                   child: Center(
                     child: defaultImageLoader.buildImage(
-                      doc.originalPath,
+                      page.originalPath,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -150,6 +156,29 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
 
             const Divider(height: 1),
 
+            if (doc.pageCount > 1)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    tooltip: 'Previous document page',
+                    icon: const Icon(Icons.chevron_left),
+                    onPressed: _pageIndex == 0
+                        ? null
+                        : () => setState(() => _pageIndex--),
+                  ),
+                  Text(
+                    'Page ${_pageIndex + 1} of ${doc.pageCount}${page.pageNumber == null ? '' : ' • Logbook page ${page.pageNumber}'}',
+                  ),
+                  IconButton(
+                    tooltip: 'Next document page',
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: _pageIndex == doc.pageCount - 1
+                        ? null
+                        : () => setState(() => _pageIndex++),
+                  ),
+                ],
+              ),
             // Metadata & Integrity section
             Padding(
               padding: const EdgeInsets.all(16),
@@ -161,7 +190,10 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                   if (doc.isSuperseded)
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.amber.shade100,
                         border: Border.all(color: Colors.amber.shade600),
@@ -169,7 +201,11 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.history, color: Colors.amber.shade900, size: 18),
+                          Icon(
+                            Icons.history,
+                            color: Colors.amber.shade900,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -188,7 +224,10 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                   if (doc.isReplacement)
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.blue.shade50,
                         border: Border.all(color: Colors.blue.shade300),
@@ -196,7 +235,11 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.published_with_changes, color: Colors.blue.shade800, size: 18),
+                          Icon(
+                            Icons.published_with_changes,
+                            color: Colors.blue.shade800,
+                            size: 18,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -226,7 +269,9 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                     decoration: BoxDecoration(
                       color: colorScheme.surfaceContainerHighest.withAlpha(120),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: colorScheme.outlineVariant.withAlpha(80)),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.withAlpha(80),
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,8 +281,11 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                             const Icon(Icons.fingerprint, size: 16),
                             const SizedBox(width: 6),
                             const Text(
-                              'SHA-256 Checksum',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              'Document SHA-256',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
                             const Spacer(),
                             IconButton(
@@ -245,22 +293,42 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                               icon: const Icon(Icons.copy, size: 16),
                               tooltip: 'Copy SHA-256',
                               onPressed: () {
-                                Clipboard.setData(ClipboardData(text: doc.sha256));
+                                Clipboard.setData(
+                                  ClipboardData(text: fingerprint),
+                                );
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('SHA-256 copied to clipboard')),
+                                  const SnackBar(
+                                    content: Text(
+                                      'SHA-256 copied to clipboard',
+                                    ),
+                                  ),
                                 );
                               },
                             ),
                           ],
                         ),
                         SelectableText(
-                          doc.sha256,
+                          fingerprint,
                           style: const TextStyle(
                             fontFamily: 'monospace',
                             fontSize: 11,
                             letterSpacing: 0.2,
                           ),
                         ),
+                        if (doc.pageCount > 1) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            'Page ${_pageIndex + 1} SHA-256',
+                            style: theme.textTheme.labelSmall,
+                          ),
+                          SelectableText(
+                            page.sha256,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 6),
                         // Live verify button
                         Wrap(
@@ -274,10 +342,16 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                                   ? const SizedBox(
                                       width: 14,
                                       height: 14,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : const Icon(Icons.verified, size: 16),
-                              label: Text(_isVerifying ? 'Verifying...' : 'Verify Integrity'),
+                              label: Text(
+                                _isVerifying
+                                    ? 'Verifying...'
+                                    : 'Verify all pages',
+                              ),
                               style: OutlinedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                                 textStyle: const TextStyle(fontSize: 12),
@@ -287,7 +361,11 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                               const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                    size: 16,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     'Verified Intact',
@@ -303,7 +381,11 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                               const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.error, color: Colors.red, size: 16),
+                                  Icon(
+                                    Icons.error,
+                                    color: Colors.red,
+                                    size: 16,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     'Hash Mismatch / Corrupted',
@@ -331,7 +413,9 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                     runSpacing: 8,
                     children: [
                       TextButton.icon(
-                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
                         onPressed: _deleteDocument,
                         icon: const Icon(Icons.delete_outline, size: 18),
                         label: const Text('Delete'),
@@ -343,7 +427,7 @@ class _EndorsementDetailsDialogState extends ConsumerState<EndorsementDetailsDia
                             widget.onSupersede!(doc);
                           },
                           icon: const Icon(Icons.upgrade, size: 18),
-                          label: const Text('Supersede / Replace Scan'),
+                          label: const Text('Replace document'),
                         ),
                     ],
                   ),

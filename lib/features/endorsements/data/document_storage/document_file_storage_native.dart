@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
@@ -16,9 +17,16 @@ class NativeDocumentFileStorage implements DocumentFileStorage {
     if (!await endorsementsDir.exists()) {
       await endorsementsDir.create(recursive: true);
     }
-    final cleanExt = fileExtension.startsWith('.') ? fileExtension : '.$fileExtension';
+    final cleanExt = fileExtension.startsWith('.')
+        ? fileExtension
+        : '.$fileExtension';
     final file = File(p.join(endorsementsDir.path, '$id$cleanExt'));
-    await file.writeAsBytes(bytes, flush: true);
+    try {
+      await file.writeAsBytes(bytes, flush: true);
+    } catch (_) {
+      if (await file.exists()) await file.delete();
+      rethrow;
+    }
     return file.path;
   }
 
@@ -41,4 +49,3 @@ class NativeDocumentFileStorage implements DocumentFileStorage {
 }
 
 DocumentFileStorage getDocumentFileStorage() => NativeDocumentFileStorage();
-

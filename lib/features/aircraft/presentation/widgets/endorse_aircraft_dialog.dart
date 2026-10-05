@@ -183,7 +183,7 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                         dense: true,
                         leading: const Icon(Icons.verified_outlined, size: 20),
                         title: Text(
-                          doc.category.label,
+                          '${doc.category.label} • ${doc.pageCount} ${doc.pageCount == 1 ? 'page' : 'pages'}',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(

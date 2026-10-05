@@ -193,7 +193,7 @@ class _EndorsementVaultScreenState
                             selectedCategory != null ||
                                     _searchController.text.isNotEmpty
                                 ? 'No documents match the active category or search query.'
-                                : 'Store digital copies of your logbook endorsements, rating certificates, and flight tests with tamper-proof SHA-256 verification.',
+                                : 'Store digital copies of your logbook endorsements, rating certificates, and flight tests with tamper-evident SHA-256 verification.',
                             textAlign: TextAlign.center,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,

@@ -1,11 +1,21 @@
 import 'dart:typed_data';
+import 'dart:convert';
+
 import 'package:cryptography/cryptography.dart';
 
 /// Pure Dart cryptographic utility for calculating SHA-256 tamper-evident checksums.
 class DocumentHasher {
   final HashAlgorithm _algorithm;
 
-  DocumentHasher({HashAlgorithm? algorithm}) : _algorithm = algorithm ?? Sha256();
+  DocumentHasher({HashAlgorithm? algorithm})
+    : _algorithm = algorithm ?? Sha256();
+
+  /// Versioned, ordered fingerprint. Paths are excluded for portable restores.
+  Future<String> computeDocumentHash(List<String> pageHashes) => computeSha256(
+    Uint8List.fromList(
+      utf8.encode(jsonEncode({'version': 1, 'pages': pageHashes})),
+    ),
+  );
 
   /// Computes a hexadecimal SHA-256 digest of [bytes].
   Future<String> computeSha256(Uint8List bytes) async {
@@ -19,4 +29,3 @@ class DocumentHasher {
     return calculated.toLowerCase() == expectedHash.trim().toLowerCase();
   }
 }
-

@@ -1,13 +1,18 @@
+import 'endorsement_page.dart';
 import 'endorsement_category.dart';
 import 'endorsement_document.dart';
 
 /// Pure Dart domain port defining operations for endorsement document storage and verification.
 abstract interface class EndorsementsRepositoryPort {
   /// Watches all stored endorsement documents.
-  Stream<List<EndorsementDocument>> watchEndorsements({bool includeSuperseded = false});
+  Stream<List<EndorsementDocument>> watchEndorsements({
+    bool includeSuperseded = false,
+  });
 
   /// Fetches all stored endorsement documents.
-  Future<List<EndorsementDocument>> getEndorsements({bool includeSuperseded = false});
+  Future<List<EndorsementDocument>> getEndorsements({
+    bool includeSuperseded = false,
+  });
 
   /// Fetches an endorsement document by its unique identifier.
   Future<EndorsementDocument?> getEndorsementById(String id);
@@ -25,10 +30,19 @@ abstract interface class EndorsementsRepositoryPort {
     String? supersedesId,
   });
 
+  /// Saves one complete ordered document, publishing metadata only after all files exist.
+  Future<EndorsementDocument> saveDocument({
+    required EndorsementCategory category,
+    required DateTime endorsementDate,
+    required List<DocumentPageInput> pages,
+    int? pageNumber,
+    String? notes,
+    String? supersedesId,
+  });
+
   /// Verifies whether the on-disk file bytes still match the registered SHA-256 hash.
   Future<bool> verifyIntegrity(String id);
 
   /// Deletes an endorsement document record.
   Future<void> deleteEndorsement(String id);
 }
-

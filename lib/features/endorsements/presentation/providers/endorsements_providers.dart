@@ -43,7 +43,9 @@ class SelectedCategoryNotifier extends Notifier<EndorsementCategory?> {
 
 /// Currently selected category filter (null = all categories).
 final selectedCategoryFilterProvider =
-    NotifierProvider<SelectedCategoryNotifier, EndorsementCategory?>(SelectedCategoryNotifier.new);
+    NotifierProvider<SelectedCategoryNotifier, EndorsementCategory?>(
+      SelectedCategoryNotifier.new,
+    );
 
 class EndorsementSearchQueryNotifier extends Notifier<String> {
   @override
@@ -54,13 +56,17 @@ class EndorsementSearchQueryNotifier extends Notifier<String> {
 
 /// Search filter text.
 final endorsementSearchQueryProvider =
-    NotifierProvider<EndorsementSearchQueryNotifier, String>(EndorsementSearchQueryNotifier.new);
+    NotifierProvider<EndorsementSearchQueryNotifier, String>(
+      EndorsementSearchQueryNotifier.new,
+    );
 
 /// Reactive stream of all endorsement documents.
-final allEndorsementsStreamProvider = StreamProvider<List<EndorsementDocument>>((ref) {
-  final repository = ref.watch(endorsementsRepositoryProvider);
-  return repository.watchEndorsements(includeSuperseded: true);
-});
+final allEndorsementsStreamProvider = StreamProvider<List<EndorsementDocument>>(
+  (ref) {
+    final repository = ref.watch(endorsementsRepositoryProvider);
+    return repository.watchEndorsements(includeSuperseded: true);
+  },
+);
 
 /// Filtered list of endorsements adhering to selected category, search query, and supersede status.
 /// Evaluated synchronously in memory so toggling filters never flashes or re-queries SQLite.
@@ -82,7 +88,10 @@ final filteredEndorsementsProvider = Provider<List<EndorsementDocument>>((ref) {
     if (query.isNotEmpty) {
       final matchesNotes = doc.notes?.toLowerCase().contains(query) ?? false;
       final matchesCat = doc.category.label.toLowerCase().contains(query);
-      final matchesSha = doc.sha256.toLowerCase().contains(query);
+      final matchesSha =
+          doc.sha256.toLowerCase().contains(query) ||
+          (doc.documentHash?.toLowerCase().contains(query) ?? false) ||
+          doc.pages.any((p) => p.sha256.toLowerCase().contains(query));
       if (!matchesNotes && !matchesCat && !matchesSha) {
         return false;
       }
@@ -90,4 +99,3 @@ final filteredEndorsementsProvider = Provider<List<EndorsementDocument>>((ref) {
     return true;
   }).toList();
 });
-

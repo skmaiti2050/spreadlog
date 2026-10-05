@@ -196,6 +196,55 @@ class BackupService {
         await targetFile.writeAsBytes(doc.bytes, flush: true);
       }
 
+      final sqlite = await getPlatformSqliteLoader().load();
+      final restoredDb = sqlite.open(dbFile.path);
+      try {
+        final columns = restoredDb
+            .select('PRAGMA table_info(endorsement_documents_table)')
+            .map((r) => r['name'])
+            .toSet();
+        final hasPages = columns.contains('pages_json');
+        final files = {
+          for (final f in extracted.documentFiles) p.basename(f.path): f,
+        };
+        String relocate(String path, int index) {
+          if (path.startsWith('data:')) return path;
+          final name = p.windows.basename(path);
+          if (!files.containsKey(name)) {
+            throw const BackupException('Missing document page in backup');
+          }
+          return p.join(endorsementsDir.path, name);
+        }
+
+        restoredDb.execute('BEGIN');
+        for (final row
+            in columns.isEmpty
+                ? <Row>[]
+                : restoredDb.select(
+                    'SELECT * FROM endorsement_documents_table',
+                  )) {
+          final path = relocate(row['original_path'] as String, 0);
+          if (hasPages) {
+            final manifest = _mapPagePaths(
+              row['pages_json'] as String?,
+              relocate,
+            );
+            restoredDb.execute(
+              'UPDATE endorsement_documents_table SET original_path = ?, pages_json = ? WHERE id = ?',
+              [path, manifest, row['id']],
+            );
+          } else {
+            restoredDb.execute(
+              'UPDATE endorsement_documents_table SET original_path = ? WHERE id = ?',
+              [path, row['id']],
+            );
+          }
+        }
+        restoredDb.execute('COMMIT');
+      } finally {
+        restoredDb.close();
+      }
+
       // Restore succeeded, clean up rollback safety copy
       if (await rollbackFile.exists()) {
         await rollbackFile.delete();
@@ -435,6 +484,12 @@ class BackupService {
                   ),
                   pageNumber: Value(row['page_number'] as int?),
                   originalPath: Value(origPath),
+                  pagesJson: Value(
+                    _mapPagePaths(
+                      row['pages_json'] as String?,
+                      (path, index) => _restoreWebPagePath(path, docFileMap),
+                    ),
+                  ),
                   processedPath: Value(row['processed_path'] as String?),
                   thumbnailPath: Value(row['thumbnail_path'] as String?),
                   sha256: Value((row['sha256'] as String?) ?? ''),
@@ -549,7 +604,8 @@ class BackupService {
           captured_at INTEGER NOT NULL,
           superseded_by TEXT,
           supersedes TEXT,
-          notes TEXT
+          notes TEXT,
+          pages_json TEXT
         );
         CREATE TABLE endorsement_corrections (id INTEGER PRIMARY KEY AUTOINCREMENT, endorsement_id TEXT NOT NULL, aircraft_model_id TEXT NOT NULL, removed_at TEXT NOT NULL, reason TEXT NOT NULL, snapshot TEXT NOT NULL);
         CREATE TABLE model_endorsements_table (
@@ -666,10 +722,12 @@ class BackupService {
       for (final d in docs) {
         var origPath = d.originalPath;
         if (origPath.startsWith('data:')) {
-          origPath = 'endorsements/${d.id}.jpg';
+          origPath = d.pagesJson == null
+              ? 'endorsements/${d.id}.jpg'
+              : 'endorsements/${d.id}_page1.jpg';
         }
         exportDb.execute(
-          'INSERT INTO endorsement_documents_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO endorsement_documents_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             d.id,
             d.category,
@@ -683,6 +741,12 @@ class BackupService {
             d.supersededBy,
             d.supersedes,
             d.notes,
+            _mapPagePaths(
+              d.pagesJson,
+              (path, index) => path.startsWith('data:')
+                  ? 'endorsements/${d.id}_page${index + 1}.jpg'
+                  : path,
+            ),
           ],
         );
       }
@@ -707,6 +771,7 @@ class BackupService {
         );
       }
 
+      exportDb.execute('PRAGMA user_version = ${db.schemaVersion}');
       try {
         exportDb.execute('VACUUM INTO "/vacuum.sqlite";');
       } catch (_) {}
@@ -745,20 +810,51 @@ class BackupService {
     final documentFiles = <ArchiveFileItem>[];
     final docs = await db.select(db.endorsementDocumentsTable).get();
     for (final d in docs) {
-      if (d.originalPath.startsWith('data:')) {
-        final commaIdx = d.originalPath.indexOf(',');
-        if (commaIdx != -1) {
-          final rawB64 = d.originalPath.substring(commaIdx + 1);
-          try {
-            final bytes = base64Decode(rawB64);
-            documentFiles.add(
-              ArchiveFileItem(path: 'endorsements/${d.id}.jpg', bytes: bytes),
-            );
-          } catch (_) {}
+      final paths = <String>[if (d.pagesJson == null) d.originalPath];
+      final names = <String>[
+        if (d.pagesJson == null) 'endorsements/${d.id}.jpg',
+      ];
+      _mapPagePaths(d.pagesJson, (path, index) {
+        paths.add(path);
+        names.add('endorsements/${d.id}_page${index + 1}.jpg');
+        return path;
+      });
+      for (var i = 0; i < paths.length; i++) {
+        final path = paths[i];
+        if (!path.startsWith('data:')) {
+          throw const BackupException(
+            'Web document image is not locally available',
+          );
         }
+        final bytes = base64Decode(path.substring(path.indexOf(',') + 1));
+        documentFiles.add(ArchiveFileItem(path: names[i], bytes: bytes));
       }
     }
     return documentFiles;
+  }
+
+  /// Rewrites only locations; ordered hashes and source page numbers remain unchanged.
+  String? _mapPagePaths(String? manifest, String Function(String, int) map) {
+    if (manifest == null) return null;
+    final decoded = jsonDecode(manifest) as Map<String, dynamic>;
+    final pages = decoded['pages'] as List<dynamic>;
+    for (var i = 0; i < pages.length; i++) {
+      final page = pages[i] as Map<String, dynamic>;
+      page['originalPath'] = map(page['originalPath'] as String, i);
+    }
+    return jsonEncode(decoded);
+  }
+
+  String _restoreWebPagePath(String path, Map<String, Uint8List> files) {
+    if (path.startsWith('data:')) return path;
+    final bytes = files[p.windows.basename(path)] ?? files[path];
+    if (bytes == null) {
+      throw const BackupException('Missing document page in backup');
+    }
+    final mime = p.extension(path).toLowerCase() == '.png'
+        ? 'image/png'
+        : 'image/jpeg';
+    return 'data:$mime;base64,${base64Encode(bytes)}';
   }
 
   List<Map<String, dynamic>> _readTable(

@@ -15,7 +15,9 @@ class EndorsementDocumentsTable extends Table {
   TextColumn get supersedes => text().nullable()();
   TextColumn get notes => text().nullable()();
 
+  /// Ordered page manifest and document fingerprint; null for legacy single pages.
+  TextColumn get pagesJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
-

@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? conn.openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   Future<void> _createCorrectionHistory() => customStatement('''
     CREATE TABLE IF NOT EXISTS endorsement_corrections (
@@ -60,6 +60,12 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(modelEndorsementsTable);
         }
         if (from < 4) await _createCorrectionHistory();
+        if (from >= 2 && from < 5) {
+          await m.addColumn(
+            endorsementDocumentsTable,
+            endorsementDocumentsTable.pagesJson,
+          );
+        }
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');

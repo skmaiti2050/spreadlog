@@ -1,12 +1,26 @@
+import 'endorsement_page.dart';
 import 'endorsement_category.dart';
 
 /// Immutable domain model representing a scanned legal endorsement, rating certificate,
 /// or signed logbook document.
 ///
-/// In accordance with statutory audit standards, once an endorsement document is created,
-/// its original image and SHA-256 fingerprint are immutable. Revisions are tracked
+/// Original images and SHA-256 fingerprints are immutable after capture. Revisions are tracked
 /// through superseding relationships ([supersededBy] / [supersedes]).
 class EndorsementDocument {
+  final List<EndorsementPage> storedPages;
+  final String? documentHash;
+
+  List<EndorsementPage> get pages => storedPages.isEmpty
+      ? [
+          EndorsementPage(
+            originalPath: originalPath,
+            sha256: sha256,
+            pageNumber: pageNumber,
+          ),
+        ]
+      : List.unmodifiable(storedPages);
+  int get pageCount => pages.length;
+
   final String id;
   final EndorsementCategory category;
   final DateTime endorsementDate;
@@ -20,7 +34,9 @@ class EndorsementDocument {
   final String? supersedes;
   final String? notes;
 
-  const EndorsementDocument({
+  EndorsementDocument({
+    List<EndorsementPage> storedPages = const [],
+    this.documentHash,
     required this.id,
     required this.category,
     required this.endorsementDate,
@@ -33,7 +49,7 @@ class EndorsementDocument {
     this.supersededBy,
     this.supersedes,
     this.notes,
-  });
+  }) : storedPages = List.unmodifiable(storedPages);
 
   /// True if this document has been superseded by a newer replacement scan.
   bool get isSuperseded => supersededBy != null && supersededBy!.isNotEmpty;
@@ -42,6 +58,8 @@ class EndorsementDocument {
   bool get isReplacement => supersedes != null && supersedes!.isNotEmpty;
 
   EndorsementDocument copyWith({
+    List<EndorsementPage>? storedPages,
+    String? documentHash,
     String? id,
     EndorsementCategory? category,
     DateTime? endorsementDate,
@@ -56,6 +74,8 @@ class EndorsementDocument {
     String? notes,
   }) {
     return EndorsementDocument(
+      storedPages: storedPages ?? this.storedPages,
+      documentHash: documentHash ?? this.documentHash,
       id: id ?? this.id,
       category: category ?? this.category,
       endorsementDate: endorsementDate ?? this.endorsementDate,
@@ -73,6 +93,8 @@ class EndorsementDocument {
 
   Map<String, dynamic> toJson() {
     return {
+      'pages': pages.map((p) => p.toJson()).toList(),
+      'documentHash': documentHash,
       'id': id,
       'category': category.code,
       'endorsementDate': endorsementDate.toIso8601String(),
@@ -90,6 +112,12 @@ class EndorsementDocument {
 
   factory EndorsementDocument.fromJson(Map<String, dynamic> json) {
     return EndorsementDocument(
+      storedPages: List.unmodifiable(
+        (json['pages'] as List<dynamic>? ?? []).map(
+          (p) => EndorsementPage.fromJson(p as Map<String, dynamic>),
+        ),
+      ),
+      documentHash: json['documentHash'] as String?,
       id: json['id'] as String,
       category: EndorsementCategory.fromCode(json['category'] as String),
       endorsementDate: DateTime.parse(json['endorsementDate'] as String),
@@ -109,6 +137,8 @@ class EndorsementDocument {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is EndorsementDocument &&
+        other.documentHash == documentHash &&
+        _samePages(other.pages, pages) &&
         other.id == id &&
         other.category == category &&
         other.endorsementDate == endorsementDate &&
@@ -126,6 +156,8 @@ class EndorsementDocument {
   @override
   int get hashCode {
     return Object.hash(
+      documentHash,
+      Object.hashAll(pages),
       id,
       category,
       endorsementDate,
@@ -142,3 +174,6 @@ class EndorsementDocument {
   }
 }
 
+bool _samePages(List<EndorsementPage> a, List<EndorsementPage> b) =>
+    a.length == b.length &&
+    List.generate(a.length, (i) => a[i] == b[i]).every((same) => same);
