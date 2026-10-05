@@ -13,6 +13,7 @@ class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.spreadlog.app/backup_intent"
     private var pendingBackupPath: String? = null
     private var methodChannel: MethodChannel? = null
+    private var backupListenerReady = false
 
     override fun getInitialRoute(): String {
         return "/"
@@ -58,20 +59,26 @@ class MainActivity : FlutterActivity() {
                 fileName = File(uri.lastPathSegment!!).name
             }
 
-            // Only process Spreadlog backup archives
-            if (!fileName.endsWith(".spbackup", ignoreCase = true) &&
-                !fileName.endsWith(".spreadlog", ignoreCase = true)) {
-                return
-            }
-
-            contentResolver.openInputStream(uri)?.use { inputStream ->
-                val cacheFile = File(cacheDir, fileName)
+            contentResolver.openInputStream(uri)?.buffered()?.use { inputStream ->
+                val header = ByteArray(4)
+                var offset = 0
+                while (offset < header.size) {
+                    val read = inputStream.read(header, offset, header.size - offset)
+                    if (read < 0) return
+                    offset += read
+                }
+                if (!header.contentEquals(byteArrayOf(0x53, 0x50, 0x42, 0x4b))) return
+                val cacheFile = File.createTempFile("incoming_", ".spbackup", cacheDir)
                 FileOutputStream(cacheFile).use { outputStream ->
+                    outputStream.write(header)
                     inputStream.copyTo(outputStream)
                 }
                 val path = cacheFile.absolutePath
-                pendingBackupPath = path
-                methodChannel?.invokeMethod("onBackupFileReceived", path)
+                if (backupListenerReady) {
+                    methodChannel?.invokeMethod("onBackupFileReceived", path)
+                } else {
+                    pendingBackupPath = path
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -86,6 +93,7 @@ class MainActivity : FlutterActivity() {
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "getPendingBackupPath" -> {
+                    backupListenerReady = true
                     val path = pendingBackupPath
                     pendingBackupPath = null
                     result.success(path)

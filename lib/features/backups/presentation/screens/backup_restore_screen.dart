@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import '../../data/backup_workmanager_service.dart';
 import '../../data/transports/google_drive_backup_transport.dart';
 import '../../data/transports/smtp_backup_transport.dart';
 import '../../domain/backup_exceptions.dart';
+import '../../domain/backup_encryptor.dart';
 import '../providers/backup_providers.dart';
 import '../providers/google_auth_providers.dart';
 import '../widgets/google_sign_in_button.dart';
@@ -19,16 +21,14 @@ import '../widgets/google_sign_in_button.dart';
 class BackupRestoreScreen extends ConsumerStatefulWidget {
   final String? initialFilePath;
 
-  const BackupRestoreScreen({
-    super.key,
-    this.initialFilePath,
-  });
+  const BackupRestoreScreen({super.key, this.initialFilePath});
 
   /// Tracks if the screen is currently mounted and active.
   static bool isScreenActive = false;
 
   @override
-  ConsumerState<BackupRestoreScreen> createState() => _BackupRestoreScreenState();
+  ConsumerState<BackupRestoreScreen> createState() =>
+      _BackupRestoreScreenState();
 }
 
 class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
@@ -122,15 +122,18 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final flightsAsync = ref.watch(flightsStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Backup & Cloud Sync Hub'),
-      ),
+      appBar: AppBar(title: const Text('Backup & Cloud Sync Hub')),
       body: Stack(
         children: [
           settingsAsync.when(
-            data: (settings) => _buildContent(context, settings, flightsAsync.value?.length ?? 0),
+            data: (settings) => _buildContent(
+              context,
+              settings,
+              flightsAsync.value?.length ?? 0,
+            ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(child: Text('Error loading settings: $err')),
+            error: (err, stack) =>
+                Center(child: Text('Error loading settings: $err')),
           ),
           if (_isLoading)
             Container(
@@ -138,7 +141,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               child: Center(
                 child: Card(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 24,
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -160,7 +166,11 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, BackupSettings settings, int currentFlightCount) {
+  Widget _buildContent(
+    BuildContext context,
+    BackupSettings settings,
+    int currentFlightCount,
+  ) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -219,7 +229,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // ==========================================
   // SECTION: MASTER PASSPHRASE
   // ==========================================
-  Widget _buildMasterPassphraseCard(BuildContext context, BackupSettings settings) {
+  Widget _buildMasterPassphraseCard(
+    BuildContext context,
+    BackupSettings settings,
+  ) {
     final isConfigured = settings.hasMasterPassphrase;
 
     return Card(
@@ -242,7 +255,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     children: [
                       const Text(
                         'Master Encryption Passphrase',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Text(
                         isConfigured
@@ -272,7 +288,11 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // ==========================================
   // SECTION 1: OFFLINE / LOCAL BACKUP & RESTORE
   // ==========================================
-  Widget _buildExportCard(BuildContext context, BackupSettings settings, int flightCount) {
+  Widget _buildExportCard(
+    BuildContext context,
+    BackupSettings settings,
+    int flightCount,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -349,7 +369,11 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           children: [
             const Row(
               children: [
-                Icon(Icons.settings_backup_restore, color: _accentPurple, size: 26),
+                Icon(
+                  Icons.settings_backup_restore,
+                  color: _accentPurple,
+                  size: 26,
+                ),
                 SizedBox(width: 12),
                 Text(
                   'Restore from Local File',
@@ -381,7 +405,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // ==========================================
   // SECTION 2: GOOGLE DRIVE CLOUD SYNC
   // ==========================================
-  Widget _buildGoogleDriveSyncCard(BuildContext context, BackupSettings settings) {
+  Widget _buildGoogleDriveSyncCard(
+    BuildContext context,
+    BackupSettings settings,
+  ) {
     final authService = ref.watch(googleAuthServiceProvider);
     final userAsync = ref.watch(googleUserStreamProvider);
     final user = userAsync.value ?? authService.currentUser;
@@ -399,7 +426,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                 Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: isSignedIn ? Colors.blue.shade800 : Colors.grey.shade800,
+                      backgroundColor: isSignedIn
+                          ? Colors.blue.shade800
+                          : Colors.grey.shade800,
                       child: Icon(
                         isSignedIn ? Icons.cloud_done : Icons.cloud_off,
                         color: Colors.white,
@@ -411,11 +440,18 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            isSignedIn ? (user.displayName ?? 'Google Account') : 'Google Cloud Sync',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            isSignedIn
+                                ? (user.displayName ?? 'Google Account')
+                                : 'Google Cloud Sync',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           Text(
-                            isSignedIn ? user.email : 'Not connected to Google Drive',
+                            isSignedIn
+                                ? user.email
+                                : 'Not connected to Google Drive',
                             style: TextStyle(
                               fontSize: 13,
                               color: isSignedIn ? _accentGreen : Colors.white60,
@@ -431,9 +467,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                         onPressed: _handleGoogleSignOut,
                       )
                     else
-                      buildGoogleSignInButton(
-                        onPressed: _handleGoogleSignIn,
-                      ),
+                      buildGoogleSignInButton(onPressed: _handleGoogleSignIn),
                   ],
                 ),
                 if (!isSignedIn) ...[
@@ -454,18 +488,27 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                         return Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.amber.shade900.withValues(alpha: 0.25),
+                            color: Colors.amber.shade900.withValues(
+                              alpha: 0.25,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.amber.shade700),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.shield_outlined, color: Colors.amber, size: 22),
+                              const Icon(
+                                Icons.shield_outlined,
+                                color: Colors.amber,
+                                size: 22,
+                              ),
                               const SizedBox(width: 10),
                               const Expanded(
                                 child: Text(
                                   'Google Drive permission required to sync files.',
-                                  style: TextStyle(fontSize: 12, color: Colors.white),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                               FilledButton.tonal(
@@ -541,7 +584,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     children: [
                       const Text(
                         'Backups in Google Drive',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.refresh),
@@ -574,29 +620,47 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _driveBackups!.length,
-                      separatorBuilder: (context, index) => const Divider(height: 1),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1),
                       itemBuilder: (context, index) {
                         final item = _driveBackups![index];
                         final dateStr = item.createdTime != null
-                            ? item.createdTime!.toLocal().toString().substring(0, 16)
+                            ? item.createdTime!.toLocal().toString().substring(
+                                0,
+                                16,
+                              )
                             : 'Unknown date';
-                        final sizeKb = (item.sizeBytes / 1024).toStringAsFixed(1);
+                        final sizeKb = (item.sizeBytes / 1024).toStringAsFixed(
+                          1,
+                        );
 
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.cloud_done, color: _accentGreen),
-                          title: Text(item.name, style: const TextStyle(fontSize: 14)),
+                          leading: const Icon(
+                            Icons.cloud_done,
+                            color: _accentGreen,
+                          ),
+                          title: Text(
+                            item.name,
+                            style: const TextStyle(fontSize: 14),
+                          ),
                           subtitle: Text('$dateStr • $sizeKb KB'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.restore, color: _accentBlue),
+                                icon: const Icon(
+                                  Icons.restore,
+                                  color: _accentBlue,
+                                ),
                                 tooltip: 'Restore from this backup',
                                 onPressed: () => _handleRestoreFromDrive(item),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: _accentError),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: _accentError,
+                                ),
                                 tooltip: 'Delete cloud backup',
                                 onPressed: () => _handleDeleteFromDrive(item),
                               ),
@@ -617,7 +681,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // ==========================================
   // SECTION 3: EMAIL BACKUP DISPATCH
   // ==========================================
-  Widget _buildEmailDispatchCard(BuildContext context, BackupSettings settings) {
+  Widget _buildEmailDispatchCard(
+    BuildContext context,
+    BackupSettings settings,
+  ) {
     final authService = ref.watch(googleAuthServiceProvider);
     final userAsync = ref.watch(googleUserStreamProvider);
     final user = userAsync.value ?? authService.currentUser;
@@ -638,7 +705,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     SizedBox(width: 12),
                     Text(
                       'Email Backup to Myself (Google)',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
@@ -663,7 +733,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.login),
-                      label: const Text('Sign in with Google to Email Yourself'),
+                      label: const Text(
+                        'Sign in with Google to Email Yourself',
+                      ),
                       onPressed: _handleGoogleSignIn,
                     ),
                   ),
@@ -688,12 +760,16 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     const Expanded(
                       child: Text(
                         'Custom SMTP Server (Advanced)',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     Switch(
                       value: settings.autoBackupEnabled,
-                      onChanged: (enabled) => _toggleAutoBackup(settings, enabled),
+                      onChanged: (enabled) =>
+                          _toggleAutoBackup(settings, enabled),
                     ),
                   ],
                 ),
@@ -721,7 +797,8 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                         onPressed: () => _promptConfigureSmtp(settings),
                       ),
                     ),
-                    if (settings.smtpHost != null && settings.smtpHost!.isNotEmpty) ...[
+                    if (settings.smtpHost != null &&
+                        settings.smtpHost!.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       FilledButton.tonalIcon(
                         icon: const Icon(Icons.send),
@@ -751,7 +828,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       if (resolvedUser != null && mounted) {
         final repo = ref.read(backupSettingsRepositoryProvider);
         final settings = await repo.loadSettings();
-        await repo.updateSettings(settings.copyWith(googleAccountEmail: resolvedUser.email));
+        await repo.updateSettings(
+          settings.copyWith(googleAccountEmail: resolvedUser.email),
+        );
         ref.invalidate(backupSettingsProvider);
         await _loadDriveBackups();
         if (mounted) {
@@ -769,7 +848,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         // User is actually signed in (e.g. through One Tap or parallel selection)
         final repo = ref.read(backupSettingsRepositoryProvider);
         final settings = await repo.loadSettings();
-        await repo.updateSettings(settings.copyWith(googleAccountEmail: resolvedUser.email));
+        await repo.updateSettings(
+          settings.copyWith(googleAccountEmail: resolvedUser.email),
+        );
         ref.invalidate(backupSettingsProvider);
         await _loadDriveBackups();
         return;
@@ -796,9 +877,8 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       _driveBackups = null;
     });
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signed out of Google.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Signed out of Google.')));
     }
   }
 
@@ -812,7 +892,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Google Drive permission is required to upload backups.'),
+                content: Text(
+                  'Google Drive permission is required to upload backups.',
+                ),
                 backgroundColor: _accentWarning,
               ),
             );
@@ -838,12 +920,15 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
     setState(() {
       _isLoading = true;
-      _loadingMessage = 'Creating encrypted backup & uploading to Google Drive...';
+      _loadingMessage =
+          'Creating encrypted backup & uploading to Google Drive...';
     });
 
     try {
       final backupService = ref.read(backupServiceProvider);
-      final encryptedBytes = await backupService.createEncryptedBackup(passphrase: passphrase);
+      final encryptedBytes = await backupService.createEncryptedBackup(
+        passphrase: passphrase,
+      );
 
       final nowStr = DateTime.now().toIso8601String().substring(0, 10);
       final fileName = 'spreadlog_backup_$nowStr.spbackup';
@@ -854,7 +939,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         suggestedFileName: fileName,
       );
 
-      await repo.recordBackupResult(timestamp: DateTime.now().toUtc(), status: 'Google Drive Sync OK');
+      await repo.recordBackupResult(
+        timestamp: DateTime.now().toUtc(),
+        status: 'Google Drive Sync OK',
+      );
       ref.invalidate(backupSettingsProvider);
       await _loadDriveBackups();
 
@@ -916,7 +1004,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Cloud Backup?'),
-        content: Text('Are you sure you want to delete ${item.name} from Google Drive?'),
+        content: Text(
+          'Are you sure you want to delete ${item.name} from Google Drive?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -945,7 +1035,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Delete failed: $e'), backgroundColor: _accentError),
+          SnackBar(
+            content: Text('Delete failed: $e'),
+            backgroundColor: _accentError,
+          ),
         );
       }
     }
@@ -987,12 +1080,15 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
     setState(() {
       _isLoading = true;
-      _loadingMessage = 'Sending encrypted backup to $recipientEmail via Gmail API...';
+      _loadingMessage =
+          'Sending encrypted backup to $recipientEmail via Gmail API...';
     });
 
     try {
       final backupService = ref.read(backupServiceProvider);
-      final encryptedBytes = await backupService.createEncryptedBackup(passphrase: passphrase);
+      final encryptedBytes = await backupService.createEncryptedBackup(
+        passphrase: passphrase,
+      );
 
       final nowStr = DateTime.now().toIso8601String().substring(0, 10);
       final fileName = 'spreadlog_backup_$nowStr.spbackup';
@@ -1004,13 +1100,18 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         recipientEmail: recipientEmail,
       );
 
-      await repo.recordBackupResult(timestamp: DateTime.now().toUtc(), status: 'Gmail Dispatch OK');
+      await repo.recordBackupResult(
+        timestamp: DateTime.now().toUtc(),
+        status: 'Gmail Dispatch OK',
+      );
       ref.invalidate(backupSettingsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Encrypted backup successfully sent to $recipientEmail!'),
+            content: Text(
+              'Encrypted backup successfully sent to $recipientEmail!',
+            ),
             backgroundColor: _accentGreen,
           ),
         );
@@ -1053,7 +1154,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
     try {
       final backupService = ref.read(backupServiceProvider);
-      final encryptedBytes = await backupService.createEncryptedBackup(passphrase: passphrase);
+      final encryptedBytes = await backupService.createEncryptedBackup(
+        passphrase: passphrase,
+      );
 
       final nowStr = DateTime.now().toIso8601String().substring(0, 10);
       final fileName = 'spreadlog_backup_$nowStr.spbackup';
@@ -1068,12 +1171,14 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         dialogTitle: 'Save Encrypted Backup',
         fileName: fileName,
         bytes: encryptedBytes,
-        type: FileType.custom,
-        allowedExtensions: const ['spbackup'],
+        type: FileType.any,
       );
 
       if (resultUri != null) {
-        await repo.recordBackupResult(timestamp: DateTime.now().toUtc(), status: 'Saved to Device');
+        await repo.recordBackupResult(
+          timestamp: DateTime.now().toUtc(),
+          status: 'Saved to Device',
+        );
         ref.invalidate(backupSettingsProvider);
 
         if (mounted) {
@@ -1123,7 +1228,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
     try {
       final backupService = ref.read(backupServiceProvider);
-      final encryptedBytes = await backupService.createEncryptedBackup(passphrase: passphrase);
+      final encryptedBytes = await backupService.createEncryptedBackup(
+        passphrase: passphrase,
+      );
 
       final nowStr = DateTime.now().toIso8601String().substring(0, 10);
       final fileName = 'spreadlog_backup_$nowStr.spbackup';
@@ -1140,7 +1247,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         suggestedFileName: fileName,
       );
 
-      await repo.recordBackupResult(timestamp: DateTime.now().toUtc(), status: 'Exported');
+      await repo.recordBackupResult(
+        timestamp: DateTime.now().toUtc(),
+        status: 'Exported',
+      );
       ref.invalidate(backupSettingsProvider);
 
       if (mounted) {
@@ -1170,16 +1280,25 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   }
 
   Future<void> _handlePickAndRestore() async {
-    final pickedFiles = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: const ['spbackup', 'spreadlog'],
-    );
-    if (pickedFiles.isEmpty) return;
-
-    final pickedFile = pickedFiles.first;
-    final fileBytes = await pickedFile.readAsBytes();
-
-    await _performRestore(fileBytes, originName: pickedFile.name);
+    try {
+      final mobile =
+          !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS);
+      final files = await FilePicker.pickFiles(
+        type: mobile ? FileType.any : FileType.custom,
+        allowedExtensions: mobile ? null : const ['spbackup', 'spreadlog'],
+      );
+      if (files.isEmpty || !mounted) return;
+      final bytes = await files.first.readAsBytes();
+      if (!mounted) return;
+      await _performRestore(bytes, originName: files.first.name);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Could not open backup: $e')));
+      }
+    }
   }
 
   Future<void> _restoreFromPath(String path) async {
@@ -1200,8 +1319,23 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     await _performRestore(bytes, originName: fileName);
   }
 
-  Future<void> _performRestore(Uint8List fileBytes, {String originName = 'archive'}) async {
-    if (!mounted) return;
+  Future<void> _performRestore(
+    Uint8List fileBytes, {
+    String originName = 'archive',
+  }) async {
+    if (!mounted || _isLoading) return;
+    if (fileBytes.length < 4 ||
+        !List.generate(
+          4,
+          (i) => fileBytes[i] == BackupEncryptor.magicBytes[i],
+        ).every((match) => match)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('This file is not a Spreadlog encrypted backup.'),
+        ),
+      );
+      return;
+    }
 
     final passphrase = await _promptEnterPassphraseDialog(
       title: 'Enter Backup Passphrase',
@@ -1277,15 +1411,24 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           children: [
             const Text(
               'All SHA-256 file checksums verified successfully.',
-              style: TextStyle(color: _accentGreen, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: _accentGreen,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const Divider(height: 24),
             Text('• Archive: $originName'),
-            Text('• Created: ${inspection.manifest.createdAt.toLocal().toString().substring(0, 16)}'),
+            Text(
+              '• Created: ${inspection.manifest.createdAt.toLocal().toString().substring(0, 16)}',
+            ),
             Text('• Total Flights: ${inspection.manifest.flightCount}'),
             Text('• Endorsement Scans: ${inspection.manifest.documentCount}'),
-            Text('• Aircraft Models: ${inspection.manifest.aircraftModelCount}'),
-            Text('• Archive Size: ${(inspection.totalSizeBytes / 1024).toStringAsFixed(1)} KB'),
+            Text(
+              '• Aircraft Models: ${inspection.manifest.aircraftModelCount}',
+            ),
+            Text(
+              '• Archive Size: ${(inspection.totalSizeBytes / 1024).toStringAsFixed(1)} KB',
+            ),
             const SizedBox(height: 16),
             const Text(
               'Proceeding will replace your current logbook with this backup. Rollback protection is active.',
@@ -1347,7 +1490,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     }
   }
 
-  Future<void> _toggleAutoSyncDrive(BackupSettings settings, bool enabled) async {
+  Future<void> _toggleAutoSyncDrive(
+    BackupSettings settings,
+    bool enabled,
+  ) async {
     final repo = ref.read(backupSettingsRepositoryProvider);
     final updated = settings.copyWith(autoSyncGoogleDrive: enabled);
     await repo.updateSettings(updated);
@@ -1386,12 +1532,16 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
     if (masterPass == null || masterPass.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please configure a Master Passphrase first.')),
+        const SnackBar(
+          content: Text('Please configure a Master Passphrase first.'),
+        ),
       );
       return;
     }
 
-    if (settings.smtpHost == null || settings.smtpUsername == null || smtpPass == null) {
+    if (settings.smtpHost == null ||
+        settings.smtpUsername == null ||
+        smtpPass == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('SMTP configuration is incomplete.')),
       );
@@ -1405,7 +1555,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
     try {
       final backupService = ref.read(backupServiceProvider);
-      final encryptedBytes = await backupService.createEncryptedBackup(passphrase: masterPass);
+      final encryptedBytes = await backupService.createEncryptedBackup(
+        passphrase: masterPass,
+      );
 
       final nowStr = DateTime.now().toIso8601String().substring(0, 10);
       final fileName = 'spreadlog_backup_$nowStr.spbackup';
@@ -1426,13 +1578,18 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         recipientEmail: settings.primaryEmail,
       );
 
-      await repo.recordBackupResult(timestamp: DateTime.now().toUtc(), status: 'Sent via SMTP');
+      await repo.recordBackupResult(
+        timestamp: DateTime.now().toUtc(),
+        status: 'Sent via SMTP',
+      );
       ref.invalidate(backupSettingsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Test backup dispatched via SMTP to ${settings.primaryEmail ?? settings.smtpUsername}'),
+            content: Text(
+              'Test backup dispatched via SMTP to ${settings.primaryEmail ?? settings.smtpUsername}',
+            ),
             backgroundColor: _accentGreen,
           ),
         );
@@ -1479,7 +1636,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             TextField(
               controller: ctrl2,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Confirm Passphrase'),
+              decoration: const InputDecoration(
+                labelText: 'Confirm Passphrase',
+              ),
             ),
           ],
         ),
@@ -1515,7 +1674,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       ref.invalidate(backupSettingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Master Passphrase updated successfully.')),
+          const SnackBar(
+            content: Text('Master Passphrase updated successfully.'),
+          ),
         );
       }
     }
@@ -1534,7 +1695,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(message, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 13, color: Colors.white70),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: ctrl,
@@ -1563,7 +1727,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final portCtrl = TextEditingController(text: settings.smtpPort.toString());
     final userCtrl = TextEditingController(text: settings.smtpUsername ?? '');
     final passCtrl = TextEditingController();
-    final primaryEmailCtrl = TextEditingController(text: settings.primaryEmail ?? '');
+    final primaryEmailCtrl = TextEditingController(
+      text: settings.primaryEmail ?? '',
+    );
     bool useTls = settings.smtpUseTls;
 
     final repo = ref.read(backupSettingsRepositoryProvider);
@@ -1585,29 +1751,39 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               children: [
                 TextField(
                   controller: hostCtrl,
-                  decoration: const InputDecoration(labelText: 'SMTP Host (e.g. smtp.gmail.com)'),
+                  decoration: const InputDecoration(
+                    labelText: 'SMTP Host (e.g. smtp.gmail.com)',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: portCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Port (e.g. 587)'),
+                  decoration: const InputDecoration(
+                    labelText: 'Port (e.g. 587)',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: userCtrl,
-                  decoration: const InputDecoration(labelText: 'SMTP Username / Login'),
+                  decoration: const InputDecoration(
+                    labelText: 'SMTP Username / Login',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: passCtrl,
                   obscureText: true,
-                  decoration: const InputDecoration(labelText: 'SMTP Password / App Password'),
+                  decoration: const InputDecoration(
+                    labelText: 'SMTP Password / App Password',
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: primaryEmailCtrl,
-                  decoration: const InputDecoration(labelText: 'Recipient Email Address'),
+                  decoration: const InputDecoration(
+                    labelText: 'Recipient Email Address',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -1637,8 +1813,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       final updated = settings.copyWith(
         smtpHost: hostCtrl.text.trim().isEmpty ? null : hostCtrl.text.trim(),
         smtpPort: int.tryParse(portCtrl.text.trim()) ?? 587,
-        smtpUsername: userCtrl.text.trim().isEmpty ? null : userCtrl.text.trim(),
-        primaryEmail: primaryEmailCtrl.text.trim().isEmpty ? null : primaryEmailCtrl.text.trim(),
+        smtpUsername: userCtrl.text.trim().isEmpty
+            ? null
+            : userCtrl.text.trim(),
+        primaryEmail: primaryEmailCtrl.text.trim().isEmpty
+            ? null
+            : primaryEmailCtrl.text.trim(),
         smtpUseTls: useTls,
       );
 
