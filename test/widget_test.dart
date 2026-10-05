@@ -44,6 +44,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('TOTAL FLIGHT TIME'), findsOneWidget);
+    expect(find.byTooltip('Select Multiple'), findsNothing);
+    expect(find.byTooltip('Select All'), findsNothing);
+    expect(find.byTooltip('Delete Selected'), findsNothing);
   });
 
   testWidgets('Cold backup launch opens restore above home exactly once', (

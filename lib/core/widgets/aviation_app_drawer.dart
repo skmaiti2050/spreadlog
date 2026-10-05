@@ -7,7 +7,6 @@ import '../../features/profile/presentation/providers/profile_providers.dart';
 import '../../features/profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../features/reports/presentation/pdf_preview_screen.dart';
 import '../../features/reports/presentation/summary_slip_preview_screen.dart';
-import '../../features/shell/presentation/providers/navigation_providers.dart';
 import '../theme/aviation_theme.dart';
 import '../utils/time_utils.dart';
 
@@ -15,24 +14,11 @@ import '../utils/time_utils.dart';
 class AviationAppDrawer extends ConsumerWidget {
   final ValueChanged<int>? onDestinationSelected;
 
-  const AviationAppDrawer({
-    super.key,
-    this.onDestinationSelected,
-  });
-
-  void _handleTabSelect(BuildContext context, WidgetRef ref, int index) {
-    Navigator.of(context).pop(); // Close drawer
-    if (onDestinationSelected != null) {
-      onDestinationSelected!(index);
-    } else {
-      ref.read(navigationTabProvider.notifier).selectTab(index);
-    }
-  }
+  const AviationAppDrawer({super.key, this.onDestinationSelected});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final activeTab = ref.watch(navigationTabProvider);
     final profile = ref.watch(pilotProfileProvider);
     final totals = ref.watch(grandTotalsProvider);
     final activeTheme = ref.watch(aviationThemeProvider);
@@ -55,7 +41,9 @@ class AviationAppDrawer extends ConsumerWidget {
                 color: theme.colorScheme.primaryContainer,
                 border: Border(
                   bottom: BorderSide(
-                    color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.5,
+                    ),
                   ),
                 ),
               ),
@@ -79,7 +67,9 @@ class AviationAppDrawer extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              profile.pilotName.isEmpty ? 'Captain' : profile.pilotName,
+                              profile.pilotName.isEmpty
+                                  ? 'Captain'
+                                  : profile.pilotName,
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 color: theme.colorScheme.onPrimaryContainer,
@@ -92,7 +82,8 @@ class AviationAppDrawer extends ConsumerWidget {
                                   ? 'Licence: Pending'
                                   : '${profile.licenceNumber} • SACAA',
                               style: theme.textTheme.labelMedium?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+                                color: theme.colorScheme.onPrimaryContainer
+                                    .withValues(alpha: 0.8),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -104,12 +95,17 @@ class AviationAppDrawer extends ConsumerWidget {
                   ),
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surface.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                     ),
                     child: Row(
@@ -141,43 +137,6 @@ class AviationAppDrawer extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
-                  // PRIMARY OPERATIONAL TABS
-                  _buildSectionHeader(context, 'FLIGHT OPERATIONS'),
-                  _buildDrawerTile(
-                    context: context,
-                    icon: Icons.flight_takeoff,
-                    label: 'Flight Deck',
-                    subtitle: 'Active Logbook Entries',
-                    isSelected: activeTab == 0,
-                    onTap: () => _handleTabSelect(context, ref, 0),
-                  ),
-                  _buildDrawerTile(
-                    context: context,
-                    icon: Icons.menu_book,
-                    label: 'Physical Logbook',
-                    subtitle: 'SACAA 14-Row Printable Spread',
-                    isSelected: activeTab == 1,
-                    onTap: () => _handleTabSelect(context, ref, 1),
-                  ),
-                  _buildDrawerTile(
-                    context: context,
-                    icon: Icons.folder_special_outlined,
-                    label: 'Endorsement Vault',
-                    subtitle: 'Scanned Stamps & Legal Signatures',
-                    isSelected: activeTab == 2,
-                    onTap: () => _handleTabSelect(context, ref, 2),
-                  ),
-                  _buildDrawerTile(
-                    context: context,
-                    icon: Icons.airplanemode_active,
-                    label: 'Aircraft Register',
-                    subtitle: 'Fleet Models & Class Endorsements',
-                    isSelected: activeTab == 3,
-                    onTap: () => _handleTabSelect(context, ref, 3),
-                  ),
-
-                  const Divider(height: 24),
-
                   // REPORTS & COMPLIANCE
                   _buildSectionHeader(context, 'REPORTS & COMPLIANCE'),
                   _buildDrawerTile(
@@ -208,7 +167,9 @@ class AviationAppDrawer extends ConsumerWidget {
                     isSelected: false,
                     onTap: () {
                       Navigator.of(context).pop();
-                      final typeSummaries = ref.read(aircraftTypeSummariesProvider);
+                      final typeSummaries = ref.read(
+                        aircraftTypeSummariesProvider,
+                      );
                       final grandTotals = ref.read(grandTotalsProvider);
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
@@ -324,13 +285,17 @@ class AviationAppDrawer extends ConsumerWidget {
       child: ListTile(
         leading: Icon(
           icon,
-          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+          color: isSelected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
         ),
         title: Text(
           label,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
@@ -340,7 +305,9 @@ class AviationAppDrawer extends ConsumerWidget {
           ),
         ),
         selected: isSelected,
-        selectedTileColor: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+        selectedTileColor: theme.colorScheme.primaryContainer.withValues(
+          alpha: 0.35,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         dense: true,
         trailing: trailing,

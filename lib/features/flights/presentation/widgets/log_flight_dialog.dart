@@ -30,10 +30,8 @@ class LogFlightDialog extends ConsumerStatefulWidget {
       return Navigator.of(context).push<Flight>(
         MaterialPageRoute<Flight>(
           fullscreenDialog: true,
-          builder: (context) => LogFlightDialog(
-            initialFlight: initialFlight,
-            isFullScreen: true,
-          ),
+          builder: (context) =>
+              LogFlightDialog(initialFlight: initialFlight, isFullScreen: true),
         ),
       );
     }
@@ -91,17 +89,6 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   late final TextEditingController _instFstdController;
   late final TextEditingController _navaidsController;
 
-  static const List<String> _popularTypes = [
-    'C172',
-    'C152',
-    'PA28',
-    'BE76',
-    'DA42',
-    'PA34',
-    'SR22',
-    'FNPT II',
-  ];
-
   static const List<Map<String, String>> _popularAirfields = [
     {'code': 'FALA', 'name': 'Lanseria'},
     {'code': 'FAGM', 'name': 'Rand'},
@@ -121,7 +108,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
     if (init != null) {
       _date = init.date;
-      _typeController = TextEditingController(text: init.aircraftModelId ?? 'C172');
+      _typeController = TextEditingController(
+        text: init.aircraftModelId ?? 'C172',
+      );
       _regController = TextEditingController(text: init.registration);
       _picController = TextEditingController(text: init.picName);
       _remarksController = TextEditingController(text: init.remarks);
@@ -150,12 +139,16 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
       if (init.instrumentTime != null) {
         _instActualController = TextEditingController(
-          text: TimeUtils.formatMinutesToHhMm(init.instrumentTime!.actualMinutes),
+          text: TimeUtils.formatMinutesToHhMm(
+            init.instrumentTime!.actualMinutes,
+          ),
         );
         _instFstdController = TextEditingController(
           text: TimeUtils.formatMinutesToHhMm(init.instrumentTime!.fstdMinutes),
         );
-        _navaidsController = TextEditingController(text: init.instrumentTime!.navaids ?? '');
+        _navaidsController = TextEditingController(
+          text: init.instrumentTime!.navaids ?? '',
+        );
       } else {
         _instActualController = TextEditingController(text: '00:00');
         _instFstdController = TextEditingController(text: '00:00');
@@ -165,7 +158,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       _typeController = TextEditingController(text: 'C172');
       _regController = TextEditingController(text: 'ZS-');
       _picController = TextEditingController(
-        text: profile.defaultPicName.isNotEmpty ? profile.defaultPicName : 'SELF',
+        text: profile.defaultPicName.isNotEmpty
+            ? profile.defaultPicName
+            : 'SELF',
       );
       _durationController = TextEditingController(text: '01:30');
       _remarksController = TextEditingController(text: 'Local Training');
@@ -207,7 +202,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   void _onRegChanged(String value) {
     String upper = value.toUpperCase().replaceAll(' ', '');
     if (upper.length >= 3 && !upper.contains('-')) {
-      if (upper.startsWith('ZS') || upper.startsWith('ZU') || upper.startsWith('ZT')) {
+      if (upper.startsWith('ZS') ||
+          upper.startsWith('ZU') ||
+          upper.startsWith('ZT')) {
         upper = '${upper.substring(0, 2)}-${upper.substring(2)}';
         _regController.value = TextEditingValue(
           text: upper,
@@ -270,7 +267,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Calculated flight time: ${TimeUtils.formatMinutesToHhMm(diff)} ($diff mins)'),
+            content: Text(
+              'Calculated flight time: ${TimeUtils.formatMinutesToHhMm(diff)} ($diff mins)',
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -279,7 +278,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   Future<void> _pickFlightDuration() async {
-    final currentMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 90;
+    final currentMins =
+        TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 90;
     final picked = await DurationPickerDialog.show(
       context,
       initialMinutes: currentMins,
@@ -299,14 +299,18 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   void _quickAddDurationMinutes(int addMins) {
-    final current = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
+    final current =
+        TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
     final updated = (current + addMins).clamp(0, 99 * 60);
     setState(() {
       _durationController.text = TimeUtils.formatMinutesToHhMm(updated);
     });
   }
 
-  Future<void> _pickBlockTime(TextEditingController controller, String label) async {
+  Future<void> _pickBlockTime(
+    TextEditingController controller,
+    String label,
+  ) async {
     final initial = TimeUtils.tryParseHhMmToMinutes(controller.text.trim());
     final tod = initial != null
         ? TimeOfDay(hour: initial ~/ 60, minute: initial % 60)
@@ -331,8 +335,12 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     }
   }
 
-  Future<void> _pickInstrumentDuration(TextEditingController controller, String title) async {
-    final currentMins = TimeUtils.tryParseHhMmToMinutes(controller.text.trim()) ?? 0;
+  Future<void> _pickInstrumentDuration(
+    TextEditingController controller,
+    String title,
+  ) async {
+    final currentMins =
+        TimeUtils.tryParseHhMmToMinutes(controller.text.trim()) ?? 0;
     final picked = await DurationPickerDialog.show(
       context,
       initialMinutes: currentMins,
@@ -411,7 +419,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       if (_soloCrossCountry && _role == PilotRole.dual) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error: Solo Cross-Country (CAR 61.01.5) cannot be logged as Dual'),
+            content: Text(
+              'Error: Solo Cross-Country (CAR 61.01.5) cannot be logged as Dual',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -420,12 +430,17 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       return true;
     } else if (step == 2) {
       if (!(_formKeyStep3.currentState?.validate() ?? true)) return false;
-      final durationMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
-      final instActualMins = TimeUtils.tryParseHhMmToMinutes(_instActualController.text.trim()) ?? 0;
+      final durationMins =
+          TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
+      final instActualMins =
+          TimeUtils.tryParseHhMmToMinutes(_instActualController.text.trim()) ??
+          0;
       if (!_isFstd && instActualMins > durationMins) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Error: Actual instrument time cannot exceed total flight duration'),
+            content: Text(
+              'Error: Actual instrument time cannot exceed total flight duration',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -473,7 +488,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         TimeUtils.tryParseHhMmToMinutes(_instFstdController.text.trim()) ?? 0;
 
     final now = DateTime.now();
-    final flightId = widget.initialFlight?.id ?? 'flight_${now.millisecondsSinceEpoch}';
+    final flightId =
+        widget.initialFlight?.id ?? 'flight_${now.millisecondsSinceEpoch}';
     final createdAt = widget.initialFlight?.createdAt ?? now;
 
     final flight = Flight(
@@ -495,7 +511,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                 durationMinutes: durationMins,
               ),
             ],
-      instrumentTime: (instActualMins > 0 ||
+      instrumentTime:
+          (instActualMins > 0 ||
               instFstdMins > 0 ||
               _navaidsController.text.isNotEmpty)
           ? InstrumentTime(
@@ -504,10 +521,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               fstdMinutes: instFstdMins,
             )
           : null,
-      landings: Landings(
-        dayCount: _dayLandings,
-        nightCount: _nightLandings,
-      ),
+      landings: Landings(dayCount: _dayLandings, nightCount: _nightLandings),
       createdAt: createdAt,
       updatedAt: now,
     );
@@ -548,7 +562,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     if (widget.isFullScreen) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.of(context).pop(),
@@ -558,10 +575,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: bodyContent,
-    );
+    return Scaffold(backgroundColor: Colors.transparent, body: bodyContent);
   }
 
   Widget _buildStepHeader(ThemeData theme) {
@@ -605,7 +619,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             child: LinearProgressIndicator(
               value: (_currentStep + 1) / 3,
               minHeight: 3,
-              backgroundColor: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              backgroundColor: theme.colorScheme.outlineVariant.withValues(
+                alpha: 0.3,
+              ),
               valueColor: AlwaysStoppedAnimation(theme.colorScheme.primary),
             ),
           ),
@@ -634,7 +650,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.4,
+                ),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: theme.colorScheme.outlineVariant),
               ),
@@ -643,7 +661,11 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.school_outlined, size: 14, color: theme.colorScheme.primary),
+                      Icon(
+                        Icons.school_outlined,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Syllabus Quick Fill',
@@ -660,8 +682,14 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                     runSpacing: 6,
                     children: [
                       _templateChip('PPL Solo XC', Icons.flight_takeoff),
-                      _templateChip('Night Rating Dual', Icons.nightlight_round),
-                      _templateChip('Multi-Engine Dual', Icons.airplanemode_active),
+                      _templateChip(
+                        'Night Rating Dual',
+                        Icons.nightlight_round,
+                      ),
+                      _templateChip(
+                        'Multi-Engine Dual',
+                        Icons.airplanemode_active,
+                      ),
                       _templateChip('IF Sim (FNPT II)', Icons.computer),
                     ],
                   ),
@@ -681,64 +709,42 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
-                child: Text(dateStr, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                child: Text(
+                  dateStr,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Aircraft Model
             TextFormField(
               controller: _typeController,
+              readOnly: true,
               decoration: const InputDecoration(
-                labelText: 'Aircraft Model / Type',
-                hintText: 'e.g. C172, BE76, FNPT II',
-                prefixIcon: Icon(Icons.airplanemode_active, size: 18),
+                labelText: 'Aircraft model',
                 border: OutlineInputBorder(),
-                isDense: true,
+                suffixIcon: Icon(Icons.search),
               ),
-              textCapitalization: TextCapitalization.characters,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-              onChanged: _onTypeSelected,
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: (aircraftEntries.isNotEmpty
-                      ? aircraftEntries
-                      : _popularTypes.map((t) => EndorsedAircraftEntry(
-                            model: AircraftModel(
-                              id: t,
-                              manufacturer: '',
-                              model: t,
-                              aircraftClass: ['BE76', 'DA42', 'PA34'].contains(t)
-                                  ? AircraftClass.multiEngine
-                                  : AircraftClass.singleEngine,
-                              category: t == 'FNPT II'
-                                  ? AircraftCategory.fstd
-                                  : AircraftCategory.aeroplane,
-                            ),
-                          )))
-                  .map((entry) {
-                final isSelected = _typeController.text.toUpperCase() == entry.model.id;
-                return ChoiceChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (entry.isEndorsed) ...[
-                        const Icon(Icons.check, size: 12, color: Colors.green),
-                        const SizedBox(width: 3),
-                      ],
-                      Text(entry.model.id, style: const TextStyle(fontSize: 10)),
-                    ],
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Select an aircraft' : null,
+              onTap: () async {
+                final selected = await showModalBottomSheet<AircraftModel>(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (context) => _AircraftPicker(
+                    models: aircraftEntries
+                        .map((entry) => entry.model)
+                        .toList(),
                   ),
-                  tooltip: entry.model.displayName.isNotEmpty ? entry.model.displayName : entry.model.id,
-                  selected: isSelected,
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  onSelected: (_) => _onTypeSelected(entry.model.id, entry.model),
                 );
-              }).toList(),
+                if (selected != null && mounted) {
+                  _onTypeSelected(selected.id, selected);
+                }
+              },
             ),
             const SizedBox(height: 16),
 
@@ -753,7 +759,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                 isDense: true,
               ),
               textCapitalization: TextCapitalization.characters,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
               onChanged: _onRegChanged,
             ),
             const SizedBox(height: 6),
@@ -761,12 +768,18 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               spacing: 4,
               children: [
                 ActionChip(
-                  label: const Text('ZS- (Standard)', style: TextStyle(fontSize: 10)),
+                  label: const Text(
+                    'ZS- (Standard)',
+                    style: TextStyle(fontSize: 10),
+                  ),
                   visualDensity: VisualDensity.compact,
                   onPressed: () => _onRegChanged('ZS-'),
                 ),
                 ActionChip(
-                  label: const Text('ZU- (NTCA)', style: TextStyle(fontSize: 10)),
+                  label: const Text(
+                    'ZU- (NTCA)',
+                    style: TextStyle(fontSize: 10),
+                  ),
                   visualDensity: VisualDensity.compact,
                   onPressed: () => _onRegChanged('ZU-'),
                 ),
@@ -785,7 +798,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                 isDense: true,
               ),
               textCapitalization: TextCapitalization.characters,
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Required' : null,
             ),
           ],
         ),
@@ -815,13 +829,21 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                     readOnly: true,
                     onTap: _pickFlightDuration,
                     decoration: InputDecoration(
-                      labelText: _isFstd ? 'FSTD Actual Time (Col 13)' : 'Total Flight Duration',
+                      labelText: _isFstd
+                          ? 'FSTD Actual Time (Col 13)'
+                          : 'Total Flight Duration',
                       hintText: 'Tap to select HH:MM',
                       prefixIcon: const Icon(Icons.schedule, size: 18),
                       suffixIcon: IconButton(
-                        icon: Icon(_showBlockTimes ? Icons.calculate : Icons.calculate_outlined, size: 20),
+                        icon: Icon(
+                          _showBlockTimes
+                              ? Icons.calculate
+                              : Icons.calculate_outlined,
+                          size: 20,
+                        ),
                         tooltip: 'Calculate from Off/On Blocks',
-                        onPressed: () => setState(() => _showBlockTimes = !_showBlockTimes),
+                        onPressed: () =>
+                            setState(() => _showBlockTimes = !_showBlockTimes),
                       ),
                       border: const OutlineInputBorder(),
                       isDense: true,
@@ -869,14 +891,21 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Block Time Calculator', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Block Time Calculator',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -884,7 +913,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                           child: TextField(
                             controller: _offBlocksController,
                             readOnly: true,
-                            onTap: () => _pickBlockTime(_offBlocksController, 'Off Blocks'),
+                            onTap: () => _pickBlockTime(
+                              _offBlocksController,
+                              'Off Blocks',
+                            ),
                             decoration: InputDecoration(
                               labelText: 'Off Blocks',
                               hintText: '09:00',
@@ -892,7 +924,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                               isDense: true,
                               suffixIcon: IconButton(
                                 icon: const Icon(Icons.access_time, size: 18),
-                                onPressed: () => _pickBlockTime(_offBlocksController, 'Off Blocks'),
+                                onPressed: () => _pickBlockTime(
+                                  _offBlocksController,
+                                  'Off Blocks',
+                                ),
                               ),
                             ),
                           ),
@@ -902,7 +937,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                           child: TextField(
                             controller: _onBlocksController,
                             readOnly: true,
-                            onTap: () => _pickBlockTime(_onBlocksController, 'On Blocks'),
+                            onTap: () => _pickBlockTime(
+                              _onBlocksController,
+                              'On Blocks',
+                            ),
                             decoration: InputDecoration(
                               labelText: 'On Blocks',
                               hintText: '10:30',
@@ -910,7 +948,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                               isDense: true,
                               suffixIcon: IconButton(
                                 icon: const Icon(Icons.access_time, size: 18),
-                                onPressed: () => _pickBlockTime(_onBlocksController, 'On Blocks'),
+                                onPressed: () => _pickBlockTime(
+                                  _onBlocksController,
+                                  'On Blocks',
+                                ),
                               ),
                             ),
                           ),
@@ -918,7 +959,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                         const SizedBox(width: 8),
                         FilledButton(
                           onPressed: _applyBlockTimes,
-                          style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+                          style: FilledButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                          ),
                           child: const Text('Apply'),
                         ),
                       ],
@@ -947,11 +990,19 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                       SegmentedButton<AircraftClass>(
                         showSelectedIcon: false,
                         segments: const [
-                          ButtonSegment(value: AircraftClass.singleEngine, label: Text('SE', style: TextStyle(fontSize: 11))),
-                          ButtonSegment(value: AircraftClass.multiEngine, label: Text('ME', style: TextStyle(fontSize: 11))),
+                          ButtonSegment(
+                            value: AircraftClass.singleEngine,
+                            label: Text('SE', style: TextStyle(fontSize: 11)),
+                          ),
+                          ButtonSegment(
+                            value: AircraftClass.multiEngine,
+                            label: Text('ME', style: TextStyle(fontSize: 11)),
+                          ),
                         ],
                         selected: {_aircraftClass},
-                        onSelectionChanged: _isFstd ? null : (s) => setState(() => _aircraftClass = s.first),
+                        onSelectionChanged: _isFstd
+                            ? null
+                            : (s) => setState(() => _aircraftClass = s.first),
                       ),
                     ],
                   ),
@@ -972,11 +1023,22 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                       SegmentedButton<TimePeriod>(
                         showSelectedIcon: false,
                         segments: const [
-                          ButtonSegment(value: TimePeriod.day, label: Text('Day', style: TextStyle(fontSize: 11))),
-                          ButtonSegment(value: TimePeriod.night, label: Text('Night', style: TextStyle(fontSize: 11))),
+                          ButtonSegment(
+                            value: TimePeriod.day,
+                            label: Text('Day', style: TextStyle(fontSize: 11)),
+                          ),
+                          ButtonSegment(
+                            value: TimePeriod.night,
+                            label: Text(
+                              'Night',
+                              style: TextStyle(fontSize: 11),
+                            ),
+                          ),
                         ],
                         selected: {_period},
-                        onSelectionChanged: _isFstd ? null : (s) => setState(() => _period = s.first),
+                        onSelectionChanged: _isFstd
+                            ? null
+                            : (s) => setState(() => _period = s.first),
                       ),
                     ],
                   ),
@@ -997,10 +1059,22 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             SegmentedButton<PilotRole>(
               showSelectedIcon: false,
               segments: const [
-                ButtonSegment(value: PilotRole.dual, label: Text('DUAL', style: TextStyle(fontSize: 10))),
-                ButtonSegment(value: PilotRole.pic, label: Text('PIC', style: TextStyle(fontSize: 10))),
-                ButtonSegment(value: PilotRole.picus, label: Text('PICUS', style: TextStyle(fontSize: 10))),
-                ButtonSegment(value: PilotRole.copilot, label: Text('COPILOT', style: TextStyle(fontSize: 10))),
+                ButtonSegment(
+                  value: PilotRole.dual,
+                  label: Text('DUAL', style: TextStyle(fontSize: 10)),
+                ),
+                ButtonSegment(
+                  value: PilotRole.pic,
+                  label: Text('PIC', style: TextStyle(fontSize: 10)),
+                ),
+                ButtonSegment(
+                  value: PilotRole.picus,
+                  label: Text('PICUS', style: TextStyle(fontSize: 10)),
+                ),
+                ButtonSegment(
+                  value: PilotRole.copilot,
+                  label: Text('COPILOT', style: TextStyle(fontSize: 10)),
+                ),
               ],
               selected: {_role},
               onSelectionChanged: (s) {
@@ -1039,8 +1113,14 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             // Solo Cross-Country (CAR 61.01.5)
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Solo Cross-Country (CAR 61.01.5)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-              subtitle: const Text('Must be flown as PIC. Required for licence renewal.', style: TextStyle(fontSize: 11)),
+              title: const Text(
+                'Solo Cross-Country (CAR 61.01.5)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              subtitle: const Text(
+                'Must be flown as PIC. Required for licence renewal.',
+                style: TextStyle(fontSize: 11),
+              ),
               value: _soloCrossCountry,
               dense: true,
               onChanged: (v) {
@@ -1084,7 +1164,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
           ),
           Text(
             '$value',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, size: 20),
@@ -1113,7 +1195,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.4,
+                ),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: theme.colorScheme.outlineVariant),
               ),
@@ -1122,9 +1206,18 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.tune, size: 16, color: theme.colorScheme.primary),
+                      Icon(
+                        Icons.tune,
+                        size: 16,
+                        color: theme.colorScheme.primary,
+                      ),
                       const SizedBox(width: 6),
-                      Text('Instrument Flying & Navaids (Optional)', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        'Instrument Flying & Navaids (Optional)',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -1134,24 +1227,39 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                         child: TextFormField(
                           controller: _instActualController,
                           readOnly: true,
-                          onTap: () => _pickInstrumentDuration(_instActualController, 'Actual Instrument Time'),
+                          onTap: () => _pickInstrumentDuration(
+                            _instActualController,
+                            'Actual Instrument Time',
+                          ),
                           decoration: InputDecoration(
                             labelText: 'Actual Inst (Col 9)',
                             hintText: '00:00',
                             border: const OutlineInputBorder(),
                             isDense: true,
                             suffixIcon: IconButton(
-                              icon: const Icon(Icons.touch_app_outlined, size: 18),
+                              icon: const Icon(
+                                Icons.touch_app_outlined,
+                                size: 18,
+                              ),
                               tooltip: 'Select Hours & Minutes',
-                              onPressed: () => _pickInstrumentDuration(_instActualController, 'Actual Instrument Time'),
+                              onPressed: () => _pickInstrumentDuration(
+                                _instActualController,
+                                'Actual Instrument Time',
+                              ),
                             ),
                           ),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) return null;
                             final instMins = TimeUtils.tryParseHhMmToMinutes(v);
                             if (instMins == null) return 'HH:MM';
-                            final durMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
-                            if (!_isFstd && instMins > durMins) return 'Exceeds flight ($durMins m)';
+                            final durMins =
+                                TimeUtils.tryParseHhMmToMinutes(
+                                  _durationController.text.trim(),
+                                ) ??
+                                0;
+                            if (!_isFstd && instMins > durMins) {
+                              return 'Exceeds flight ($durMins m)';
+                            }
                             return null;
                           },
                         ),
@@ -1161,24 +1269,39 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                         child: TextFormField(
                           controller: _instFstdController,
                           readOnly: true,
-                          onTap: () => _pickInstrumentDuration(_instFstdController, 'FSTD / Sim Instrument Time'),
+                          onTap: () => _pickInstrumentDuration(
+                            _instFstdController,
+                            'FSTD / Sim Instrument Time',
+                          ),
                           decoration: InputDecoration(
                             labelText: 'FSTD / Sim (Col 10)',
                             hintText: '00:00',
                             border: const OutlineInputBorder(),
                             isDense: true,
                             suffixIcon: IconButton(
-                              icon: const Icon(Icons.touch_app_outlined, size: 18),
+                              icon: const Icon(
+                                Icons.touch_app_outlined,
+                                size: 18,
+                              ),
                               tooltip: 'Select Hours & Minutes',
-                              onPressed: () => _pickInstrumentDuration(_instFstdController, 'FSTD / Sim Instrument Time'),
+                              onPressed: () => _pickInstrumentDuration(
+                                _instFstdController,
+                                'FSTD / Sim Instrument Time',
+                              ),
                             ),
                           ),
                           validator: (v) {
                             if (v == null || v.trim().isEmpty) return null;
                             final instMins = TimeUtils.tryParseHhMmToMinutes(v);
                             if (instMins == null) return 'HH:MM';
-                            final durMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
-                            if (_isFstd && instMins > durMins) return 'Exceeds sim ($durMins m)';
+                            final durMins =
+                                TimeUtils.tryParseHhMmToMinutes(
+                                  _durationController.text.trim(),
+                                ) ??
+                                0;
+                            if (_isFstd && instMins > durMins) {
+                              return 'Exceeds sim ($durMins m)';
+                            }
                             return null;
                           },
                         ),
@@ -1188,7 +1311,12 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _navaidsController,
-                    decoration: const InputDecoration(labelText: 'Navaids / Approaches (Col 11)', hintText: 'e.g. ILS RWY 03, VOR, RNAV', border: OutlineInputBorder(), isDense: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Navaids / Approaches (Col 11)',
+                      hintText: 'e.g. ILS RWY 03, VOR, RNAV',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
                   ),
                 ],
               ),
@@ -1198,12 +1326,21 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             // Remarks & Route
             TextFormField(
               controller: _remarksController,
-              decoration: const InputDecoration(labelText: 'Route & Remarks (Column 5)', hintText: 'e.g. FALA - FAGM Local Training', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(
+                labelText: 'Route & Remarks (Column 5)',
+                hintText: 'e.g. FALA - FAGM Local Training',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
             const SizedBox(height: 14),
             Row(
               children: [
-                Icon(Icons.local_airport_outlined, size: 14, color: theme.colorScheme.primary),
+                Icon(
+                  Icons.local_airport_outlined,
+                  size: 14,
+                  color: theme.colorScheme.primary,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   'Quick-Add Airfield:',
@@ -1220,7 +1357,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               runSpacing: 6,
               children: _popularAirfields.map((af) {
                 return ActionChip(
-                  label: Text(af['code']!, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  label: Text(
+                    af['code']!,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   tooltip: af['name'],
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1243,7 +1386,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+        border: Border(
+          top: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1260,8 +1405,15 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               child: const Text('Cancel'),
             ),
           FilledButton.icon(
-            icon: Icon(_currentStep == 2 ? Icons.check : Icons.arrow_forward, size: 16),
-            label: Text(_currentStep == 2 ? (_isEditing ? 'Save Changes' : 'Log Flight') : 'Next'),
+            icon: Icon(
+              _currentStep == 2 ? Icons.check : Icons.arrow_forward,
+              size: 16,
+            ),
+            label: Text(
+              _currentStep == 2
+                  ? (_isEditing ? 'Save Changes' : 'Log Flight')
+                  : 'Next',
+            ),
             onPressed: _nextStep,
           ),
         ],
@@ -1280,10 +1432,14 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   Widget _quickDurationChip(String label, int mins) {
-    final currentMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
+    final currentMins =
+        TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
     final isSelected = currentMins == mins;
     return ChoiceChip(
-      label: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+      ),
       selected: isSelected,
       visualDensity: VisualDensity.compact,
       padding: EdgeInsets.zero,
@@ -1292,7 +1448,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   Widget _buildLiveColumnPill(ThemeData theme) {
-    final durMins = TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
+    final durMins =
+        TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
     String colTarget;
 
     if (_isFstd) {
@@ -1300,33 +1457,65 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     } else if (_aircraftClass == AircraftClass.singleEngine) {
       if (_period == TimePeriod.day) {
         switch (_role) {
-          case PilotRole.dual: colTarget = 'Col 14 (SE Day Dual)'; break;
-          case PilotRole.pic: colTarget = 'Col 15 (SE Day PIC)'; break;
-          case PilotRole.picus: colTarget = 'Col 16 (SE Day PICUS)'; break;
-          case PilotRole.copilot: colTarget = 'Col 17 (SE Day Copilot)'; break;
+          case PilotRole.dual:
+            colTarget = 'Col 14 (SE Day Dual)';
+            break;
+          case PilotRole.pic:
+            colTarget = 'Col 15 (SE Day PIC)';
+            break;
+          case PilotRole.picus:
+            colTarget = 'Col 16 (SE Day PICUS)';
+            break;
+          case PilotRole.copilot:
+            colTarget = 'Col 17 (SE Day Copilot)';
+            break;
         }
       } else {
         switch (_role) {
-          case PilotRole.dual: colTarget = 'Col 18 (SE Night Dual)'; break;
-          case PilotRole.pic: colTarget = 'Col 19 (SE Night PIC)'; break;
-          case PilotRole.picus: colTarget = 'Col 20 (SE Night PICUS)'; break;
-          case PilotRole.copilot: colTarget = 'Col 21 (SE Night Copilot)'; break;
+          case PilotRole.dual:
+            colTarget = 'Col 18 (SE Night Dual)';
+            break;
+          case PilotRole.pic:
+            colTarget = 'Col 19 (SE Night PIC)';
+            break;
+          case PilotRole.picus:
+            colTarget = 'Col 20 (SE Night PICUS)';
+            break;
+          case PilotRole.copilot:
+            colTarget = 'Col 21 (SE Night Copilot)';
+            break;
         }
       }
     } else {
       if (_period == TimePeriod.day) {
         switch (_role) {
-          case PilotRole.dual: colTarget = 'Col 22 (ME Day Dual)'; break;
-          case PilotRole.pic: colTarget = 'Col 23 (ME Day PIC)'; break;
-          case PilotRole.picus: colTarget = 'Col 24 (ME Day PICUS)'; break;
-          case PilotRole.copilot: colTarget = 'Col 25 (ME Day Copilot)'; break;
+          case PilotRole.dual:
+            colTarget = 'Col 22 (ME Day Dual)';
+            break;
+          case PilotRole.pic:
+            colTarget = 'Col 23 (ME Day PIC)';
+            break;
+          case PilotRole.picus:
+            colTarget = 'Col 24 (ME Day PICUS)';
+            break;
+          case PilotRole.copilot:
+            colTarget = 'Col 25 (ME Day Copilot)';
+            break;
         }
       } else {
         switch (_role) {
-          case PilotRole.dual: colTarget = 'Col 26 (ME Night Dual)'; break;
-          case PilotRole.pic: colTarget = 'Col 27 (ME Night PIC)'; break;
-          case PilotRole.picus: colTarget = 'Col 28 (ME Night PICUS)'; break;
-          case PilotRole.copilot: colTarget = 'Col 29 (ME Night Copilot)'; break;
+          case PilotRole.dual:
+            colTarget = 'Col 26 (ME Night Dual)';
+            break;
+          case PilotRole.pic:
+            colTarget = 'Col 27 (ME Night PIC)';
+            break;
+          case PilotRole.picus:
+            colTarget = 'Col 28 (ME Night PICUS)';
+            break;
+          case PilotRole.copilot:
+            colTarget = 'Col 29 (ME Night Copilot)';
+            break;
         }
       }
     }
@@ -1340,7 +1529,11 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       ),
       child: Row(
         children: [
-          Icon(Icons.table_chart_outlined, size: 18, color: theme.colorScheme.onSecondaryContainer),
+          Icon(
+            Icons.table_chart_outlined,
+            size: 18,
+            color: theme.colorScheme.onSecondaryContainer,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -1356,6 +1549,67 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AircraftPicker extends StatefulWidget {
+  final List<AircraftModel> models;
+  const _AircraftPicker({required this.models});
+  @override
+  State<_AircraftPicker> createState() => _AircraftPickerState();
+}
+
+class _AircraftPickerState extends State<_AircraftPicker> {
+  String _query = '';
+  @override
+  Widget build(BuildContext context) {
+    final models = widget.models
+        .where(
+          (model) =>
+              '${model.id} ${model.displayName}'.toLowerCase().contains(_query),
+        )
+        .toList();
+    return SizedBox(
+      height: MediaQuery.sizeOf(context).height * .65,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          children: [
+            TextField(
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Search aircraft',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (value) =>
+                  setState(() => _query = value.trim().toLowerCase()),
+            ),
+            if (models.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No matching aircraft. Add models in Fleet.'),
+              ),
+            Expanded(
+              child: ListView(
+                children: [
+                  for (final model in models)
+                    ListTile(
+                      title: Text(model.id),
+                      subtitle: Text(model.displayName),
+                      onTap: () => Navigator.pop(context, model),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../domain/endorsement_category.dart';
 import '../../domain/endorsement_document.dart';
 import '../providers/endorsements_providers.dart';
@@ -13,10 +12,12 @@ class EndorsementVaultScreen extends ConsumerStatefulWidget {
   const EndorsementVaultScreen({super.key});
 
   @override
-  ConsumerState<EndorsementVaultScreen> createState() => _EndorsementVaultScreenState();
+  ConsumerState<EndorsementVaultScreen> createState() =>
+      _EndorsementVaultScreenState();
 }
 
-class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen> {
+class _EndorsementVaultScreenState
+    extends ConsumerState<EndorsementVaultScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -44,7 +45,6 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -54,9 +54,7 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
     final selectedCategory = ref.watch(selectedCategoryFilterProvider);
     final showSuperseded = ref.watch(showSupersededFilterProvider);
 
-
     return Scaffold(
-      drawer: const AviationAppDrawer(),
       appBar: AppBar(
         title: const Text('Endorsement Vault'),
         actions: [
@@ -85,15 +83,26 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
                               icon: const Icon(Icons.clear, size: 18),
                               onPressed: () {
                                 _searchController.clear();
-                                ref.read(endorsementSearchQueryProvider.notifier).setQuery('');
+                                ref
+                                    .read(
+                                      endorsementSearchQueryProvider.notifier,
+                                    )
+                                    .setQuery('');
                               },
                             )
                           : null,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
                     onChanged: (val) {
-                      ref.read(endorsementSearchQueryProvider.notifier).setQuery(val);
+                      ref
+                          .read(endorsementSearchQueryProvider.notifier)
+                          .setQuery(val);
                     },
                   ),
                 ),
@@ -105,7 +114,9 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
                   avatar: Icon(
                     Icons.history,
                     size: 16,
-                    color: showSuperseded ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+                    color: showSuperseded
+                        ? colorScheme.onPrimaryContainer
+                        : colorScheme.onSurfaceVariant,
                   ),
                   selected: showSuperseded,
                   onSelected: (val) {
@@ -127,7 +138,9 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
                   selected: selectedCategory == null,
                   onSelected: (selected) {
                     if (selected) {
-                      ref.read(selectedCategoryFilterProvider.notifier).select(null);
+                      ref
+                          .read(selectedCategoryFilterProvider.notifier)
+                          .select(null);
                     }
                   },
                 ),
@@ -139,9 +152,9 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
                       label: Text(cat.label),
                       selected: selectedCategory == cat,
                       onSelected: (selected) {
-                        ref.read(selectedCategoryFilterProvider.notifier).select(
-                              selected ? cat : null,
-                            );
+                        ref
+                            .read(selectedCategoryFilterProvider.notifier)
+                            .select(selected ? cat : null);
                       },
                     ),
                   );
@@ -150,7 +163,6 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
             ),
           ),
 
-
           const SizedBox(height: 4),
 
           // Main Endorsements List
@@ -158,11 +170,10 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
             child: asyncDocs.isLoading && !asyncDocs.hasValue
                 ? const Center(child: CircularProgressIndicator())
                 : endorsements.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
@@ -179,7 +190,8 @@ class _EndorsementVaultScreenState extends ConsumerState<EndorsementVaultScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            selectedCategory != null || _searchController.text.isNotEmpty
+                            selectedCategory != null ||
+                                    _searchController.text.isNotEmpty
                                 ? 'No documents match the active category or search query.'
                                 : 'Store digital copies of your logbook endorsements, rating certificates, and flight tests with tamper-proof SHA-256 verification.',
                             textAlign: TextAlign.center,

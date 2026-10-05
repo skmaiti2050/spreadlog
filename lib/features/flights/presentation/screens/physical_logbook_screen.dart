@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/hint_banner.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
@@ -45,8 +44,7 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
         widget.pages ?? ref.watch(ledgerPagesProvider);
     if (effectivePages.isEmpty) {
       return Scaffold(
-        drawer: const AviationAppDrawer(),
-        appBar: AppBar(title: const Text('Physical Logbook')),
+          appBar: AppBar(title: const Text('Physical Logbook')),
         body: const Center(child: Text('No flights logged yet.')),
       );
     }
@@ -55,7 +53,6 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
     final page = effectivePages[safeIndex];
 
     return Scaffold(
-      drawer: const AviationAppDrawer(),
       appBar: AppBar(
         title: Text('Physical Logbook — Page ${page.pageNumber} of ${effectivePages.length}'),
         actions: [

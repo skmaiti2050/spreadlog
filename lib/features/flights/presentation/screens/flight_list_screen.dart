@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/aviation_theme.dart';
 import '../../../../core/utils/time_utils.dart';
-import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../../../core/widgets/hint_banner.dart';
-import '../../../backups/presentation/screens/backup_restore_screen.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
-import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
-import '../../../reports/presentation/pdf_preview_screen.dart';
-import '../../../reports/presentation/summary_slip_preview_screen.dart';
 import '../../domain/flight.dart';
 import '../providers/flights_providers.dart';
 import '../widgets/flight_details_dialog.dart';
@@ -29,8 +23,10 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
 
   Future<void> _openEditFlightDialog(Flight flight) async {
     try {
-      final updated =
-          await LogFlightDialog.show(context, initialFlight: flight);
+      final updated = await LogFlightDialog.show(
+        context,
+        initialFlight: flight,
+      );
       if (updated != null) {
         await ref.read(flightsRepositoryProvider).saveFlight(updated);
         if (mounted) {
@@ -123,9 +119,9 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
       try {
         await ref.read(flightsRepositoryProvider).deleteFlight(flight.id);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Flight entry deleted')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Flight entry deleted')));
         }
       } catch (e) {
         if (mounted) {
@@ -203,10 +199,24 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final isUltraNarrow = screenWidth < 380;
-    final activeTheme = ref.watch(aviationThemeProvider);
+
+    final visibleFlights = (flightsAsync.value ?? <Flight>[])
+        .where(
+          (f) =>
+              _searchFilter.isEmpty ||
+              f.registration.toLowerCase().contains(_searchFilter) ||
+              (f.aircraftModelId?.toLowerCase().contains(_searchFilter) ??
+                  false) ||
+              f.remarks.toLowerCase().contains(_searchFilter) ||
+              f.picName.toLowerCase().contains(_searchFilter),
+        )
+        .toList();
+    final visibleIds = visibleFlights.map((f) => f.id).toSet();
+    // Reconcile local selection whenever the stream or search changes.
+    _selectedFlightIds.retainAll(visibleIds);
+    if (visibleIds.isEmpty) _isSelectionMode = false;
 
     return Scaffold(
-      drawer: const AviationAppDrawer(),
       appBar: _isSelectionMode
           ? AppBar(
               leading: IconButton(
@@ -227,11 +237,10 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                     tooltip: 'Select All',
                     onPressed: () {
                       setState(() {
-                        if (_selectedFlightIds.length == flights.length) {
+                        if (_selectedFlightIds.length == visibleIds.length) {
                           _selectedFlightIds.clear();
                         } else {
-                          _selectedFlightIds
-                              .addAll(flights.map((f) => f.id));
+                          _selectedFlightIds.addAll(visibleIds);
                         }
                       });
                     },
@@ -269,103 +278,12 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                 ],
               ),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.checklist),
-                  tooltip: 'Select Multiple',
-                  onPressed: () => setState(() => _isSelectionMode = true),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.picture_as_pdf),
-                  tooltip: 'Export Logbook PDF',
-                  onPressed: () {
-                    final pages = ref.read(ledgerPagesProvider);
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => PdfPreviewScreen(
-                          pages: pages,
-                          pilotName: profile.pilotName,
-                          licenceNumber: profile.licenceNumber,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  tooltip: 'More Cockpit Actions',
-                  onSelected: (action) {
-                    switch (action) {
-                      case 'profile':
-                        EditProfileDialog.show(context);
-                        break;
-                      case 'slip':
-                        final typeSummaries =
-                            ref.read(aircraftTypeSummariesProvider);
-                        final grandTotals = ref.read(grandTotalsProvider);
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => SummarySlipPreviewScreen(
-                              typeSummaries: typeSummaries,
-                              grandTotals: grandTotals,
-                            ),
-                          ),
-                        );
-                        break;
-                      case 'backup':
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const BackupRestoreScreen(),
-                          ),
-                        );
-                        break;
-                      case 'theme':
-                        ref
-                            .read(aviationThemeProvider.notifier)
-                            .cycleNext();
-                        break;
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'profile',
-                      child: ListTile(
-                        leading: Icon(Icons.account_circle_outlined),
-                        title: Text('Pilot Profile'),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'slip',
-                      child: ListTile(
-                        leading: Icon(Icons.receipt_long),
-                        title: Text('Career Summary Slip'),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'backup',
-                      child: ListTile(
-                        leading: Icon(Icons.backup_outlined),
-                        title: Text('Backup & Restore'),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    PopupMenuItem(
-                      value: 'theme',
-                      child: ListTile(
-                        leading: Icon(activeTheme.icon),
-                        title: Text(
-                            'Theme: ${activeTheme.displayName.split(" ").first}'),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
-                ),
+                if (visibleIds.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.checklist),
+                    tooltip: 'Select Multiple',
+                    onPressed: () => setState(() => _isSelectionMode = true),
+                  ),
               ],
             ),
       body: Column(
@@ -421,13 +339,15 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             context,
                             'Single Engine',
                             TimeUtils.formatMinutesToHhMm(
-                                totals.totalSingleEngine),
+                              totals.totalSingleEngine,
+                            ),
                           ),
                           _buildMetricColumn(
                             context,
                             'Multi Engine',
                             TimeUtils.formatMinutesToHhMm(
-                                totals.totalMultiEngine),
+                              totals.totalMultiEngine,
+                            ),
                           ),
                         ],
                       ),
@@ -456,14 +376,12 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                       _buildMetricColumn(
                         context,
                         'Single Engine',
-                        TimeUtils.formatMinutesToHhMm(
-                            totals.totalSingleEngine),
+                        TimeUtils.formatMinutesToHhMm(totals.totalSingleEngine),
                       ),
                       _buildMetricColumn(
                         context,
                         'Multi Engine',
-                        TimeUtils.formatMinutesToHhMm(
-                            totals.totalMultiEngine),
+                        TimeUtils.formatMinutesToHhMm(totals.totalMultiEngine),
                       ),
                       _buildMetricColumn(
                         context,
@@ -486,7 +404,8 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'Search by registration, aircraft type, or remarks...',
+                hintText:
+                    'Search by registration, aircraft type, or remarks...',
                 prefixIcon: const Icon(Icons.search, size: 20),
                 isDense: true,
                 border: OutlineInputBorder(
@@ -499,7 +418,8 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                       )
                     : null,
               ),
-              onChanged: (v) => setState(() => _searchFilter = v.trim().toLowerCase()),
+              onChanged: (v) =>
+                  setState(() => _searchFilter = v.trim().toLowerCase()),
             ),
           ),
 
@@ -534,11 +454,6 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 16),
-                          FilledButton.icon(
-                            onPressed: _openLogFlightDialog,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add Flight'),
-                          ),
                         ],
                       ),
                     ),
@@ -546,14 +461,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                 }
 
                 // Apply search filter if present
-                final filteredFlights = _searchFilter.isEmpty
-                    ? flights
-                    : flights.where((f) {
-                        return f.registration.toLowerCase().contains(_searchFilter) ||
-                            (f.aircraftModelId?.toLowerCase().contains(_searchFilter) ?? false) ||
-                            f.remarks.toLowerCase().contains(_searchFilter) ||
-                            f.picName.toLowerCase().contains(_searchFilter);
-                      }).toList();
+                final filteredFlights = visibleFlights;
 
                 if (filteredFlights.isEmpty) {
                   return const Center(
@@ -564,7 +472,10 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                 return Column(
                   children: [
                     const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 2,
+                      ),
                       child: HintBanner(
                         hintKey: 'hint_flight_card_details',
                         message: 'Tap any flight card for its briefing breakdown • Tap the pencil icon to edit in place.',
@@ -575,8 +486,10 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                       child: Scrollbar(
                         thumbVisibility: true,
                         child: ListView.separated(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           itemCount: filteredFlights.length,
                           separatorBuilder: (context, index) =>
                               const SizedBox(height: 8),
@@ -698,8 +611,9 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                 const SizedBox(width: 8),
               ] else ...[
                 CircleAvatar(
-                  backgroundColor:
-                      theme.colorScheme.primary.withValues(alpha: 0.1),
+                  backgroundColor: theme.colorScheme.primary.withValues(
+                    alpha: 0.1,
+                  ),
                   foregroundColor: theme.colorScheme.primary,
                   child: const Icon(Icons.flight),
                 ),
@@ -720,7 +634,9 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                           const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.secondaryContainer,
                               borderRadius: BorderRadius.circular(4),
@@ -728,8 +644,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                             child: Text(
                               flight.aircraftModelId!,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color:
-                                    theme.colorScheme.onSecondaryContainer,
+                                color: theme.colorScheme.onSecondaryContainer,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -757,9 +672,12 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                         Chip(
                           label: Text(
                             TimeUtils.formatMinutesToHhMm(
-                                flight.totalDurationMinutes),
+                              flight.totalDurationMinutes,
+                            ),
                             style: const TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 11),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
                           ),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
@@ -767,15 +685,19 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                         if (flight.landings.totalCount > 0)
                           Chip(
                             avatar: const Icon(Icons.flight_land, size: 14),
-                            label: Text('${flight.landings.totalCount} ldgs',
-                                style: const TextStyle(fontSize: 11)),
+                            label: Text(
+                              '${flight.landings.totalCount} ldgs',
+                              style: const TextStyle(fontSize: 11),
+                            ),
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
                           ),
                         if (flight.soloCrossCountry)
                           const Chip(
-                            label: Text('Solo XC',
-                                style: TextStyle(fontSize: 11)),
+                            label: Text(
+                              'Solo XC',
+                              style: TextStyle(fontSize: 11),
+                            ),
                             visualDensity: VisualDensity.compact,
                             padding: EdgeInsets.zero,
                           ),
