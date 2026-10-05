@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 
+import 'dart:convert';
+
 import '../../../core/database/app_database.dart';
 import '../../../core/database/daos/aircraft_dao.dart';
 import '../domain/aircraft_model.dart';
@@ -13,7 +15,9 @@ class DriftAircraftRepository implements AircraftRepository {
 
   @override
   Stream<List<AircraftModel>> watchAllModels() {
-    return _dao.watchAllModels().map((list) => list.map(_mapModelDataToDomain).toList());
+    return _dao.watchAllModels().map(
+      (list) => list.map(_mapModelDataToDomain).toList(),
+    );
   }
 
   @override
@@ -49,7 +53,9 @@ class DriftAircraftRepository implements AircraftRepository {
 
   @override
   Stream<List<ModelEndorsement>> watchAllEndorsements() {
-    return _dao.watchAllEndorsements().map((list) => list.map(_mapEndorsementDataToDomain).toList());
+    return _dao.watchAllEndorsements().map(
+      (list) => list.map(_mapEndorsementDataToDomain).toList(),
+    );
   }
 
   @override
@@ -82,8 +88,30 @@ class DriftAircraftRepository implements AircraftRepository {
   }
 
   @override
-  Future<void> deleteEndorsement(String id) async {
-    await _dao.deleteEndorsement(id);
+  Future<void> deleteEndorsement(
+    String id, {
+    String reason = 'Record corrected',
+  }) async {
+    if (reason.trim().isEmpty) {
+      throw ArgumentError('A correction reason is required');
+    }
+    await _dao.attachedDatabase.transaction(() async {
+      final rows = await _dao.getAllEndorsements();
+      final matching = rows.where((row) => row.id == id);
+      if (matching.isEmpty) return;
+      final row = matching.single;
+      await _dao.attachedDatabase.customStatement(
+        'INSERT INTO endorsement_corrections (endorsement_id, aircraft_model_id, removed_at, reason, snapshot) VALUES (?, ?, ?, ?, ?)',
+        [
+          id,
+          row.aircraftModelId,
+          DateTime.now().toUtc().toIso8601String(),
+          reason.trim(),
+          jsonEncode(row.toJson()),
+        ],
+      );
+      await _dao.deleteEndorsement(id);
+    });
   }
 
   AircraftModel _mapModelDataToDomain(AircraftModelsTableData d) {

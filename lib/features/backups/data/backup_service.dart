@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -40,13 +41,11 @@ class BackupService {
     required this.db,
     BackupEncryptor? encryptor,
     BackupArchiveService? archiveService,
-  })  : _encryptor = encryptor ?? BackupEncryptor(),
-        _archiveService = archiveService ?? BackupArchiveService();
+  }) : _encryptor = encryptor ?? BackupEncryptor(),
+       _archiveService = archiveService ?? BackupArchiveService();
 
   /// Creates a full, tamper-evident, encrypted `.spbackup` binary archive.
-  Future<Uint8List> createEncryptedBackup({
-    required String passphrase,
-  }) async {
+  Future<Uint8List> createEncryptedBackup({required String passphrase}) async {
     // 1. Gather stats from database
     final flights = await db.flightsDao.getAllFlights();
     final models = await db.aircraftDao.getAllModels();
@@ -60,7 +59,9 @@ class BackupService {
       documentFiles = await _collectWebDocumentFiles();
     } else {
       final docsDir = await getApplicationDocumentsDirectory();
-      final dbFile = File(p.join(docsDir.path, 'database', 'app_database.sqlite'));
+      final dbFile = File(
+        p.join(docsDir.path, 'database', 'app_database.sqlite'),
+      );
 
       // Checkpoint WAL first to flush all pending writes into the main file
       try {
@@ -153,7 +154,9 @@ class BackupService {
       await dbDir.create(recursive: true);
     }
     final dbFile = File(p.join(dbDir.path, 'app_database.sqlite'));
-    final rollbackFile = File(p.join(dbDir.path, 'app_database.sqlite.rollback'));
+    final rollbackFile = File(
+      p.join(dbDir.path, 'app_database.sqlite.rollback'),
+    );
     final walFile = File(p.join(dbDir.path, 'app_database.sqlite-wal'));
     final shmFile = File(p.join(dbDir.path, 'app_database.sqlite-shm'));
     final journalFile = File(p.join(dbDir.path, 'app_database.sqlite-journal'));
@@ -212,23 +215,74 @@ class BackupService {
   // --- WEB RESTORATION ENGINE ---
   Future<void> _restoreWeb(ExtractedBackup extracted) async {
     final sqlite = await getPlatformSqliteLoader().load();
-    final fs = InMemoryFileSystem(name: 'mem_restore_${DateTime.now().microsecondsSinceEpoch}');
-    fs.fileData['/backup.sqlite'] = Uint8Buffer()..addAll(extracted.databaseBytes);
+    final fs = InMemoryFileSystem(
+      name: 'mem_restore_${DateTime.now().microsecondsSinceEpoch}',
+    );
+    fs.fileData['/backup.sqlite'] = Uint8Buffer()
+      ..addAll(extracted.databaseBytes);
     sqlite.registerVirtualFileSystem(fs, makeDefault: false);
     final sourceDb = sqlite.open('/backup.sqlite', vfs: fs.name);
 
     try {
-      final tableRows = sourceDb.select("SELECT name FROM sqlite_master WHERE type='table';");
+      final tableRows = sourceDb.select(
+        "SELECT name FROM sqlite_master WHERE type='table';",
+      );
       final availableTables = tableRows.map((r) => r['name'] as String).toSet();
 
-      final modelsRows = _readTable(sourceDb, availableTables, 'aircraft_models_table', 'aircraft_models');
-      final flightsRows = _readTable(sourceDb, availableTables, 'flights_table', 'flights');
-      final flightTimesRows = _readTable(sourceDb, availableTables, 'flight_times_table', 'flight_times');
-      final instructionTimesRows = _readTable(sourceDb, availableTables, 'instruction_times_table', 'instruction_times');
-      final instrumentTimesRows = _readTable(sourceDb, availableTables, 'instrument_times_table', 'instrument_times');
-      final landingsRows = _readTable(sourceDb, availableTables, 'landings_table', 'landings');
-      final docsRows = _readTable(sourceDb, availableTables, 'endorsement_documents_table', 'endorsement_documents');
-      final modelEndorsementsRows = _readTable(sourceDb, availableTables, 'model_endorsements_table', 'model_endorsements');
+      final modelsRows = _readTable(
+        sourceDb,
+        availableTables,
+        'aircraft_models_table',
+        'aircraft_models',
+      );
+      final flightsRows = _readTable(
+        sourceDb,
+        availableTables,
+        'flights_table',
+        'flights',
+      );
+      final flightTimesRows = _readTable(
+        sourceDb,
+        availableTables,
+        'flight_times_table',
+        'flight_times',
+      );
+      final instructionTimesRows = _readTable(
+        sourceDb,
+        availableTables,
+        'instruction_times_table',
+        'instruction_times',
+      );
+      final instrumentTimesRows = _readTable(
+        sourceDb,
+        availableTables,
+        'instrument_times_table',
+        'instrument_times',
+      );
+      final landingsRows = _readTable(
+        sourceDb,
+        availableTables,
+        'landings_table',
+        'landings',
+      );
+      final docsRows = _readTable(
+        sourceDb,
+        availableTables,
+        'endorsement_documents_table',
+        'endorsement_documents',
+      );
+      final correctionRows = _readTable(
+        sourceDb,
+        availableTables,
+        'endorsement_corrections',
+        'endorsement_corrections',
+      );
+      final modelEndorsementsRows = _readTable(
+        sourceDb,
+        availableTables,
+        'model_endorsements_table',
+        'model_endorsements',
+      );
 
       final docFileMap = <String, Uint8List>{};
       for (final doc in extracted.documentFiles) {
@@ -239,6 +293,19 @@ class BackupService {
       await db.transaction(() async {
         await db.customStatement('PRAGMA foreign_keys = OFF;');
 
+        await db.customStatement('DELETE FROM endorsement_corrections');
+        for (final row in correctionRows) {
+          await db.customStatement(
+            'INSERT INTO endorsement_corrections (endorsement_id, aircraft_model_id, removed_at, reason, snapshot) VALUES (?, ?, ?, ?, ?)',
+            [
+              row['endorsement_id'],
+              row['aircraft_model_id'],
+              row['removed_at'],
+              row['reason'],
+              row['snapshot'],
+            ],
+          );
+        }
         await db.delete(db.modelEndorsementsTable).go();
         await db.delete(db.endorsementDocumentsTable).go();
         await db.delete(db.flightTimesTable).go();
@@ -249,81 +316,97 @@ class BackupService {
         await db.delete(db.aircraftModelsTable).go();
 
         for (final row in modelsRows) {
-          await db.into(db.aircraftModelsTable).insert(
-            AircraftModelsTableCompanion(
-              id: Value(row['id'] as String),
-              manufacturer: Value(row['manufacturer'] as String),
-              model: Value(row['model'] as String),
-              aircraftClass: Value(row['aircraft_class'] as int),
-              category: Value(row['category'] as int),
-              createdAt: Value(_parseDateTime(row['created_at'])),
-            ),
-          );
+          await db
+              .into(db.aircraftModelsTable)
+              .insert(
+                AircraftModelsTableCompanion(
+                  id: Value(row['id'] as String),
+                  manufacturer: Value(row['manufacturer'] as String),
+                  model: Value(row['model'] as String),
+                  aircraftClass: Value(row['aircraft_class'] as int),
+                  category: Value(row['category'] as int),
+                  createdAt: Value(_parseDateTime(row['created_at'])),
+                ),
+              );
         }
 
         for (final row in flightsRows) {
-          await db.into(db.flightsTable).insert(
-            FlightsTableCompanion(
-              id: Value(row['id'] as String),
-              date: Value(_parseDateTime(row['date'])),
-              aircraftModelId: Value(row['aircraft_model_id'] as String?),
-              registration: Value(row['registration'] as String),
-              picName: Value(row['pic_name'] as String),
-              remarks: Value((row['remarks'] as String?) ?? ''),
-              soloCrossCountry: Value(_parseBool(row['solo_cross_country'])),
-              fstdActualMinutes: Value((row['fstd_actual_minutes'] as int?) ?? 0),
-              createdAt: Value(_parseDateTime(row['created_at'])),
-              updatedAt: Value(_parseDateTime(row['updated_at'])),
-            ),
-          );
+          await db
+              .into(db.flightsTable)
+              .insert(
+                FlightsTableCompanion(
+                  id: Value(row['id'] as String),
+                  date: Value(_parseDateTime(row['date'])),
+                  aircraftModelId: Value(row['aircraft_model_id'] as String?),
+                  registration: Value(row['registration'] as String),
+                  picName: Value(row['pic_name'] as String),
+                  remarks: Value((row['remarks'] as String?) ?? ''),
+                  soloCrossCountry: Value(
+                    _parseBool(row['solo_cross_country']),
+                  ),
+                  fstdActualMinutes: Value(
+                    (row['fstd_actual_minutes'] as int?) ?? 0,
+                  ),
+                  createdAt: Value(_parseDateTime(row['created_at'])),
+                  updatedAt: Value(_parseDateTime(row['updated_at'])),
+                ),
+              );
         }
 
         for (final row in flightTimesRows) {
-          await db.into(db.flightTimesTable).insert(
-            FlightTimesTableCompanion(
-              id: Value(row['id'] as String),
-              flightId: Value(row['flight_id'] as String),
-              aircraftClass: Value(row['aircraft_class'] as int),
-              period: Value(row['period'] as int),
-              role: Value(row['role'] as int),
-              durationMinutes: Value(row['duration_minutes'] as int),
-            ),
-          );
+          await db
+              .into(db.flightTimesTable)
+              .insert(
+                FlightTimesTableCompanion(
+                  id: Value(row['id'] as String),
+                  flightId: Value(row['flight_id'] as String),
+                  aircraftClass: Value(row['aircraft_class'] as int),
+                  period: Value(row['period'] as int),
+                  role: Value(row['role'] as int),
+                  durationMinutes: Value(row['duration_minutes'] as int),
+                ),
+              );
         }
 
         for (final row in instructionTimesRows) {
-          await db.into(db.instructionTimesTable).insert(
-            InstructionTimesTableCompanion(
-              id: Value(row['id'] as String),
-              flightId: Value(row['flight_id'] as String),
-              category: Value(row['category'] as int),
-              durationMinutes: Value(row['duration_minutes'] as int),
-            ),
-          );
+          await db
+              .into(db.instructionTimesTable)
+              .insert(
+                InstructionTimesTableCompanion(
+                  id: Value(row['id'] as String),
+                  flightId: Value(row['flight_id'] as String),
+                  category: Value(row['category'] as int),
+                  durationMinutes: Value(row['duration_minutes'] as int),
+                ),
+              );
         }
 
         for (final row in instrumentTimesRows) {
-          await db.into(db.instrumentTimesTable).insert(
-            InstrumentTimesTableCompanion(
-              id: Value(row['id'] as String),
-              flightId: Value(row['flight_id'] as String),
-              navaids: Value(row['navaids'] as String?),
-              place: Value(row['place'] as String?),
-              actualMinutes: Value((row['actual_minutes'] as int?) ?? 0),
-              fstdMinutes: Value((row['fstd_minutes'] as int?) ?? 0),
-            ),
-          );
+          await db
+              .into(db.instrumentTimesTable)
+              .insert(
+                InstrumentTimesTableCompanion(
+                  id: Value(row['id'] as String),
+                  flightId: Value(row['flight_id'] as String),
+                  navaids: Value(row['navaids'] as String?),
+                  place: Value(row['place'] as String?),
+                  actualMinutes: Value((row['actual_minutes'] as int?) ?? 0),
+                  fstdMinutes: Value((row['fstd_minutes'] as int?) ?? 0),
+                ),
+              );
         }
 
         for (final row in landingsRows) {
-          await db.into(db.landingsTable).insert(
-            LandingsTableCompanion(
-              id: Value(row['id'] as String),
-              flightId: Value(row['flight_id'] as String),
-              dayCount: Value((row['day_count'] as int?) ?? 0),
-              nightCount: Value((row['night_count'] as int?) ?? 0),
-            ),
-          );
+          await db
+              .into(db.landingsTable)
+              .insert(
+                LandingsTableCompanion(
+                  id: Value(row['id'] as String),
+                  flightId: Value(row['flight_id'] as String),
+                  dayCount: Value((row['day_count'] as int?) ?? 0),
+                  nightCount: Value((row['night_count'] as int?) ?? 0),
+                ),
+              );
         }
 
         for (final row in docsRows) {
@@ -333,42 +416,58 @@ class BackupService {
           final docBytes = docFileMap[baseName] ?? docFileMap[origPath];
           if (docBytes != null) {
             final ext = p.extension(origPath).replaceAll('.', '').toLowerCase();
-            final mime = ext == 'png' ? 'image/png' : ext == 'pdf' ? 'application/pdf' : 'image/jpeg';
+            final mime = ext == 'png'
+                ? 'image/png'
+                : ext == 'pdf'
+                ? 'application/pdf'
+                : 'image/jpeg';
             origPath = 'data:$mime;base64,${base64Encode(docBytes)}';
           }
 
-          await db.into(db.endorsementDocumentsTable).insert(
-            EndorsementDocumentsTableCompanion(
-              id: Value(row['id'] as String),
-              category: Value(row['category'] as String),
-              endorsementDate: Value(_parseDateTime(row['endorsement_date'])),
-              pageNumber: Value(row['page_number'] as int?),
-              originalPath: Value(origPath),
-              processedPath: Value(row['processed_path'] as String?),
-              thumbnailPath: Value(row['thumbnail_path'] as String?),
-              sha256: Value((row['sha256'] as String?) ?? ''),
-              capturedAt: Value(_parseDateTime(row['captured_at'])),
-              supersededBy: Value(row['superseded_by'] as String?),
-              supersedes: Value(row['supersedes'] as String?),
-              notes: Value(row['notes'] as String?),
-            ),
-          );
+          await db
+              .into(db.endorsementDocumentsTable)
+              .insert(
+                EndorsementDocumentsTableCompanion(
+                  id: Value(row['id'] as String),
+                  category: Value(row['category'] as String),
+                  endorsementDate: Value(
+                    _parseDateTime(row['endorsement_date']),
+                  ),
+                  pageNumber: Value(row['page_number'] as int?),
+                  originalPath: Value(origPath),
+                  processedPath: Value(row['processed_path'] as String?),
+                  thumbnailPath: Value(row['thumbnail_path'] as String?),
+                  sha256: Value((row['sha256'] as String?) ?? ''),
+                  capturedAt: Value(_parseDateTime(row['captured_at'])),
+                  supersededBy: Value(row['superseded_by'] as String?),
+                  supersedes: Value(row['supersedes'] as String?),
+                  notes: Value(row['notes'] as String?),
+                ),
+              );
         }
 
         for (final row in modelEndorsementsRows) {
-          await db.into(db.modelEndorsementsTable).insert(
-            ModelEndorsementsTableCompanion(
-              id: Value(row['id'] as String),
-              aircraftModelId: Value(row['aircraft_model_id'] as String),
-              pilotDate: Value(_parseDateTime(row['pilot_date'])),
-              instructorDate: Value(row['instructor_date'] == null ? null : _parseDateTime(row['instructor_date'])),
-              instructorName: Value(row['instructor_name'] as String?),
-              instructorLicence: Value(row['instructor_licence'] as String?),
-              sourceDocumentId: Value(row['source_document_id'] as String?),
-              notes: Value(row['notes'] as String?),
-              createdAt: Value(_parseDateTime(row['created_at'])),
-            ),
-          );
+          await db
+              .into(db.modelEndorsementsTable)
+              .insert(
+                ModelEndorsementsTableCompanion(
+                  id: Value(row['id'] as String),
+                  aircraftModelId: Value(row['aircraft_model_id'] as String),
+                  pilotDate: Value(_parseDateTime(row['pilot_date'])),
+                  instructorDate: Value(
+                    row['instructor_date'] == null
+                        ? null
+                        : _parseDateTime(row['instructor_date']),
+                  ),
+                  instructorName: Value(row['instructor_name'] as String?),
+                  instructorLicence: Value(
+                    row['instructor_licence'] as String?,
+                  ),
+                  sourceDocumentId: Value(row['source_document_id'] as String?),
+                  notes: Value(row['notes'] as String?),
+                  createdAt: Value(_parseDateTime(row['created_at'])),
+                ),
+              );
         }
 
         await db.customStatement('PRAGMA foreign_keys = ON;');
@@ -382,7 +481,9 @@ class BackupService {
   // --- WEB DATABASE EXPORT ENGINE ---
   Future<Uint8List> _createWebDatabaseSnapshot() async {
     final sqlite = await getPlatformSqliteLoader().load();
-    final fs = InMemoryFileSystem(name: 'mem_export_${DateTime.now().microsecondsSinceEpoch}');
+    final fs = InMemoryFileSystem(
+      name: 'mem_export_${DateTime.now().microsecondsSinceEpoch}',
+    );
     sqlite.registerVirtualFileSystem(fs, makeDefault: false);
     final exportDb = sqlite.open('/export.sqlite', vfs: fs.name);
 
@@ -450,6 +551,7 @@ class BackupService {
           supersedes TEXT,
           notes TEXT
         );
+        CREATE TABLE endorsement_corrections (id INTEGER PRIMARY KEY AUTOINCREMENT, endorsement_id TEXT NOT NULL, aircraft_model_id TEXT NOT NULL, removed_at TEXT NOT NULL, reason TEXT NOT NULL, snapshot TEXT NOT NULL);
         CREATE TABLE model_endorsements_table (
           id TEXT NOT NULL PRIMARY KEY,
           aircraft_model_id TEXT NOT NULL,
@@ -463,11 +565,33 @@ class BackupService {
         );
       ''');
 
+      final corrections = await db
+          .customSelect('SELECT * FROM endorsement_corrections')
+          .get();
+      for (final row in corrections) {
+        exportDb.execute(
+          'INSERT INTO endorsement_corrections (endorsement_id, aircraft_model_id, removed_at, reason, snapshot) VALUES (?, ?, ?, ?, ?)',
+          [
+            row.data['endorsement_id'],
+            row.data['aircraft_model_id'],
+            row.data['removed_at'],
+            row.data['reason'],
+            row.data['snapshot'],
+          ],
+        );
+      }
       final models = await db.select(db.aircraftModelsTable).get();
       for (final m in models) {
         exportDb.execute(
           'INSERT INTO aircraft_models_table VALUES (?, ?, ?, ?, ?, ?)',
-          [m.id, m.manufacturer, m.model, m.aircraftClass, m.category, m.createdAt.millisecondsSinceEpoch ~/ 1000],
+          [
+            m.id,
+            m.manufacturer,
+            m.model,
+            m.aircraftClass,
+            m.category,
+            m.createdAt.millisecondsSinceEpoch ~/ 1000,
+          ],
         );
       }
 
@@ -494,7 +618,14 @@ class BackupService {
       for (final ft in ftimes) {
         exportDb.execute(
           'INSERT INTO flight_times_table VALUES (?, ?, ?, ?, ?, ?)',
-          [ft.id, ft.flightId, ft.aircraftClass, ft.period, ft.role, ft.durationMinutes],
+          [
+            ft.id,
+            ft.flightId,
+            ft.aircraftClass,
+            ft.period,
+            ft.role,
+            ft.durationMinutes,
+          ],
         );
       }
 
@@ -510,16 +641,25 @@ class BackupService {
       for (final inst in instTimes) {
         exportDb.execute(
           'INSERT INTO instrument_times_table VALUES (?, ?, ?, ?, ?, ?)',
-          [inst.id, inst.flightId, inst.navaids, inst.place, inst.actualMinutes, inst.fstdMinutes],
+          [
+            inst.id,
+            inst.flightId,
+            inst.navaids,
+            inst.place,
+            inst.actualMinutes,
+            inst.fstdMinutes,
+          ],
         );
       }
 
       final landings = await db.select(db.landingsTable).get();
       for (final l in landings) {
-        exportDb.execute(
-          'INSERT INTO landings_table VALUES (?, ?, ?, ?)',
-          [l.id, l.flightId, l.dayCount, l.nightCount],
-        );
+        exportDb.execute('INSERT INTO landings_table VALUES (?, ?, ?, ?)', [
+          l.id,
+          l.flightId,
+          l.dayCount,
+          l.nightCount,
+        ]);
       }
 
       final docs = await db.select(db.endorsementDocumentsTable).get();
@@ -555,7 +695,9 @@ class BackupService {
             me.id,
             me.aircraftModelId,
             me.pilotDate.millisecondsSinceEpoch ~/ 1000,
-            me.instructorDate == null ? null : me.instructorDate!.millisecondsSinceEpoch ~/ 1000,
+            me.instructorDate == null
+                ? null
+                : me.instructorDate!.millisecondsSinceEpoch ~/ 1000,
             me.instructorName,
             me.instructorLicence,
             me.sourceDocumentId,
@@ -569,7 +711,8 @@ class BackupService {
         exportDb.execute('VACUUM INTO "/vacuum.sqlite";');
       } catch (_) {}
 
-      final bytes = fs.fileData['/vacuum.sqlite'] ?? fs.fileData['/export.sqlite']!;
+      final bytes =
+          fs.fileData['/vacuum.sqlite'] ?? fs.fileData['/export.sqlite']!;
       return Uint8List.fromList(bytes);
     } finally {
       exportDb.close();
@@ -578,7 +721,9 @@ class BackupService {
   }
 
   // --- DOCUMENT COLLECTION HELPERS ---
-  Future<List<ArchiveFileItem>> _collectNativeDocumentFiles(Directory docsDir) async {
+  Future<List<ArchiveFileItem>> _collectNativeDocumentFiles(
+    Directory docsDir,
+  ) async {
     final documentFiles = <ArchiveFileItem>[];
     final endorsementsDir = Directory(p.join(docsDir.path, 'endorsements'));
     if (await endorsementsDir.exists()) {
@@ -587,10 +732,9 @@ class BackupService {
         if (entry is File) {
           final fileName = p.basename(entry.path);
           final bytes = await entry.readAsBytes();
-          documentFiles.add(ArchiveFileItem(
-            path: 'endorsements/$fileName',
-            bytes: bytes,
-          ));
+          documentFiles.add(
+            ArchiveFileItem(path: 'endorsements/$fileName', bytes: bytes),
+          );
         }
       }
     }
@@ -607,10 +751,9 @@ class BackupService {
           final rawB64 = d.originalPath.substring(commaIdx + 1);
           try {
             final bytes = base64Decode(rawB64);
-            documentFiles.add(ArchiveFileItem(
-              path: 'endorsements/${d.id}.jpg',
-              bytes: bytes,
-            ));
+            documentFiles.add(
+              ArchiveFileItem(path: 'endorsements/${d.id}.jpg', bytes: bytes),
+            );
           } catch (_) {}
         }
       }
@@ -627,8 +770,8 @@ class BackupService {
     final tableName = availableTables.contains(preferredName)
         ? preferredName
         : availableTables.contains(alternateName)
-            ? alternateName
-            : null;
+        ? alternateName
+        : null;
     if (tableName == null) return const [];
     final result = sourceDb.select('SELECT * FROM "$tableName";');
     return result.map((r) {

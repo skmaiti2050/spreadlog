@@ -12,6 +12,8 @@ abstract class AircraftRepository {
   Future<List<ModelEndorsement>> getAllEndorsements();
   Future<ModelEndorsement?> getEndorsementByModelId(String modelId);
   Future<void> saveEndorsement(ModelEndorsement endorsement);
-  Future<void> deleteEndorsement(String id);
+  Future<void> deleteEndorsement(
+    String id, {
+    String reason = 'Record corrected',
+  });
 }
-

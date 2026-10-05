@@ -19,7 +19,8 @@ class EndorseAircraftDialog extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EndorseAircraftDialog> createState() => _EndorseAircraftDialogState();
+  ConsumerState<EndorseAircraftDialog> createState() =>
+      _EndorseAircraftDialogState();
 }
 
 class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
@@ -46,10 +47,16 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
     final e = widget.initialEndorsement;
 
     _idController = TextEditingController(text: m?.id ?? '');
-    _manufacturerController = TextEditingController(text: m?.manufacturer ?? '');
+    _manufacturerController = TextEditingController(
+      text: m?.manufacturer ?? '',
+    );
     _modelController = TextEditingController(text: m?.model ?? '');
-    _instructorNameController = TextEditingController(text: e?.instructorName ?? '');
-    _instructorLicenceController = TextEditingController(text: e?.instructorLicence ?? '');
+    _instructorNameController = TextEditingController(
+      text: e?.instructorName ?? '',
+    );
+    _instructorLicenceController = TextEditingController(
+      text: e?.instructorLicence ?? '',
+    );
     _notesController = TextEditingController(text: e?.notes ?? '');
 
     _aircraftClass = m?.aircraftClass ?? AircraftClass.singleEngine;
@@ -71,7 +78,9 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
   }
 
   Future<void> _pickDate({required bool isPilotDate}) async {
-    final initial = isPilotDate ? _pilotDate : (_instructorDate ?? DateTime.now());
+    final initial = isPilotDate
+        ? _pilotDate
+        : (_instructorDate ?? DateTime.now());
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -115,7 +124,8 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                   children: [
                     Text(
                       'Attach Vault Scan',
-                      style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      style: Theme.of(ctx).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -136,7 +146,9 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                     builder: (_) => const ScanEndorsementDialog(),
                   );
                   if (result == true) {
-                    final updatedDocs = await repo.getEndorsements(includeSuperseded: true);
+                    final updatedDocs = await repo.getEndorsements(
+                      includeSuperseded: true,
+                    );
                     if (updatedDocs.isNotEmpty && mounted) {
                       setState(() {
                         _sourceDocumentId = updatedDocs.first.id;
@@ -155,7 +167,9 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
               if (docs.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: Text('No documents in Endorsement Vault yet.')),
+                  child: Center(
+                    child: Text('No documents in Endorsement Vault yet.'),
+                  ),
                 )
               else
                 Flexible(
@@ -168,9 +182,16 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                       return ListTile(
                         dense: true,
                         leading: const Icon(Icons.verified_outlined, size: 20),
-                        title: Text(doc.category.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Date: ${TimeUtils.formatDate(doc.endorsementDate)} • SHA: ${doc.sha256.substring(0, 8)}...'),
-                        trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+                        title: Text(
+                          doc.category.label,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Date: ${TimeUtils.formatDate(doc.endorsementDate)} • SHA: ${doc.sha256.substring(0, 8)}...',
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check, color: Colors.green)
+                            : null,
                         onTap: () => Navigator.of(ctx).pop(doc.id),
                       );
                     },
@@ -192,6 +213,12 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    String? removalReason;
+    if (!_recordEndorsement && widget.initialEndorsement != null) {
+      removalReason = await showDialog<String>(context: context,
+        builder: (_) => const _EndorsementRemovalDialog());
+      if (!mounted || removalReason == null) return;
+    }
     setState(() => _isSaving = true);
     try {
       final repo = ref.read(aircraftRepositoryProvider);
@@ -210,26 +237,41 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
       if (_recordEndorsement) {
         final existingEndorsement = widget.initialEndorsement;
         final endorsement = ModelEndorsement(
-          id: existingEndorsement?.id ?? 'me_${DateTime.now().millisecondsSinceEpoch}',
+          id:
+              existingEndorsement?.id ??
+              'me_${DateTime.now().millisecondsSinceEpoch}',
           aircraftModelId: modelId,
           pilotDate: _pilotDate,
           instructorDate: _instructorDate,
-          instructorName: _instructorNameController.text.trim().isEmpty ? null : _instructorNameController.text.trim(),
-          instructorLicence: _instructorLicenceController.text.trim().isEmpty ? null : _instructorLicenceController.text.trim(),
+          instructorName: _instructorNameController.text.trim().isEmpty
+              ? null
+              : _instructorNameController.text.trim(),
+          instructorLicence: _instructorLicenceController.text.trim().isEmpty
+              ? null
+              : _instructorLicenceController.text.trim(),
           sourceDocumentId: _sourceDocumentId,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
           createdAt: existingEndorsement?.createdAt ?? DateTime.now(),
         );
         await repo.saveEndorsement(endorsement);
       } else if (widget.initialEndorsement != null) {
-        await repo.deleteEndorsement(widget.initialEndorsement!.id);
+        await repo.deleteEndorsement(
+          widget.initialEndorsement!.id,
+          reason: removalReason!,
+        );
       }
 
       if (mounted) {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Aircraft ${model.displayName} saved successfully'),
+            content: Text(
+              !_recordEndorsement && widget.initialEndorsement != null
+                  ? 'Endorsement removed; aircraft and scans kept'
+                  : 'Aircraft ${model.displayName} saved successfully',
+            ),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -237,7 +279,10 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving aircraft: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error saving aircraft: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -264,12 +309,19 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                 // Header
                 Row(
                   children: [
-                    Icon(Icons.airplanemode_active, color: theme.colorScheme.primary),
+                    Icon(
+                      Icons.airplanemode_active,
+                      color: theme.colorScheme.primary,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        isEditing ? 'Edit Aircraft & Endorsement' : 'Register Aircraft Model',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        isEditing
+                            ? 'Edit Aircraft & Endorsement'
+                            : 'Register Aircraft Model',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -299,8 +351,12 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                   border: OutlineInputBorder(),
                                   isDense: true,
                                 ),
-                                textCapitalization: TextCapitalization.characters,
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                textCapitalization:
+                                    TextCapitalization.characters,
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Required'
+                                    : null,
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -320,11 +376,25 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                   SegmentedButton<AircraftClass>(
                                     showSelectedIcon: false,
                                     segments: const [
-                                      ButtonSegment(value: AircraftClass.singleEngine, label: Text('SE', style: TextStyle(fontSize: 11))),
-                                      ButtonSegment(value: AircraftClass.multiEngine, label: Text('ME', style: TextStyle(fontSize: 11))),
+                                      ButtonSegment(
+                                        value: AircraftClass.singleEngine,
+                                        label: Text(
+                                          'SE',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                      ),
+                                      ButtonSegment(
+                                        value: AircraftClass.multiEngine,
+                                        label: Text(
+                                          'ME',
+                                          style: TextStyle(fontSize: 11),
+                                        ),
+                                      ),
                                     ],
                                     selected: {_aircraftClass},
-                                    onSelectionChanged: (s) => setState(() => _aircraftClass = s.first),
+                                    onSelectionChanged: (s) => setState(
+                                      () => _aircraftClass = s.first,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -343,7 +413,9 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                             isDense: true,
                           ),
                           textCapitalization: TextCapitalization.words,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Required'
+                              : null,
                         ),
                         const SizedBox(height: 14),
 
@@ -357,18 +429,30 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                             isDense: true,
                           ),
                           textCapitalization: TextCapitalization.words,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Required'
+                              : null,
                         ),
                         const SizedBox(height: 16),
 
                         // Endorsement Section Toggle
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Record Differences / Type Endorsement', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          subtitle: const Text('Log checkout date and authorized instructor sign-off.', style: TextStyle(fontSize: 11)),
+                          title: const Text(
+                            'Record Differences / Type Endorsement',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            'Log checkout date and authorized instructor sign-off.',
+                            style: TextStyle(fontSize: 11),
+                          ),
                           value: _recordEndorsement,
                           dense: true,
-                          onChanged: (v) => setState(() => _recordEndorsement = v),
+                          onChanged: (v) =>
+                              setState(() => _recordEndorsement = v),
                         ),
 
                         if (_recordEndorsement) ...[
@@ -382,7 +466,10 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                 labelText: 'Pilot Endorsement Date *',
                                 border: OutlineInputBorder(),
                                 isDense: true,
-                                prefixIcon: Icon(Icons.calendar_today, size: 18),
+                                prefixIcon: Icon(
+                                  Icons.calendar_today,
+                                  size: 18,
+                                ),
                               ),
                               child: Text(TimeUtils.formatDate(_pilotDate)),
                             ),
@@ -393,18 +480,31 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.4),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: theme.colorScheme.outlineVariant),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.verified_user_outlined, size: 16, color: theme.colorScheme.primary),
+                                    Icon(
+                                      Icons.verified_user_outlined,
+                                      size: 16,
+                                      color: theme.colorScheme.primary,
+                                    ),
                                     const SizedBox(width: 6),
-                                    Text('Instructor Sign-Off (Optional)', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold)),
+                                    Text(
+                                      'Instructor Sign-Off (Optional)',
+                                      style: theme.textTheme.labelSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 10),
@@ -417,15 +517,29 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                       labelText: 'Instructor Test Date',
                                       border: const OutlineInputBorder(),
                                       isDense: true,
-                                      prefixIcon: const Icon(Icons.event_available, size: 18),
+                                      prefixIcon: const Icon(
+                                        Icons.event_available,
+                                        size: 18,
+                                      ),
                                       suffixIcon: _instructorDate != null
                                           ? IconButton(
-                                              icon: const Icon(Icons.clear, size: 16),
-                                              onPressed: () => setState(() => _instructorDate = null),
+                                              icon: const Icon(
+                                                Icons.clear,
+                                                size: 16,
+                                              ),
+                                              onPressed: () => setState(
+                                                () => _instructorDate = null,
+                                              ),
                                             )
                                           : null,
                                     ),
-                                    child: Text(_instructorDate != null ? TimeUtils.formatDate(_instructorDate!) : 'Not Specified'),
+                                    child: Text(
+                                      _instructorDate != null
+                                          ? TimeUtils.formatDate(
+                                              _instructorDate!,
+                                            )
+                                          : 'Not Specified',
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -437,9 +551,13 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                     hintText: 'e.g. CAPT J. MILLER',
                                     border: OutlineInputBorder(),
                                     isDense: true,
-                                    prefixIcon: Icon(Icons.person_outline, size: 18),
+                                    prefixIcon: Icon(
+                                      Icons.person_outline,
+                                      size: 18,
+                                    ),
                                   ),
-                                  textCapitalization: TextCapitalization.characters,
+                                  textCapitalization:
+                                      TextCapitalization.characters,
                                 ),
                                 const SizedBox(height: 10),
 
@@ -450,9 +568,13 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                     hintText: 'e.g. ZA-642918',
                                     border: OutlineInputBorder(),
                                     isDense: true,
-                                    prefixIcon: Icon(Icons.badge_outlined, size: 18),
+                                    prefixIcon: Icon(
+                                      Icons.badge_outlined,
+                                      size: 18,
+                                    ),
                                   ),
-                                  textCapitalization: TextCapitalization.characters,
+                                  textCapitalization:
+                                      TextCapitalization.characters,
                                 ),
                               ],
                             ),
@@ -476,8 +598,12 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                     ? 'Attached Document (ID: ${_sourceDocumentId!.length > 12 ? _sourceDocumentId!.substring(0, 12) : _sourceDocumentId}..)'
                                     : 'None (Tap to attach scan)',
                                 style: TextStyle(
-                                  color: _sourceDocumentId != null ? theme.colorScheme.primary : null,
-                                  fontWeight: _sourceDocumentId != null ? FontWeight.bold : FontWeight.normal,
+                                  color: _sourceDocumentId != null
+                                      ? theme.colorScheme.primary
+                                      : null,
+                                  fontWeight: _sourceDocumentId != null
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -508,14 +634,23 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                      onPressed: _isSaving
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 10),
                     FilledButton.icon(
                       onPressed: _isSaving ? null : _save,
                       icon: _isSaving
-                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          ? const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : const Icon(Icons.check, size: 18),
                       label: Text(_isSaving ? 'Saving...' : 'Save Aircraft'),
                     ),
@@ -528,4 +663,30 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
       ),
     );
   }
+}
+
+class _EndorsementRemovalDialog extends StatefulWidget {
+  const _EndorsementRemovalDialog();
+  @override
+  State<_EndorsementRemovalDialog> createState() => _EndorsementRemovalDialogState();
+}
+class _EndorsementRemovalDialogState extends State<_EndorsementRemovalDialog> {
+  final _controller = TextEditingController();
+  String? _error;
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Remove recorded endorsement?'),
+    content: Column(mainAxisSize: MainAxisSize.min, children: [
+      const Text('The aircraft, flights and original Vault scan will be kept. A correction record will preserve the removed endorsement.'),
+      TextField(controller: _controller, decoration: InputDecoration(labelText: 'Reason for correction', errorText: _error)),
+    ]),
+    actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+      TextButton(onPressed: () {
+        final reason = _controller.text.trim();
+        if (reason.isEmpty) { setState(() => _error = 'Enter a reason'); return; }
+        Navigator.pop(context, reason);
+      }, child: const Text('Remove endorsement'))],
+  );
 }

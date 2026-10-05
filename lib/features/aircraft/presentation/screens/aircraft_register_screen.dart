@@ -2,28 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
-import '../../../../core/widgets/aviation_app_drawer.dart';
 import '../../../endorsements/presentation/providers/endorsements_providers.dart';
 import '../../../endorsements/presentation/widgets/endorsement_details_dialog.dart';
 import '../../domain/aircraft_model.dart';
 import '../providers/aircraft_providers.dart';
 import '../widgets/endorse_aircraft_dialog.dart';
 
-enum AircraftRegisterFilter {
-  all,
-  singleEngine,
-  multiEngine,
-  endorsedOnly,
-}
+enum AircraftRegisterFilter { all, singleEngine, multiEngine, endorsedOnly }
 
 class AircraftRegisterScreen extends ConsumerStatefulWidget {
   const AircraftRegisterScreen({super.key});
 
   @override
-  ConsumerState<AircraftRegisterScreen> createState() => _AircraftRegisterScreenState();
+  ConsumerState<AircraftRegisterScreen> createState() =>
+      _AircraftRegisterScreenState();
 }
 
-class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen> {
+class _AircraftRegisterScreenState
+    extends ConsumerState<AircraftRegisterScreen> {
   AircraftRegisterFilter _filter = AircraftRegisterFilter.all;
   String _searchQuery = '';
   final _searchController = TextEditingController();
@@ -102,15 +98,21 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
     final theme = Theme.of(context);
     final allEntries = ref.watch(endorsedAircraftListProvider);
 
-    final seCount = allEntries.where((e) => e.model.aircraftClass == AircraftClass.singleEngine).length;
-    final meCount = allEntries.where((e) => e.model.aircraftClass == AircraftClass.multiEngine).length;
+    final seCount = allEntries
+        .where((e) => e.model.aircraftClass == AircraftClass.singleEngine)
+        .length;
+    final meCount = allEntries
+        .where((e) => e.model.aircraftClass == AircraftClass.multiEngine)
+        .length;
     final endorsedCount = allEntries.where((e) => e.isEndorsed).length;
 
     final filteredEntries = allEntries.where((entry) {
-      if (_filter == AircraftRegisterFilter.singleEngine && entry.model.aircraftClass != AircraftClass.singleEngine) {
+      if (_filter == AircraftRegisterFilter.singleEngine &&
+          entry.model.aircraftClass != AircraftClass.singleEngine) {
         return false;
       }
-      if (_filter == AircraftRegisterFilter.multiEngine && entry.model.aircraftClass != AircraftClass.multiEngine) {
+      if (_filter == AircraftRegisterFilter.multiEngine &&
+          entry.model.aircraftClass != AircraftClass.multiEngine) {
         return false;
       }
       if (_filter == AircraftRegisterFilter.endorsedOnly && !entry.isEndorsed) {
@@ -126,17 +128,7 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
     }).toList();
 
     return Scaffold(
-      drawer: const AviationAppDrawer(),
-      appBar: AppBar(
-        title: const Text('Aircraft Model Register'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Register Aircraft Model',
-            onPressed: () => _openAddEditDialog(),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Aircraft Model Register')),
       body: Column(
         children: [
           // Search & Filter Header
@@ -160,7 +152,10 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
                         : null,
                     border: const OutlineInputBorder(),
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                   ),
                   onChanged: (v) => setState(() => _searchQuery = v.trim()),
                 ),
@@ -203,18 +198,19 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.airplanemode_inactive, size: 48, color: theme.colorScheme.outline),
+                        Icon(
+                          Icons.airplanemode_inactive,
+                          size: 48,
+                          color: theme.colorScheme.outline,
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'No aircraft models found.',
-                          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                         const SizedBox(height: 12),
-                        FilledButton.tonalIcon(
-                          onPressed: () => _openAddEditDialog(),
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Add Aircraft Model'),
-                        ),
                       ],
                     ),
                   )
@@ -251,7 +247,11 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
     );
   }
 
-  Widget _buildAircraftCard(BuildContext context, ThemeData theme, EndorsedAircraftEntry entry) {
+  Widget _buildAircraftCard(
+    BuildContext context,
+    ThemeData theme,
+    EndorsedAircraftEntry entry,
+  ) {
     final m = entry.model;
     final e = entry.endorsement;
     final isMe = m.aircraftClass == AircraftClass.multiEngine;
@@ -276,7 +276,10 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isMe
                         ? Colors.indigo.withValues(alpha: 0.15)
@@ -296,15 +299,24 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
                 Expanded(
                   child: Text(
                     m.displayName,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: isMe
-                        ? theme.colorScheme.errorContainer.withValues(alpha: 0.4)
-                        : theme.colorScheme.primaryContainer.withValues(alpha: 0.4),
+                        ? theme.colorScheme.errorContainer.withValues(
+                            alpha: 0.4,
+                          )
+                        : theme.colorScheme.primaryContainer.withValues(
+                            alpha: 0.4,
+                          ),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -312,7 +324,9 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w600,
-                      color: isMe ? theme.colorScheme.error : theme.colorScheme.primary,
+                      color: isMe
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
                     ),
                   ),
                 ),
@@ -323,15 +337,24 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
             // Endorsement Status Pill
             if (entry.isEndorsed) ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: Colors.green.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                    const Icon(
+                      Icons.check_circle,
+                      size: 16,
+                      color: Colors.green,
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
@@ -345,13 +368,21 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
                     ),
                     if (e.sourceDocumentId != null)
                       OutlinedButton.icon(
-                        icon: const Icon(Icons.verified, size: 14, color: Colors.green),
-                        label: const Text('Vault Scan', style: TextStyle(fontSize: 11)),
+                        icon: const Icon(
+                          Icons.verified,
+                          size: 14,
+                          color: Colors.green,
+                        ),
+                        label: const Text(
+                          'Vault Scan',
+                          style: TextStyle(fontSize: 11),
+                        ),
                         style: OutlinedButton.styleFrom(
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
-                        onPressed: () => _viewVaultDocument(e.sourceDocumentId!),
+                        onPressed: () =>
+                            _viewVaultDocument(e.sourceDocumentId!),
                       ),
                   ],
                 ),
@@ -362,37 +393,46 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
                   'Instructor: ${e.instructorName ?? "Authorized Instructor"}'
                   '${e.instructorLicence != null ? " (Lic #${e.instructorLicence})" : ""}'
                   '${e.instructorDate != null ? " • Check: ${TimeUtils.formatDate(e.instructorDate!)}" : ""}',
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
               if (e.notes != null && e.notes!.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
                   'Notes: ${e.notes}',
-                  style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ],
             ] else ...[
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.5,
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Not endorsed yet',
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurfaceVariant),
-                    ),
-                    const Spacer(),
-                    TextButton.icon(
-                      icon: const Icon(Icons.edit_note, size: 16),
-                      label: const Text('Endorse', style: TextStyle(fontSize: 11)),
-                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                      onPressed: () => _openAddEditDialog(entry),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -412,10 +452,9 @@ class _AircraftRegisterScreenState extends ConsumerState<AircraftRegisterScreen>
                   onPressed: () => _confirmDelete(entry),
                 ),
                 const SizedBox(width: 4),
-                IconButton(
+                TextButton.icon(
                   icon: const Icon(Icons.edit_outlined, size: 18),
-                  tooltip: 'Edit Model / Endorsement',
-                  visualDensity: VisualDensity.compact,
+                  label: const Text('Edit'),
                   onPressed: () => _openAddEditDialog(entry),
                 ),
               ],

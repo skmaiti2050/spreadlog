@@ -26,23 +26,31 @@ part 'app_database.g.dart';
     EndorsementDocumentsTable,
     ModelEndorsementsTable,
   ],
-  daos: [
-    FlightsDao,
-    EndorsementsDao,
-    AircraftDao,
-  ],
+  daos: [FlightsDao, EndorsementsDao, AircraftDao],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? conn.openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
+
+  Future<void> _createCorrectionHistory() => customStatement('''
+    CREATE TABLE IF NOT EXISTS endorsement_corrections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      endorsement_id TEXT NOT NULL,
+      aircraft_model_id TEXT NOT NULL,
+      removed_at TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      snapshot TEXT NOT NULL
+    )
+  ''');
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
       onCreate: (Migrator m) async {
         await m.createAll();
+        await _createCorrectionHistory();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -51,6 +59,7 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           await m.createTable(modelEndorsementsTable);
         }
+        if (from < 4) await _createCorrectionHistory();
       },
       beforeOpen: (details) async {
         await customStatement('PRAGMA foreign_keys = ON');

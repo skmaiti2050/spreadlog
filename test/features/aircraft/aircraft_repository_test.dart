@@ -19,60 +19,69 @@ void main() {
   });
 
   group('DriftAircraftRepository & AircraftDao Integration Tests', () {
-    test('getAllModels automatically seeds default models when empty', () async {
-      final models = await repository.getAllModels();
+    test(
+      'getAllModels automatically seeds default models when empty',
+      () async {
+        final models = await repository.getAllModels();
 
-      expect(models, isNotEmpty);
-      expect(models.any((m) => m.id == 'C172'), isTrue);
-      expect(models.any((m) => m.id == 'BE76'), isTrue);
-      expect(models.any((m) => m.id == 'DA42'), isTrue);
-      expect(models.any((m) => m.id == 'FNPT II'), isTrue);
-    });
+        expect(models, isNotEmpty);
+        expect(models.any((m) => m.id == 'C172'), isTrue);
+        expect(models.any((m) => m.id == 'BE76'), isTrue);
+        expect(models.any((m) => m.id == 'DA42'), isTrue);
+        expect(models.any((m) => m.id == 'FNPT II'), isTrue);
+      },
+    );
 
-    test('saveModel inserts new aircraft model and getModelById retrieves it', () async {
-      const customModel = AircraftModel(
-        id: 'SR22',
-        manufacturer: 'Cirrus',
-        model: 'SR22 G6',
-        aircraftClass: AircraftClass.singleEngine,
-        category: AircraftCategory.aeroplane,
-      );
+    test(
+      'saveModel inserts new aircraft model and getModelById retrieves it',
+      () async {
+        const customModel = AircraftModel(
+          id: 'SR22',
+          manufacturer: 'Cirrus',
+          model: 'SR22 G6',
+          aircraftClass: AircraftClass.singleEngine,
+          category: AircraftCategory.aeroplane,
+        );
 
-      await repository.saveModel(customModel);
-      final retrieved = await repository.getModelById('SR22');
+        await repository.saveModel(customModel);
+        final retrieved = await repository.getModelById('SR22');
 
-      expect(retrieved, isNotNull);
-      expect(retrieved!.manufacturer, 'Cirrus');
-      expect(retrieved.model, 'SR22 G6');
-      expect(retrieved.displayName, 'Cirrus SR22 G6');
-      expect(retrieved.aircraftClass, AircraftClass.singleEngine);
-    });
+        expect(retrieved, isNotNull);
+        expect(retrieved!.manufacturer, 'Cirrus');
+        expect(retrieved.model, 'SR22 G6');
+        expect(retrieved.displayName, 'Cirrus SR22 G6');
+        expect(retrieved.aircraftClass, AircraftClass.singleEngine);
+      },
+    );
 
-    test('saveEndorsement persists pilot checkout, instructor sign-off, and notes', () async {
-      await repository.getAllModels(); // ensure seed
+    test(
+      'saveEndorsement persists pilot checkout, instructor sign-off, and notes',
+      () async {
+        await repository.getAllModels(); // ensure seed
 
-      final now = DateTime(2026, 9, 20);
-      final endorsement = ModelEndorsement(
-        id: 'endorse_be76',
-        aircraftModelId: 'BE76',
-        pilotDate: now,
-        instructorDate: now,
-        instructorName: 'Capt. J. Miller',
-        instructorLicence: 'ZA-642918',
-        notes: 'BE76 Duchess Multi-Engine checkout completed with asymmetric handling.',
-        createdAt: now,
-      );
+        final now = DateTime(2026, 9, 20);
+        final endorsement = ModelEndorsement(
+          id: 'endorse_be76',
+          aircraftModelId: 'BE76',
+          pilotDate: now,
+          instructorDate: now,
+          instructorName: 'Capt. J. Miller',
+          instructorLicence: 'ZA-642918',
+          notes: 'BE76 Duchess Multi-Engine checkout completed with asymmetric handling.',
+          createdAt: now,
+        );
 
-      await repository.saveEndorsement(endorsement);
-      final retrieved = await repository.getEndorsementByModelId('BE76');
+        await repository.saveEndorsement(endorsement);
+        final retrieved = await repository.getEndorsementByModelId('BE76');
 
-      expect(retrieved, isNotNull);
-      expect(retrieved!.id, 'endorse_be76');
-      expect(retrieved.aircraftModelId, 'BE76');
-      expect(retrieved.instructorName, 'Capt. J. Miller');
-      expect(retrieved.instructorLicence, 'ZA-642918');
-      expect(retrieved.notes, contains('Multi-Engine checkout'));
-    });
+        expect(retrieved, isNotNull);
+        expect(retrieved!.id, 'endorse_be76');
+        expect(retrieved.aircraftModelId, 'BE76');
+        expect(retrieved.instructorName, 'Capt. J. Miller');
+        expect(retrieved.instructorLicence, 'ZA-642918');
+        expect(retrieved.notes, contains('Multi-Engine checkout'));
+      },
+    );
 
     test('deleteEndorsement removes endorsement while keeping aircraft model intact', () async {
       await repository.getAllModels();
@@ -87,8 +96,23 @@ void main() {
       await repository.saveEndorsement(endorsement);
       expect(await repository.getEndorsementByModelId('C172'), isNotNull);
 
-      await repository.deleteEndorsement('endorse_c172');
+      await repository.deleteEndorsement(
+        'endorse_c172',
+        reason: 'Entered against wrong model',
+      );
       expect(await repository.getEndorsementByModelId('C172'), isNull);
+
+      final history = await db
+          .customSelect('SELECT * FROM endorsement_corrections')
+          .get();
+      expect(history, hasLength(1));
+      expect(history.single.data['reason'], 'Entered against wrong model');
+      expect(history.single.data['snapshot'], contains('endorse_c172'));
+      await repository.deleteEndorsement('endorse_c172');
+      expect(
+        await db.customSelect('SELECT * FROM endorsement_corrections').get(),
+        hasLength(1),
+      );
 
       final model = await repository.getModelById('C172');
       expect(model, isNotNull);
