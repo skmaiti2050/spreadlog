@@ -1,6 +1,9 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/time_utils.dart';
@@ -9,17 +12,14 @@ import '../../domain/endorsement_document.dart';
 import '../providers/endorsements_providers.dart';
 import '../utils/sample_endorsement_generator.dart';
 
-
 class ScanEndorsementDialog extends ConsumerStatefulWidget {
   final EndorsementDocument? supersedingDocument;
 
-  const ScanEndorsementDialog({
-    super.key,
-    this.supersedingDocument,
-  });
+  const ScanEndorsementDialog({super.key, this.supersedingDocument});
 
   @override
-  ConsumerState<ScanEndorsementDialog> createState() => _ScanEndorsementDialogState();
+  ConsumerState<ScanEndorsementDialog> createState() =>
+      _ScanEndorsementDialogState();
 }
 
 class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
@@ -31,17 +31,22 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
   final TextEditingController _notesController = TextEditingController();
 
   Uint8List? _capturedBytes;
-  String _fileExtension = 'png';
+  final List<(Uint8List, String)> _pages = [];
+  int _savedPages = 0;
+  String? _scannerError;
   bool _isSaving = false;
   bool _isScanning = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.supersedingDocument?.category ?? EndorsementCategory.tw;
-    _endorsementDate = widget.supersedingDocument?.endorsementDate ?? DateTime.now();
+    _selectedCategory =
+        widget.supersedingDocument?.category ?? EndorsementCategory.tw;
+    _endorsementDate =
+        widget.supersedingDocument?.endorsementDate ?? DateTime.now();
     if (widget.supersedingDocument?.pageNumber != null) {
-      _pageNumberController.text = widget.supersedingDocument!.pageNumber.toString();
+      _pageNumberController.text = widget.supersedingDocument!.pageNumber
+          .toString();
     }
   }
 
@@ -52,28 +57,52 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
     super.dispose();
   }
 
-  Future<void> _scanWithCamera() async {
-    setState(() => _isScanning = true);
+  Future<void> _scanWithCamera({bool manual = false}) async {
+    setState(() {
+      _isScanning = true;
+      _scannerError = null;
+    });
     try {
-      final scanner = ref.read(documentScannerPortProvider);
-      final paths = await scanner.getScannedImagePaths();
-      if (paths.isNotEmpty && mounted) {
-        final path = paths.first;
-        if (!kIsWeb) {
-          final file = File(path);
-          final bytes = await file.readAsBytes();
-          setState(() {
-            _capturedBytes = bytes;
-            _fileExtension = path.split('.').last;
-          });
-        }
+      final paths = await ref
+          .read(documentScannerPortProvider)
+          .getScannedImagePaths(manual: manual);
+      final pages = <(Uint8List, String)>[];
+      for (final path in paths) {
+        pages.add((await File(path).readAsBytes(), path.split('.').last));
       }
+      if (!mounted || pages.isEmpty) return;
+      setState(() {
+        _pages.addAll(pages);
+        _capturedBytes = pages.last.$1;
+      });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Scanner unavailable on this device: $e')),
+        setState(
+          () => _scannerError = e is PlatformException
+              ? '${e.code}: ${e.message}\n${e.details ?? ''}'
+              : e.toString(),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
+  }
+
+  Future<void> _importImages() async {
+    setState(() => _isScanning = true);
+    try {
+      final files = await FilePicker.pickFiles(type: FileType.image);
+      final pages = <(Uint8List, String)>[];
+      for (final file in files) {
+        pages.add((await file.readAsBytes(), file.name.split('.').last));
+      }
+      if (!mounted || pages.isEmpty) return;
+      setState(() {
+        _pages.addAll(pages);
+        _capturedBytes = pages.last.$1;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _scannerError = 'Image import failed: $e');
     } finally {
       if (mounted) setState(() => _isScanning = false);
     }
@@ -91,7 +120,7 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
       if (mounted) {
         setState(() {
           _capturedBytes = bytes;
-          _fileExtension = 'png';
+          _pages.add((bytes, 'png'));
         });
       }
     } finally {
@@ -132,9 +161,8 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                   children: [
                     Text(
                       'Select Endorsement Category',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -155,12 +183,19 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                       title: Text(
                         cat.label,
                         style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? Theme.of(context).colorScheme.primary : null,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
                         ),
                       ),
                       trailing: isSelected
-                          ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                          ? Icon(
+                              Icons.check,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
                           : null,
                       onTap: () => Navigator.of(context).pop(cat),
                     );
@@ -180,7 +215,9 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
   Future<void> _save() async {
     if (_capturedBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please capture or generate a document scan first.')),
+        const SnackBar(
+          content: Text('Please capture or generate a document scan first.'),
+        ),
       );
       return;
     }
@@ -192,16 +229,24 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
       final repo = ref.read(endorsementsRepositoryProvider);
       final pageNum = int.tryParse(_pageNumberController.text.trim());
 
-      await repo.saveEndorsement(
-        category: _selectedCategory,
-        endorsementDate: _endorsementDate,
-        pageNumber: pageNum,
-        imageBytes: _capturedBytes!,
-        fileExtension: _fileExtension,
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-        supersedesId: widget.supersedingDocument?.id,
-      );
+      while (_savedPages < _pages.length) {
+        final page = _pages[_savedPages];
+        await repo.saveEndorsement(
+          category: _selectedCategory,
+          endorsementDate: _endorsementDate,
+          pageNumber: pageNum == null ? null : pageNum + _savedPages,
+          imageBytes: page.$1,
+          fileExtension: page.$2,
+          notes: _notesController.text.trim().isEmpty
+              ? null
+              : _notesController.text.trim(),
+          supersedesId: _savedPages == 0
+              ? widget.supersedingDocument?.id
+              : null,
+        );
 
+        _savedPages++;
+      }
       if (mounted) {
         Navigator.of(context).pop(true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -216,9 +261,9 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving endorsement: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving endorsement: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -287,7 +332,11 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.amber.shade900, size: 20),
+                            Icon(
+                              Icons.info_outline,
+                              color: Colors.amber.shade900,
+                              size: 20,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -307,10 +356,14 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                     Container(
                       height: 180,
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHighest.withAlpha(100),
+                        color: colorScheme.surfaceContainerHighest.withAlpha(
+                          100,
+                        ),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: _capturedBytes != null ? Colors.green : colorScheme.outlineVariant,
+                          color: _capturedBytes != null
+                              ? Colors.green
+                              : colorScheme.outlineVariant,
                           width: _capturedBytes != null ? 2 : 1,
                         ),
                       ),
@@ -329,7 +382,10 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                                   top: 8,
                                   right: 8,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.black87,
                                       borderRadius: BorderRadius.circular(6),
@@ -337,11 +393,18 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                                     child: const Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.check_circle, color: Colors.greenAccent, size: 14),
+                                        Icon(
+                                          Icons.check_circle,
+                                          color: Colors.greenAccent,
+                                          size: 14,
+                                        ),
                                         SizedBox(width: 4),
                                         Text(
                                           'Scan Ready',
-                                          style: TextStyle(color: Colors.white, fontSize: 11),
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -353,11 +416,17 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.camera_alt_outlined, size: 40, color: colorScheme.outline),
+                                  Icon(
+                                    Icons.camera_alt_outlined,
+                                    size: 40,
+                                    color: colorScheme.outline,
+                                  ),
                                   const SizedBox(height: 8),
                                   Text(
                                     'No document scan attached yet',
-                                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                                    style: TextStyle(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -366,33 +435,83 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
 
                     const SizedBox(height: 12),
 
-                    // Ingest action buttons
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         if (!kIsWeb &&
                             (defaultTargetPlatform == TargetPlatform.android ||
                                 defaultTargetPlatform == TargetPlatform.iOS))
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _isScanning ? null : _scanWithCamera,
-                              icon: const Icon(Icons.camera_alt),
-                              label: const Text('Camera Scanner'),
+                          OutlinedButton.icon(
+                            onPressed: _isScanning || _isSaving
+                                ? null
+                                : () => _scanWithCamera(),
+                            icon: const Icon(Icons.document_scanner),
+                            label: Text(
+                              _scannerError == null
+                                  ? 'Scan document'
+                                  : 'Retry scanner',
                             ),
                           ),
-                        if (!kIsWeb &&
-                            (defaultTargetPlatform == TargetPlatform.android ||
-                                defaultTargetPlatform == TargetPlatform.iOS))
-                          const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton.tonalIcon(
-                            onPressed: _isScanning ? null : _generateSampleStamp,
-                            icon: const Icon(Icons.verified),
-                            label: const Text('Test Stamp / Cert'),
-                          ),
+                        OutlinedButton.icon(
+                          onPressed: _isScanning || _isSaving
+                              ? null
+                              : _importImages,
+                          icon: const Icon(Icons.photo_library_outlined),
+                          label: const Text('Import images'),
                         ),
+                        if (_scannerError != null &&
+                            !kIsWeb &&
+                            defaultTargetPlatform == TargetPlatform.android)
+                          TextButton(
+                            onPressed: _isScanning || _isSaving
+                                ? null
+                                : () => _scanWithCamera(manual: true),
+                            child: const Text('Use manual scanner'),
+                          ),
+                        if (kDebugMode)
+                          TextButton(
+                            onPressed: _isScanning || _isSaving
+                                ? null
+                                : _generateSampleStamp,
+                            child: const Text('Generate test scan'),
+                          ),
                       ],
                     ),
-
+                    if (_isScanning) const LinearProgressIndicator(),
+                    if (_scannerError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Scanner unavailable. Retry, use the manual scanner, or import images.',
+                            ),
+                            ExpansionTile(
+                              tilePadding: EdgeInsets.zero,
+                              title: const Text('Technical details'),
+                              children: [SelectableText(_scannerError!)],
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_pages.isNotEmpty) ...[
+                      Text(
+                        '${_pages.length} page(s) ready; $_savedPages saved',
+                      ),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          for (var i = 0; i < _pages.length; i++)
+                            ActionChip(
+                              label: Text('Page ${i + 1}'),
+                              onPressed: () =>
+                                  setState(() => _capturedBytes = _pages[i].$1),
+                            ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 20),
 
                     // Endorsement Category
@@ -456,7 +575,8 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                       maxLines: 2,
                       decoration: const InputDecoration(
                         labelText: 'Notes / CFI Name / License No.',
-                        hintText: 'e.g. Sign-off by Capt. J. Miller CFI #642918',
+                        hintText:
+                            'e.g. Sign-off by Capt. J. Miller CFI #642918',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.edit_note),
                       ),
@@ -469,7 +589,10 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
 
               // Bottom action buttons
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -479,12 +602,17 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                     ),
                     const SizedBox(width: 12),
                     FilledButton.icon(
-                      onPressed: _isSaving ? null : _save,
+                      onPressed: _isSaving || _isScanning || _pages.isEmpty
+                          ? null
+                          : _save,
                       icon: _isSaving
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
                           : const Icon(Icons.save),
                       label: Text(_isSaving ? 'Saving...' : 'Save to Vault'),

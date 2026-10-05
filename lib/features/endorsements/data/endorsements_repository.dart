@@ -17,9 +17,8 @@ class EndorsementsRepository implements EndorsementsRepositoryPort {
     required this.dao,
     DocumentFileStorage? fileStorage,
     DocumentHasher? hasher,
-  })  : _fileStorage = fileStorage ?? getDocumentFileStorage(),
-        _hasher = hasher ?? DocumentHasher();
-
+  }) : _fileStorage = fileStorage ?? getDocumentFileStorage(),
+       _hasher = hasher ?? DocumentHasher();
 
   EndorsementDocument _mapToDomain(EndorsementDocumentsTableData row) {
     return EndorsementDocument(
@@ -39,15 +38,21 @@ class EndorsementsRepository implements EndorsementsRepositoryPort {
   }
 
   @override
-  Stream<List<EndorsementDocument>> watchEndorsements({bool includeSuperseded = false}) {
+  Stream<List<EndorsementDocument>> watchEndorsements({
+    bool includeSuperseded = false,
+  }) {
     return dao
         .watchAllEndorsements(includeSuperseded: includeSuperseded)
         .map((rows) => rows.map(_mapToDomain).toList());
   }
 
   @override
-  Future<List<EndorsementDocument>> getEndorsements({bool includeSuperseded = false}) async {
-    final rows = await dao.getAllEndorsements(includeSuperseded: includeSuperseded);
+  Future<List<EndorsementDocument>> getEndorsements({
+    bool includeSuperseded = false,
+  }) async {
+    final rows = await dao.getAllEndorsements(
+      includeSuperseded: includeSuperseded,
+    );
     return rows.map(_mapToDomain).toList();
   }
 
@@ -68,7 +73,7 @@ class EndorsementsRepository implements EndorsementsRepositoryPort {
     String? notes,
     String? supersedesId,
   }) async {
-    final id = 'end_${DateTime.now().millisecondsSinceEpoch}';
+    final id = 'end_${DateTime.now().microsecondsSinceEpoch}';
     final sha256 = await _hasher.computeSha256(Uint8List.fromList(imageBytes));
     final filePath = await _fileStorage.saveDocumentFile(
       id: id,
@@ -128,6 +133,4 @@ class EndorsementsRepository implements EndorsementsRepositoryPort {
       await dao.deleteEndorsement(id);
     }
   }
-
 }
-
