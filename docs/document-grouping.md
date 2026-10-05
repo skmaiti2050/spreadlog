@@ -15,3 +15,9 @@ Automated checks cover ordered hashing, immutable inputs, serialization, one-rec
 Device checks: capture three pages; save once; confirm one Vault card; browse all pages; attach to an aircraft; replace the document and inspect history; back up and restore on both app and web.
 
 A separate audit against the project guidelines and archived SACAA references remains necessary. Grouping is a storage and presentation improvement, not an assertion of SACAA approval.
+
+## Full view and PDF copies
+
+The full-view action opens the selected page across the available window. Pinch/scroll, pan, double-tap, zoom buttons and fit-page controls are available. Page changes reset zoom. Long details scroll independently so the full-view action remains reachable on small screens.
+
+Export PDF verifies every original image and the ordered document fingerprint before opening a preview with print/share controls. Each original image is fitted, without cropping, onto one portrait or landscape A4 sheet in scan order. This is a viewing/printing copy; captured images, their hashes, and stored document identity remain unchanged. Missing or corrupted pages prevent export rather than producing a partial document.

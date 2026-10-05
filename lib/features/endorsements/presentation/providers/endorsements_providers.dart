@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/daos/endorsements_dao.dart';
 import '../../../flights/presentation/providers/flights_providers.dart';
 import '../../data/endorsements_repository.dart';
+import '../../data/document_pdf_exporter.dart';
 import '../../data/scanner/document_scanner_adapter.dart';
 import '../../domain/endorsement_category.dart';
 import '../../domain/endorsement_document.dart';
@@ -20,6 +21,10 @@ final endorsementsRepositoryProvider = Provider<EndorsementsRepository>((ref) {
 
 final documentScannerPortProvider = Provider<DocumentScannerPort>((ref) {
   return const DocumentScannerAdapter();
+});
+
+final documentPdfExporterProvider = Provider<DocumentPdfExporter>((ref) {
+  return DocumentPdfExporter();
 });
 
 class ShowSupersededNotifier extends Notifier<bool> {
