@@ -192,8 +192,9 @@ void main() {
       expect(totals.totalSingleEngine, 220);
       // Total ME = 50+60+70+80+55+65+75+85 = 540
       expect(totals.totalMultiEngine, 540);
-      // Total flight time = 60 + 220 + 540 = 820 minutes
-      expect(totals.totalFlightTimeMinutes, 820);
+      // Total flight time = Col 14..29 = 220 + 540 = 760 minutes; the 60 FSTD
+      // minutes (Col 13) are not flight time.
+      expect(totals.totalFlightTimeMinutes, 760);
     });
 
     test('Cutoff date filters out flights strictly after cutoff date (inclusive)', () {

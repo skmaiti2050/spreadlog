@@ -107,10 +107,13 @@ class LedgerTotals {
   int get totalInstrument => instrumentActual + instrumentFstd;
   int get totalLandings => landingsDay + landingsNight;
 
-  /// Deterministic Total Flight Time in integer minutes.
-  /// Exactly matches SACAA Appendix A rule: sum of Columns 13 to 29.
-  int get totalFlightTimeMinutes =>
-      fstdActual + totalSingleEngine + totalMultiEngine;
+  /// Deterministic Total Flight Time in integer minutes: Columns 14 to 29.
+  ///
+  /// FSTD time (Col 13) is not flight time. The printed SACAA logbook footer
+  /// reads "Grand total flight time (columns 14 to 29)", and the worked
+  /// logbook summaries in SA-CATS 61 exclude FSTD hours from their totals.
+  /// (Appendix A's "sum of columns 13 to 29" contradicts both.)
+  int get totalFlightTimeMinutes => totalSingleEngine + totalMultiEngine;
 
   LedgerTotals operator +(LedgerTotals other) {
     return LedgerTotals(
