@@ -19,7 +19,7 @@ class SacaaProfile implements RegulatorProfile {
   String get country => 'South Africa';
 
   @override
-  int get entriesPerPage => 14;
+  int get entriesPerPage => 30;
 
   @override
   List<LedgerColumnDefinition> getColumns() {

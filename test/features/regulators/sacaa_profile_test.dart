@@ -12,14 +12,29 @@ void main() {
     test('Profile identity and static properties match statutory standard', () {
       expect(profile.regulatorId, equals('sacaa'));
       expect(profile.country, equals('South Africa'));
-      expect(profile.entriesPerPage, equals(14));
-      expect(profile.getColumns().length, greaterThanOrEqualTo(32));
+      // The printed SACAA logbook has 30 lines per page.
+      expect(profile.entriesPerPage, equals(30));
+      expect(profile.getColumns(), hasLength(greaterThanOrEqualTo(32)));
     });
 
-    test('Pagination produces 14 entries per page adhering to SACAA layout', () {
+    test('Column numbers follow SA-CATS 61 Appendix A', () {
+      final titles = {
+        for (final c in profile.getColumns()) c.columnNumber: c.title,
+      };
+      expect(titles, containsPair(6, 'Inst Navaids'));
+      expect(titles, containsPair(7, 'Inst Place'));
+      expect(titles, containsPair(8, 'Inst Actual'));
+      expect(titles, containsPair(9, 'Inst FSTD'));
+      expect(titles, containsPair(13, 'FSTD Actual'));
+      expect(titles, containsPair(15, 'SE PIC Day'));
+      expect(titles, containsPair(30, 'Landings Day'));
+      expect(titles, containsPair(31, 'Landings Night'));
+    });
+
+    test('Pagination produces 30 entries per page adhering to SACAA layout', () {
       final now = DateTime(2026, 9, 18);
       final flights = List.generate(
-        20,
+        40,
         (index) => Flight(
           id: 'flight_$index',
           date: now.add(Duration(days: index)),
@@ -40,19 +55,18 @@ void main() {
       );
 
       final pages = profile.paginate(flights);
-      expect(pages.length, equals(2));
-      expect(pages[0].entries.length, equals(14));
-      expect(pages[1].entries.length, equals(6));
+      expect(pages, hasLength(2));
+      expect(pages[0].entries, hasLength(30));
+      expect(pages[1].entries, hasLength(10));
 
       // Check invariants
       expect(pages[0].broughtForward.totalFlightTimeMinutes, equals(0));
-      expect(pages[0].pageTotals.seDayPic, equals(14 * 60));
-      expect(pages[0].carriedForward.seDayPic, equals(14 * 60));
+      expect(pages[0].pageTotals.seDayPic, equals(30 * 60));
+      expect(pages[0].carriedForward.seDayPic, equals(30 * 60));
 
-      expect(pages[1].broughtForward.seDayPic, equals(14 * 60));
-      expect(pages[1].pageTotals.seDayPic, equals(6 * 60));
-      expect(pages[1].carriedForward.seDayPic, equals(20 * 60));
+      expect(pages[1].broughtForward.seDayPic, equals(30 * 60));
+      expect(pages[1].pageTotals.seDayPic, equals(10 * 60));
+      expect(pages[1].carriedForward.seDayPic, equals(40 * 60));
     });
   });
 }
-

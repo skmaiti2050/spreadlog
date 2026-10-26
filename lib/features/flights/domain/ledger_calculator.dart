@@ -162,13 +162,13 @@ class LedgerCalculator {
     return accumulated;
   }
 
-  /// Paginates flights according to physical logbook page size (default 14 entries per page).
+  /// Paginates flights according to physical logbook page size (default 30 lines per page, as printed in the SACAA logbook).
   ///
   /// Maintains strict invariant:
   /// on each page: carriedForward == broughtForward + pageTotals
   List<LedgerPage> paginateLedger(
     List<Flight> flights, {
-    int entriesPerPage = 14,
+    int entriesPerPage = 30,
     LedgerTotals initialBroughtForward = LedgerTotals.zero,
   }) {
     assert(entriesPerPage > 0, 'entriesPerPage must be greater than zero');
