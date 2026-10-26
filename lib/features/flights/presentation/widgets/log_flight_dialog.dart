@@ -884,30 +884,24 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               ],
             ),
             const SizedBox(height: 6),
-            // Quick Duration Chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _quickDurationChip('45m', 45),
-                  const SizedBox(width: 4),
-                  _quickDurationChip('1h 00m', 60),
-                  const SizedBox(width: 4),
-                  _quickDurationChip('1h 15m', 75),
-                  const SizedBox(width: 4),
-                  _quickDurationChip('1h 30m', 90),
-                  const SizedBox(width: 4),
-                  _quickDurationChip('2h 00m', 120),
-                  const SizedBox(width: 6),
-                  ActionChip(
-                    avatar: const Icon(Icons.add, size: 14),
-                    label: const Text('+15m', style: TextStyle(fontSize: 10)),
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    onPressed: () => _quickAddDurationMinutes(15),
-                  ),
-                ],
-              ),
+            // Quick Duration Chips wrap so none hide past the screen edge
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                _quickDurationChip('45m', 45),
+                _quickDurationChip('1h 00m', 60),
+                _quickDurationChip('1h 15m', 75),
+                _quickDurationChip('1h 30m', 90),
+                _quickDurationChip('2h 00m', 120),
+                ActionChip(
+                  avatar: const Icon(Icons.add, size: 14),
+                  label: const Text('+15m', style: TextStyle(fontSize: 10)),
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  onPressed: () => _quickAddDurationMinutes(15),
+                ),
+              ],
             ),
 
             // Block Time Calculator Dropdown
