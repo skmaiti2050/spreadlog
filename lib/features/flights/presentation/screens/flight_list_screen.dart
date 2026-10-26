@@ -6,6 +6,7 @@ import '../../../../core/widgets/hint_banner.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../../reports/presentation/widgets/print_reminder_banner.dart';
+import '../../../../core/widgets/storage_warning_banner.dart';
 import '../../domain/flight.dart';
 import '../providers/flights_providers.dart';
 import '../widgets/flight_details_dialog.dart';
@@ -507,6 +508,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
 
                   return Column(
                     children: [
+                      const StorageWarningBanner(),
                       const PrintReminderBanner(),
                       const Padding(
                         padding: EdgeInsets.symmetric(
