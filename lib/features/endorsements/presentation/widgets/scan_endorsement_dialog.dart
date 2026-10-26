@@ -166,6 +166,7 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
+                      tooltip: 'Close',
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                       visualDensity: VisualDensity.compact,
@@ -305,6 +306,7 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Close',
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                     ),

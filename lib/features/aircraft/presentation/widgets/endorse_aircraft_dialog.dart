@@ -128,6 +128,7 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     IconButton(
+                      tooltip: 'Close',
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(ctx).pop(),
                       visualDensity: VisualDensity.compact,
@@ -325,6 +326,7 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Close',
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.of(context).pop(),
                       visualDensity: VisualDensity.compact,
@@ -523,6 +525,7 @@ class _EndorseAircraftDialogState extends ConsumerState<EndorseAircraftDialog> {
                                       ),
                                       suffixIcon: _instructorDate != null
                                           ? IconButton(
+                                              tooltip: 'Clear date',
                                               icon: const Icon(
                                                 Icons.clear,
                                                 size: 16,

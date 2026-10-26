@@ -144,7 +144,9 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete ${plural(count, 'flight entry', 'flight entries')}?'),
+        title: Text(
+          'Delete ${plural(count, 'flight entry', 'flight entries')}?',
+        ),
         content: Text(
           'Are you sure you want to delete ${plural(count, 'selected flight entry', 'selected flight entries')}?\nThis action cannot be undone.',
         ),
@@ -429,6 +431,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                 ),
                 suffixIcon: _searchFilter.isNotEmpty
                     ? IconButton(
+                        tooltip: 'Clear search',
                         icon: const Icon(Icons.clear, size: 18),
                         onPressed: () => setState(() => _searchFilter = ''),
                       )
@@ -539,31 +542,36 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
 
   Widget _buildMetricColumn(BuildContext context, String label, String value) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onPrimaryContainer.withValues(alpha: 0.8),
+    // Read "Single Engine 01:30" as one item, not every label then every
+    // value.
+    return MergeSemantics(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer.withValues(
+                alpha: 0.8,
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.onPrimaryContainer,
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildFlightCard(BuildContext context, Flight flight) {
     final theme = Theme.of(context);
-    final dateStr =
-        '${flight.date.day.toString().padLeft(2, '0')}/${flight.date.month.toString().padLeft(2, '0')}/${flight.date.year}';
+    final dateStr = TimeUtils.formatLogbookDate(flight.date);
     final isSelected = _selectedFlightIds.contains(flight.id);
 
     return Card(

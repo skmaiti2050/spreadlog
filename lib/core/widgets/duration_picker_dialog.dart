@@ -129,6 +129,7 @@ class _DurationPickerDialogState extends State<DurationPickerDialog> {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Close',
                   icon: const Icon(Icons.close, size: 20),
                   visualDensity: VisualDensity.compact,
                   onPressed: () => Navigator.of(context).pop(),
@@ -298,6 +299,7 @@ class _DurationPickerDialogState extends State<DurationPickerDialog> {
         ),
         const SizedBox(height: 4),
         IconButton.filledTonal(
+          tooltip: 'Increase ${label.toLowerCase()}',
           icon: const Icon(Icons.keyboard_arrow_up, size: 20),
           visualDensity: VisualDensity.compact,
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -321,6 +323,7 @@ class _DurationPickerDialogState extends State<DurationPickerDialog> {
           ),
         ),
         IconButton.filledTonal(
+          tooltip: 'Decrease ${label.toLowerCase()}',
           icon: const Icon(Icons.keyboard_arrow_down, size: 20),
           visualDensity: VisualDensity.compact,
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),

@@ -587,6 +587,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           leading: IconButton(
+            tooltip: 'Close',
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -942,6 +943,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                               border: const OutlineInputBorder(),
                               isDense: true,
                               suffixIcon: IconButton(
+                                tooltip: 'Pick off-blocks time',
                                 icon: const Icon(Icons.access_time, size: 18),
                                 onPressed: () => _pickBlockTime(
                                   _offBlocksController,
@@ -966,6 +968,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                               border: const OutlineInputBorder(),
                               isDense: true,
                               suffixIcon: IconButton(
+                                tooltip: 'Pick on-blocks time',
                                 icon: const Icon(Icons.access_time, size: 18),
                                 onPressed: () => _pickBlockTime(
                                   _onBlocksController,
@@ -1176,6 +1179,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
+            tooltip: 'Decrease $label',
             icon: const Icon(Icons.remove_circle_outline, size: 20),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -1188,6 +1192,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
             ),
           ),
           IconButton(
+            tooltip: 'Increase $label',
             icon: const Icon(Icons.add_circle_outline, size: 20),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
