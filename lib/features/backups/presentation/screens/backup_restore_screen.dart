@@ -1202,7 +1202,6 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         dialogTitle: 'Save Encrypted Backup',
         fileName: fileName,
         bytes: encryptedBytes,
-        type: FileType.any,
       );
 
       if (resultUri != null) {
