@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/hint_banner.dart';
 import '../../../aircraft/domain/aircraft_model.dart';
+import '../../../regulators/domain/sacaa_profile.dart';
 import '../../../reports/presentation/summary_slip_preview_screen.dart';
 import '../providers/flights_providers.dart';
 import '../../domain/flight.dart';
@@ -145,7 +146,8 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
   }
 
   Widget _buildSpreadTable(LedgerPage page) {
-    const rowCount = 14;
+    final rowCount = const SacaaProfile().entriesPerPage;
+    final scheme = Theme.of(context).colorScheme;
 
     return DataTable(
       columnSpacing: 10,
@@ -153,8 +155,13 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
       dataRowMinHeight: 32,
       dataRowMaxHeight: 36,
       horizontalMargin: 8,
-      border: TableBorder.all(color: Colors.white24, width: 0.5),
-      headingRowColor: WidgetStateProperty.all(Colors.blueGrey.shade900),
+      border: TableBorder.all(color: scheme.outlineVariant, width: 0.5),
+      headingRowColor: WidgetStateProperty.all(scheme.surfaceContainerHighest),
+      headingTextStyle: TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 11,
+        color: scheme.onSurface,
+      ),
       columns: const [
         // Left Page (Columns 1-13)
         DataColumn(label: Text('DATE (1)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
@@ -164,12 +171,12 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
         DataColumn(label: Text('DETAILS & REMARKS (5)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
         DataColumn(label: Text('NAV (6)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
         DataColumn(label: Text('PLACE (7)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ACT (8)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SIM (9)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('SE (10)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ME (11)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('FSTD (12)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
-        DataColumn(label: Text('ACT (13)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('INST ACT (8)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('INST FSTD (9)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('INSTR SE (10)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('INSTR ME (11)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('INSTR FSTD (12)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
+        DataColumn(label: Text('FSTD (13)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
 
         // Right Page (Columns 14-32)
         DataColumn(label: Text('SE DUAL D (14)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
@@ -193,28 +200,21 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
         DataColumn(label: Text('SIGNATURES / CERT (32)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11))),
       ],
       rows: [
-        // 14 standard logbook entries
-        for (int i = 0; i < rowCount; i++)
-          _buildDataRow(i < page.entries.length ? page.entries[i] : null),
-
-        // Brought Forward
+        // Brought Forward heads the page, as in the printed logbook
         _buildSummaryRow(
           label: 'BROUGHT FORWARD',
-          color: Colors.blueGrey.shade800.withValues(alpha: 0.5),
+          color: scheme.secondaryContainer,
+          textColor: scheme.onSecondaryContainer,
           totals: page.broughtForward,
         ),
 
-        // Page Totals
-        _buildSummaryRow(
-          label: 'THIS PAGE TOTAL',
-          color: Colors.blueGrey.shade900,
-          totals: page.pageTotals,
-        ),
+        for (int i = 0; i < rowCount; i++)
+          _buildDataRow(i < page.entries.length ? page.entries[i] : null),
 
-        // Carried Forward
         _buildSummaryRow(
           label: 'CARRIED FORWARD',
-          color: Colors.indigo.shade900.withValues(alpha: 0.6),
+          color: scheme.primaryContainer,
+          textColor: scheme.onPrimaryContainer,
           isBold: true,
           totals: page.carriedForward,
         ),
@@ -229,7 +229,7 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
       );
     }
 
-    final dateStr = '${flight.date.day.toString().padLeft(2, '0')}/${flight.date.month.toString().padLeft(2, '0')}';
+    final dateStr = TimeUtils.formatLogbookDate(flight.date);
 
     int seDayDual = 0, seDayPic = 0, seDayPicus = 0, seDayCopilot = 0;
     int seNightDual = 0, seNightPic = 0, seNightPicus = 0, seNightCopilot = 0;
@@ -327,13 +327,14 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
   DataRow _buildSummaryRow({
     required String label,
     required Color color,
+    required Color textColor,
     bool isBold = false,
     required LedgerTotals totals,
   }) {
     final style = TextStyle(
       fontSize: 11,
       fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-      color: Colors.white,
+      color: textColor,
     );
 
     return DataRow(
@@ -373,7 +374,7 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
         _summaryCell(totals.meNightCopilot, style),
         DataCell(Text(totals.landingsDay > 0 ? '${totals.landingsDay}' : '-', style: style)),
         DataCell(Text(totals.landingsNight > 0 ? '${totals.landingsNight}' : '-', style: style)),
-        DataCell(Text('Total: ${TimeUtils.formatMinutesToHhMm(totals.totalFlightTimeMinutes)}', style: style)),
+        DataCell(Text('Flight time (14–29): ${TimeUtils.formatMinutesToHhMm(totals.totalFlightTimeMinutes)}', style: style)),
       ],
     );
   }
