@@ -203,12 +203,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               ButtonSegment<int>(
                 value: 0,
                 icon: Icon(Icons.sd_storage_outlined),
-                label: Text('Local / Offline'),
+                label: Text('Local'),
               ),
               ButtonSegment<int>(
                 value: 1,
                 icon: Icon(Icons.cloud_sync_outlined),
-                label: Text('Google Drive'),
+                label: Text('Drive'),
               ),
               ButtonSegment<int>(
                 value: 2,
@@ -281,7 +281,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                       Text(
                         isConfigured
                             ? 'Passphrase saved in hardware-backed secure storage.'
-                            : 'No passphrase set. All backups are encrypted with your key.',
+                            : 'Not set yet. You will be asked for one when you create a backup.',
                         style: TextStyle(
                           fontSize: 12,
                           color: isConfigured ? _accentGreen : _accentWarning,
@@ -358,7 +358,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                 Expanded(
                   child: FilledButton.icon(
                     icon: const Icon(Icons.download),
-                    label: const Text('Save / Download'),
+                    label: const Text('Save'),
                     onPressed: () => _handleSaveToDevice(),
                   ),
                 ),
