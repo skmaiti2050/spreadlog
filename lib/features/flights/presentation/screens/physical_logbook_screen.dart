@@ -45,7 +45,7 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
         widget.pages ?? ref.watch(ledgerPagesProvider);
     if (effectivePages.isEmpty) {
       return Scaffold(
-          appBar: AppBar(title: const Text('Physical Logbook')),
+          appBar: AppBar(title: const Text('Logbook')),
         body: const Center(child: Text('No flights logged yet.')),
       );
     }
@@ -55,7 +55,8 @@ class _PhysicalLogbookScreenState extends ConsumerState<PhysicalLogbookScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Physical Logbook — Page ${page.pageNumber} of ${effectivePages.length}'),
+        // The page number already sits between the page arrows.
+        title: const Text('Logbook'),
         actions: [
           IconButton(
             tooltip: 'Previous Page',
