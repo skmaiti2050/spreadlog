@@ -7,6 +7,7 @@ import '../../features/profile/presentation/providers/profile_providers.dart';
 import '../../features/profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../features/reports/presentation/pdf_preview_screen.dart';
 import '../../features/reports/presentation/summary_slip_preview_screen.dart';
+import '../app_version.dart';
 import '../theme/aviation_theme.dart';
 import '../utils/time_utils.dart';
 
@@ -108,8 +109,9 @@ class AviationAppDrawer extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 8,
                       children: [
                         Text(
                           'TOTAL TIME',
@@ -233,15 +235,18 @@ class AviationAppDrawer extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Spreadlog Aviation',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      'Spreadlog Aviation',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   Text(
-                    '1.0.4 (5)\n${const String.fromEnvironment('BUILD_COMMIT', defaultValue: 'local')}',
+                    // Read from the build, not hard-coded, so it never goes stale.
+                    '${ref.watch(appVersionProvider).value ?? ''}\n${const String.fromEnvironment('BUILD_COMMIT', defaultValue: 'local')}',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
