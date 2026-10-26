@@ -1198,6 +1198,48 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     );
   }
 
+  /// Echoes step 1 on the review step so the pilot checks the whole entry
+  /// before logging it, with a shortcut back to change it.
+  Widget _buildEntrySummary(ThemeData theme) {
+    final type = _typeController.text.trim();
+    final reg = _regController.text.trim();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              [
+                TimeUtils.formatLogbookDate(_date),
+                if (type.isNotEmpty) type,
+                if (reg.isNotEmpty) reg,
+                'PIC: ${_picController.text.trim()}',
+              ].join(' • '),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() => _currentStep = 0);
+              _pageController.animateToPage(
+                0,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+              );
+            },
+            child: const Text('Edit'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStep3InstrumentAndReview(ThemeData theme) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1208,8 +1250,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
           children: [
             const HintBanner(
               hintKey: 'hint_step3_logbook_audit',
-              message: 'Tap airport chips to append to your route. The live banner at the bottom audits your logbook column tally.',
+              message: 'Tap airport chips to append to your route. The summary at the end shows which logbook columns this flight fills.',
             ),
+            _buildEntrySummary(theme),
+            const SizedBox(height: 12),
             // Instrument Flying Card
             Container(
               padding: const EdgeInsets.all(12),
