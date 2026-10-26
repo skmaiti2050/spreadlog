@@ -56,14 +56,9 @@ class _EndorsementVaultScreenState
 
     return Scaffold(
       appBar: AppBar(
+        // Scanning lives on the FAB only; an app-bar copy and an
+        // empty-state copy offered the same action three times.
         title: const Text('Endorsement Vault'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_a_photo_outlined),
-            tooltip: 'Scan Endorsement',
-            onPressed: () => _openScanDialog(),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -193,17 +188,11 @@ class _EndorsementVaultScreenState
                             selectedCategory != null ||
                                     _searchController.text.isNotEmpty
                                 ? 'No documents match the active category or search query.'
-                                : 'Store digital copies of your logbook endorsements, rating certificates, and flight tests with tamper-evident SHA-256 verification.',
+                                : 'Store digital copies of your logbook endorsements, rating certificates, and flight tests with tamper-evident SHA-256 verification. Tap Scan Endorsement to add the first one.',
                             textAlign: TextAlign.center,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          FilledButton.icon(
-                            onPressed: () => _openScanDialog(),
-                            icon: const Icon(Icons.add_a_photo),
-                            label: const Text('Add First Endorsement'),
                           ),
                         ],
                       ),
