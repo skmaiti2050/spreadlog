@@ -11,6 +11,7 @@ import '../../domain/flight.dart';
 import '../../domain/flight_time.dart';
 import '../../domain/instrument_time.dart';
 import '../../domain/landings.dart';
+import '../providers/flights_providers.dart';
 
 /// Progressive multi-step card modal for logging flights.
 /// Adapts seamlessly from ultra-narrow 320px mobile screens to spacious desktop tablets.
@@ -160,15 +161,25 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         _placeController = TextEditingController();
       }
     } else {
-      _typeController = TextEditingController(text: 'C172');
-      _regController = TextEditingController(text: 'ZS-');
+      // Pilots usually fly the same aircraft again, so start from the most
+      // recent flight; never invent a type, duration or remarks.
+      final flights = ref.read(flightsStreamProvider).value ?? const <Flight>[];
+      final latest = flights.isEmpty
+          ? null
+          : flights.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+      _typeController = TextEditingController(
+        text: latest?.aircraftModelId ?? '',
+      );
+      _regController = TextEditingController(
+        text: latest?.registration ?? 'ZS-',
+      );
       _picController = TextEditingController(
         text: profile.defaultPicName.isNotEmpty
             ? profile.defaultPicName
             : 'SELF',
       );
-      _durationController = TextEditingController(text: '01:30');
-      _remarksController = TextEditingController(text: 'Local Training');
+      _durationController = TextEditingController();
+      _remarksController = TextEditingController();
       _instActualController = TextEditingController(text: '00:00');
       _instFstdController = TextEditingController(text: '00:00');
       _navaidsController = TextEditingController();
@@ -768,8 +779,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                 isDense: true,
               ),
               textCapitalization: TextCapitalization.characters,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
+              validator: (v) {
+                final reg = v?.trim() ?? '';
+                if (reg.isEmpty) return 'Required';
+                // The nationality prefix alone (e.g. "ZS-") is not a mark.
+                if (reg.endsWith('-')) return 'Complete the registration';
+                return null;
+              },
               onChanged: _onRegChanged,
             ),
             const SizedBox(height: 6),
