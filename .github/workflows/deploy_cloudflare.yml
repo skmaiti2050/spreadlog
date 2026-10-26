@@ -38,6 +38,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # The action defaults to wrangler 3.90, which rejects assets-only
+          # Workers ("Missing entry-point"); match the local wrangler.
+          wranglerVersion: '4.153.0'
           # The site is a Worker with static assets (wrangler.jsonc), not a
           # Pages project; same command as tool/deploy_cloudflare.ps1.
           command: deploy
