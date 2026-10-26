@@ -9,9 +9,19 @@ function Assert-NativeSuccess([string]$Step) {
 }
 
 # The Cloudflare login spans several accounts and the account ID is kept out
-# of the repo, so wrangler reads it from this environment variable.
+# of the repo. Wrangler reads it from the environment or the git-ignored .env;
+# load .env here too so the check below sees the same value.
+if (Test-Path .env) {
+    foreach ($line in Get-Content .env) {
+        if ($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$') {
+            if (-not [Environment]::GetEnvironmentVariable($Matches[1])) {
+                [Environment]::SetEnvironmentVariable($Matches[1], $Matches[2])
+            }
+        }
+    }
+}
 if (-not $env:CLOUDFLARE_ACCOUNT_ID) {
-    throw "Set CLOUDFLARE_ACCOUNT_ID to the account hosting the spreadlog Worker, e.g. setx CLOUDFLARE_ACCOUNT_ID <id> (then open a new terminal)."
+    throw "Set CLOUDFLARE_ACCOUNT_ID in .env (or the environment) to the account hosting the spreadlog Worker."
 }
 
 $buildCommit = git rev-parse --short HEAD
