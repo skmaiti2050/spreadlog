@@ -88,6 +88,16 @@ class AviationThemes {
     }
   }
 
+  /// Shared by every theme: status snackbars set their own dark green, red
+  /// or amber background, and white text has to read on all of them as well
+  /// as on this default. Floating keeps them clear of the FAB.
+  static const SnackBarThemeData _snackBarTheme = SnackBarThemeData(
+    backgroundColor: Color(0xFF263238),
+    contentTextStyle: TextStyle(color: Colors.white, fontSize: 14),
+    actionTextColor: Color(0xFF90CAF9),
+    behavior: SnackBarBehavior.floating,
+  );
+
   static ThemeData get _cockpitDarkTheme {
     const bg = Color(0xFF101418);
     const surface = Color(0xFF171D22);
@@ -120,6 +130,7 @@ class AviationThemes {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
+      snackBarTheme: _snackBarTheme,
       cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
@@ -191,6 +202,7 @@ class AviationThemes {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
+      snackBarTheme: _snackBarTheme,
       cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
@@ -262,6 +274,7 @@ class AviationThemes {
         foregroundColor: Color(0xFF1F2328),
         elevation: 0,
       ),
+      snackBarTheme: _snackBarTheme,
       cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
