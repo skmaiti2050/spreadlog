@@ -219,5 +219,129 @@ void main() {
       );
       expect(await restoredRepo.verifyIntegrity(restored.id), isTrue);
     });
+
+    final testEncryptor = BackupEncryptor(
+      kdf: Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: 1000, bits: 256),
+    );
+
+    Future<Uint8List> encryptedArchive({
+      required Uint8List databaseBytes,
+      List<ArchiveFileItem> documentFiles = const [],
+      required int schemaVersion,
+    }) async {
+      final zipBytes = await BackupArchiveService().createZipArchive(
+        databaseBytes: databaseBytes,
+        documentFiles: documentFiles,
+        flightCount: 0,
+        aircraftModelCount: 0,
+        schemaVersion: schemaVersion,
+      );
+      return testEncryptor.encrypt(clearBytes: zipBytes, passphrase: 'pw');
+    }
+
+    Uint8List fixtureDatabase(String setupSql) {
+      final file = File('${tempDir.path}/fixture_${setupSql.hashCode}.sqlite');
+      final fixtureDb = sql.sqlite3.open(file.path);
+      fixtureDb.execute(setupSql);
+      fixtureDb.close();
+      return file.readAsBytesSync();
+    }
+
+    test('backup from a newer schema is rejected on inspect and restore', () async {
+      final encrypted = await encryptedArchive(
+        databaseBytes: Uint8List.fromList([1, 2, 3]),
+        schemaVersion: db.schemaVersion + 1,
+      );
+
+      await expectLater(
+        backupService.inspectBackup(backupBytes: encrypted, passphrase: 'pw'),
+        throwsA(isA<BackupException>()),
+      );
+      await expectLater(
+        backupService.restoreBackup(backupBytes: encrypted, passphrase: 'pw'),
+        throwsA(isA<BackupException>()),
+      );
+      expect(
+        File('${tempDir.path}/database/app_database.sqlite').existsSync(),
+        isFalse,
+      );
+    });
+
+    test('successful restore removes page images of the replaced logbook', () async {
+      final endorsements = Directory('${tempDir.path}/endorsements')
+        ..createSync(recursive: true);
+      final stale = File('${endorsements.path}/old_page.jpg')
+        ..writeAsBytesSync([1]);
+
+      final encrypted = await encryptedArchive(
+        databaseBytes: fixtureDatabase('CREATE TABLE fixture (id INTEGER)'),
+        documentFiles: [
+          ArchiveFileItem(
+            path: 'endorsements/new_page.jpg',
+            bytes: Uint8List.fromList([2]),
+          ),
+        ],
+        schemaVersion: 3,
+      );
+
+      await backupService.restoreBackup(backupBytes: encrypted, passphrase: 'pw');
+
+      expect(stale.existsSync(), isFalse);
+      expect(File('${endorsements.path}/new_page.jpg').existsSync(), isTrue);
+    });
+
+    test('failed restore removes images it wrote and keeps existing ones', () async {
+      final endorsements = Directory('${tempDir.path}/endorsements')
+        ..createSync(recursive: true);
+      final existing = File('${endorsements.path}/existing.jpg')
+        ..writeAsBytesSync([1]);
+
+      // The row references a page the archive does not contain, so the
+      // path-relocation step throws after the archive's images are written.
+      final encrypted = await encryptedArchive(
+        databaseBytes: fixtureDatabase(
+          'CREATE TABLE endorsement_documents_table (id TEXT, original_path TEXT);'
+          "INSERT INTO endorsement_documents_table VALUES ('d1', '/old/missing.jpg');",
+        ),
+        documentFiles: [
+          ArchiveFileItem(
+            path: 'endorsements/written_by_restore.jpg',
+            bytes: Uint8List.fromList([2]),
+          ),
+        ],
+        schemaVersion: 3,
+      );
+
+      await expectLater(
+        backupService.restoreBackup(backupBytes: encrypted, passphrase: 'pw'),
+        throwsA(isA<BackupException>()),
+      );
+
+      expect(existing.existsSync(), isTrue);
+      expect(
+        File('${endorsements.path}/written_by_restore.jpg').existsSync(),
+        isFalse,
+      );
+    });
+
+    test('created backup records the app version', () async {
+      File('${tempDir.path}/database/app_database.sqlite')
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fixtureDatabase('CREATE TABLE fixture (id INTEGER)'));
+
+      final service = BackupService(
+        db: db,
+        encryptor: testEncryptor,
+        archiveService: BackupArchiveService(),
+        appVersion: () async => '9.9.9+42',
+      );
+      final encrypted = await service.createEncryptedBackup(passphrase: 'pw');
+      final inspection = await service.inspectBackup(
+        backupBytes: encrypted,
+        passphrase: 'pw',
+      );
+
+      expect(inspection.manifest.appVersion, '9.9.9+42');
+    });
   });
 }

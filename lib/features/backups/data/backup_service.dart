@@ -203,6 +203,10 @@ class BackupService {
       await dbFile.copy(rollbackFile.path);
     }
 
+    // Page images created by this restore; removed again if it fails.
+    final writtenFiles = <File>[];
+    final endorsementsDir = Directory(p.join(docsDir.path, 'endorsements'));
+
     try {
       // Step 3c: Delete stale WAL and journal files to prevent corruption on reconnect
       if (await walFile.exists()) await walFile.delete();
@@ -213,7 +217,6 @@ class BackupService {
       await dbFile.writeAsBytes(extracted.databaseBytes, flush: true);
 
       // Step 3e: Overwrite / restore endorsement files
-      final endorsementsDir = Directory(p.join(docsDir.path, 'endorsements'));
       if (!await endorsementsDir.exists()) {
         await endorsementsDir.create(recursive: true);
       }
@@ -221,6 +224,7 @@ class BackupService {
       for (final doc in extracted.documentFiles) {
         final fileName = p.basename(doc.path);
         final targetFile = File(p.join(endorsementsDir.path, fileName));
+        if (!await targetFile.exists()) writtenFiles.add(targetFile);
         await targetFile.writeAsBytes(doc.bytes, flush: true);
       }
 
@@ -278,12 +282,30 @@ class BackupService {
         await rollbackFile.delete();
       }
 
+      // The restored database references only the archive's pages; images
+      // left from the replaced logbook would otherwise accumulate forever.
+      final kept = {
+        for (final doc in extracted.documentFiles) p.basename(doc.path),
+      };
+      await for (final entity in endorsementsDir.list()) {
+        if (entity is File && !kept.contains(p.basename(entity.path))) {
+          try {
+            await entity.delete();
+          } catch (_) {}
+        }
+      }
+
       return extracted.manifest;
     } catch (e) {
       // Rollback on failure
       if (await rollbackFile.exists()) {
         await rollbackFile.copy(dbFile.path);
         await rollbackFile.delete();
+      }
+      for (final file in writtenFiles) {
+        try {
+          if (await file.exists()) await file.delete();
+        } catch (_) {}
       }
       throw BackupException('Failed to restore backup: $e', e);
     }
