@@ -114,6 +114,14 @@ class TimeUtils {
     final month = _monthNamesFull[dt.month - 1];
     return '$day $month ${dt.year}';
   }
+
+  /// Formats [dt] as "dd/mm/yyyy", the Column 1 format required by
+  /// SA-CATS 61 Appendix A (e.g. "05/09/2026").
+  static String formatLogbookDate(DateTime dt) {
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    return '$day/$month/${dt.year.toString().padLeft(4, '0')}';
+  }
 }
 
 

@@ -31,6 +31,11 @@ void main() {
       expect(TimeUtils.tryParseDecimalToMinutes('1.5'), 90);
       expect(TimeUtils.tryParseDecimalToMinutes('invalid'), isNull);
     });
+
+    test('formatLogbookDate uses the Appendix A dd/mm/yyyy format', () {
+      expect(TimeUtils.formatLogbookDate(DateTime(2026, 9, 5)), '05/09/2026');
+      expect(TimeUtils.formatLogbookDate(DateTime(2026, 12, 31)), '31/12/2026');
+    });
   });
 }
 
