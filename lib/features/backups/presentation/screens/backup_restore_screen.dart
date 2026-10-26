@@ -32,11 +32,28 @@ class BackupRestoreScreen extends ConsumerStatefulWidget {
 }
 
 class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
-  static const Color _accentGreen = Color(0xFF4CAF50);
-  static const Color _accentWarning = Color(0xFFFFA726);
-  static const Color _accentError = Color(0xFFEF5350);
-  static const Color _accentBlue = Color(0xFF42A5F5);
-  static const Color _accentPurple = Color(0xFFAB47BC);
+  // Accents are tuned per brightness: the mid-tone shades that read well on
+  // the dark themes fall below 3:1 contrast on the light theme's surfaces.
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+  Color get _accentGreen =>
+      _isDark ? const Color(0xFF4CAF50) : const Color(0xFF2E7D32);
+  Color get _accentWarning =>
+      _isDark ? const Color(0xFFFFA726) : const Color(0xFFB45309);
+  Color get _accentError =>
+      _isDark ? const Color(0xFFEF5350) : const Color(0xFFC62828);
+  Color get _accentBlue =>
+      _isDark ? const Color(0xFF42A5F5) : const Color(0xFF1565C0);
+  Color get _accentPurple =>
+      _isDark ? const Color(0xFFAB47BC) : const Color(0xFF7B1FA2);
+
+  // Snackbar backgrounds stay dark on every theme so the theme's white
+  // snackbar text keeps at least 4.5:1 contrast.
+  static const Color _snackSuccess = Color(0xFF2E7D32);
+  static const Color _snackError = Color(0xFFC62828);
+  static const Color _snackWarning = Color(0xFFB45309);
+
+  /// Secondary text that stays legible on every theme's card surface.
+  Color get _mutedText => Theme.of(context).colorScheme.onSurfaceVariant;
 
   int _selectedSegment = 0; // 0: Local/Offline, 1: Google Drive, 2: Email
   bool _isLoading = false;
@@ -299,21 +316,21 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.upload_file, color: _accentBlue, size: 26),
-                SizedBox(width: 12),
-                Text(
+                const SizedBox(width: 12),
+                const Text(
                   'Export Local Archive (.spbackup)',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Packages your SQLite database and scanned endorsement stamps into a tamper-evident, '
               'AES-256 encrypted file. Works 100% offline with zero internet required.',
-              style: TextStyle(fontSize: 13, color: Colors.white70),
+              style: TextStyle(fontSize: 13, color: _mutedText),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -367,25 +384,25 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(
                   Icons.settings_backup_restore,
                   color: _accentPurple,
                   size: 26,
                 ),
-                SizedBox(width: 12),
-                Text(
+                const SizedBox(width: 12),
+                const Text(
                   'Restore from Local File',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Select an encrypted .spbackup file from your device storage or files app. '
               'Every file checksum is verified before applying changes with rollback safety.',
-              style: TextStyle(fontSize: 13, color: Colors.white70),
+              style: TextStyle(fontSize: 13, color: _mutedText),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -454,7 +471,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                                 : 'Not connected to Google Drive',
                             style: TextStyle(
                               fontSize: 13,
-                              color: isSignedIn ? _accentGreen : Colors.white60,
+                              color: isSignedIn ? _accentGreen : _mutedText,
                             ),
                           ),
                         ],
@@ -472,10 +489,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                 ),
                 if (!isSignedIn) ...[
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Connect your Google Account to automatically store and sync your AES-256 encrypted '
                     'flight logbook in Google Drive. Zero passwords stored, and only Spreadlog files are accessed.',
-                    style: TextStyle(fontSize: 12, color: Colors.white70),
+                    style: TextStyle(fontSize: 12, color: _mutedText),
                   ),
                 ],
                 if (isSignedIn && kIsWeb) ...[
@@ -502,12 +519,14 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                                 size: 22,
                               ),
                               const SizedBox(width: 10),
-                              const Expanded(
+                              Expanded(
                                 child: Text(
                                   'Google Drive permission required to sync files.',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.white,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
                                   ),
                                 ),
                               ),
@@ -605,13 +624,13 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                       ),
                     )
                   else if (_driveBackups == null || _driveBackups!.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Center(
                         child: Text(
                           'No cloud backups found in Google Drive.\nTap "Backup to Google Drive Now" to upload one.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white60),
+                          style: TextStyle(color: _mutedText),
                         ),
                       ),
                     )
@@ -636,10 +655,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          leading: const Icon(
-                            Icons.cloud_done,
-                            color: _accentGreen,
-                          ),
+                          leading: Icon(Icons.cloud_done, color: _accentGreen),
                           title: Text(
                             item.name,
                             style: const TextStyle(fontSize: 14),
@@ -649,15 +665,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                icon: const Icon(
-                                  Icons.restore,
-                                  color: _accentBlue,
-                                ),
+                                icon: Icon(Icons.restore, color: _accentBlue),
                                 tooltip: 'Restore from this backup',
                                 onPressed: () => _handleRestoreFromDrive(item),
                               ),
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.delete_outline,
                                   color: _accentError,
                                 ),
@@ -699,11 +712,11 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(Icons.mark_email_read, color: _accentBlue, size: 26),
-                    SizedBox(width: 12),
-                    Text(
+                    const SizedBox(width: 12),
+                    const Text(
                       'Email Backup to Myself (Google)',
                       style: TextStyle(
                         fontSize: 17,
@@ -713,10 +726,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Sends the AES-256 encrypted logbook backup directly to your Gmail inbox via the Google REST API. '
                   'Zero password configuration or SMTP ports required.',
-                  style: TextStyle(fontSize: 13, color: Colors.white70),
+                  style: TextStyle(fontSize: 13, color: _mutedText),
                 ),
                 const SizedBox(height: 16),
                 if (isSignedIn) ...[
@@ -769,7 +782,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.tune, color: _accentWarning, size: 26),
+                      Icon(Icons.tune, color: _accentWarning, size: 26),
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
@@ -788,17 +801,17 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'For pilots using custom email domains, Outlook, or private mail servers. '
                     'Requires custom SMTP host, port, TLS, and mailbox credentials.',
-                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                    style: TextStyle(fontSize: 13, color: _mutedText),
                   ),
                   if (settings.lastBackupDate != null) ...[
                     const SizedBox(height: 8),
                     Text(
                       'Last Email: ${settings.lastBackupDate!.toLocal().toString().substring(0, 16)} '
                       '(${settings.lastBackupStatus ?? "OK"})',
-                      style: const TextStyle(fontSize: 12, color: _accentGreen),
+                      style: TextStyle(fontSize: 12, color: _accentGreen),
                     ),
                   ],
                   const SizedBox(height: 16),
@@ -851,7 +864,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Connected to Google as ${resolvedUser.email}'),
-              backgroundColor: _accentGreen,
+              backgroundColor: _snackSuccess,
             ),
           );
         }
@@ -873,7 +886,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Google Sign-In failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -909,7 +922,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                 content: Text(
                   'Google Drive permission is required to upload backups.',
                 ),
-                backgroundColor: _accentWarning,
+                backgroundColor: _snackWarning,
               ),
             );
           }
@@ -966,7 +979,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             content: Text(
               'Backup saved to Google Drive ($fileName • ${(encryptedBytes.length / 1024).toStringAsFixed(1)} KB)',
             ),
-            backgroundColor: _accentGreen,
+            backgroundColor: _snackSuccess,
           ),
         );
       }
@@ -975,7 +988,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Google Drive backup failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1006,7 +1019,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to download from Google Drive: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1051,7 +1064,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Delete failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1069,7 +1082,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Gmail permission is required to send backups.'),
-                backgroundColor: _accentWarning,
+                backgroundColor: _snackWarning,
               ),
             );
           }
@@ -1126,7 +1139,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             content: Text(
               'Encrypted backup successfully sent to $recipientEmail!',
             ),
-            backgroundColor: _accentGreen,
+            backgroundColor: _snackSuccess,
           ),
         );
       }
@@ -1135,7 +1148,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gmail dispatch failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1199,7 +1212,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Backup saved successfully: $fileName'),
-              backgroundColor: _accentGreen,
+              backgroundColor: _snackSuccess,
             ),
           );
         }
@@ -1209,7 +1222,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Save failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1273,7 +1286,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             content: Text(
               'Backup exported successfully (${(encryptedBytes.length / 1024).toStringAsFixed(1)} KB)',
             ),
-            backgroundColor: _accentGreen,
+            backgroundColor: _snackSuccess,
           ),
         );
       }
@@ -1282,7 +1295,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Export failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1326,7 +1339,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Could not read backup file at $path'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1380,7 +1393,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Incorrect passphrase. Decryption failed.'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1390,7 +1403,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Integrity check failed: ${e.message}'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1400,7 +1413,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to inspect archive: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1416,18 +1429,18 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final shouldProceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.verified, color: _accentGreen),
-            SizedBox(width: 8),
-            Text('Backup Verified'),
+            const SizedBox(width: 8),
+            const Text('Backup Verified'),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'All SHA-256 file checksums verified successfully.',
               style: TextStyle(
                 color: _accentGreen,
@@ -1450,7 +1463,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               '• Archive Size: ${(inspection.totalSizeBytes / 1024).toStringAsFixed(1)} KB',
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Proceeding will replace your current logbook with this backup. Rollback protection is active.',
               style: TextStyle(color: _accentWarning, fontSize: 12),
             ),
@@ -1490,7 +1503,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Logbook restored successfully!'),
-            backgroundColor: _accentGreen,
+            backgroundColor: _snackSuccess,
           ),
         );
       }
@@ -1499,7 +1512,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Restore failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1613,7 +1626,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             content: Text(
               'Test backup dispatched via SMTP to ${settings.primaryEmail ?? settings.smtpUsername}',
             ),
-            backgroundColor: _accentGreen,
+            backgroundColor: _snackSuccess,
           ),
         );
       }
@@ -1622,7 +1635,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('SMTP dispatch failed: $e'),
-            backgroundColor: _accentError,
+            backgroundColor: _snackError,
           ),
         );
       }
@@ -1645,9 +1658,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'This passphrase encrypts all exported backups. Keep it safe—without it, backups cannot be decrypted.',
-              style: TextStyle(fontSize: 13, color: Colors.white70),
+              style: TextStyle(fontSize: 13, color: _mutedText),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -1718,10 +1731,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message,
-              style: const TextStyle(fontSize: 13, color: Colors.white70),
-            ),
+            Text(message, style: TextStyle(fontSize: 13, color: _mutedText)),
             const SizedBox(height: 16),
             TextField(
               controller: ctrl,
