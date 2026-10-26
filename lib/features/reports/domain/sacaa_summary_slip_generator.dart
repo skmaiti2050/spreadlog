@@ -137,7 +137,7 @@ class SacaaSummarySlipPdfGenerator {
                   ),
                   pw.SizedBox(width: 8),
                   pw.Text(
-                    TimeUtils.formatMinutesToHhMm(
+                    TimeUtils.formatMinutesToDecimal(
                       grandTotals.soloCrossCountryMinutes,
                     ),
                     style: const pw.TextStyle(
@@ -440,7 +440,7 @@ class SacaaSummarySlipPdfGenerator {
   }
 
   static pw.Widget _timeCell(int minutes, {bool isBold = false}) {
-    final text = minutes > 0 ? TimeUtils.formatMinutesToHhMm(minutes) : '-';
+    final text = minutes > 0 ? TimeUtils.formatMinutesToDecimal(minutes) : '-';
     return pw.Container(
       height: 14,
       padding: const pw.EdgeInsets.symmetric(horizontal: 1),

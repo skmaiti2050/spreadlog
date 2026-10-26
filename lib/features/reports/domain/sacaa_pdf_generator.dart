@@ -13,8 +13,15 @@ import '../../../core/utils/time_utils.dart';
 /// Produces a landscape multi-page document with:
 /// - Left Page: Columns 1 to 13
 /// - Right Page: Columns 14 to 32
-/// - Bottom totals: Brought Forward, This Page, Carried Forward
+/// - Brought Forward above the 30 entry lines, Carried Forward below them
+/// - Times in decimal hours (1.5 = 1 h 30 min), as in SA-CATS 61 summaries
 class SacaaPdfGenerator {
+  /// Lines per page in the printed SACAA logbook.
+  static const int rowsPerPage = 30;
+
+  /// Fits header, 30 lines and both totals rows on an A4 landscape sheet.
+  static const double rowHeight = 12.5;
+
   static Future<List<int>> generateDocument({
     required List<LedgerPage> pages,
     required String pilotName,
@@ -69,7 +76,7 @@ class SacaaPdfGenerator {
     String pilotName,
     String licenceNumber,
   ) {
-    const rowCount = 14;
+    const rowCount = rowsPerPage;
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
@@ -175,15 +182,11 @@ class SacaaPdfGenerator {
               ),
 
 
-              // 14 Flight Rows
-              for (int i = 0; i < rowCount; i++)
-                _buildLeftFlightRow(i < page.entries.length ? page.entries[i] : null),
-
-              // Brought Forward
+              // Brought Forward sits above the entries, as in the printed logbook
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.grey100),
                 children: [
-                  _cell('BROUGHT FWD', bold: true, colSpan: 5),
+                  _cell('B/FWD', bold: true),
                   _cell(''),
                   _cell(''),
                   _cell(''),
@@ -199,30 +202,14 @@ class SacaaPdfGenerator {
                 ],
               ),
 
-              // Page Totals
-              pw.TableRow(
-                children: [
-                  _cell('THIS PAGE', bold: true, colSpan: 5),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _cell(''),
-                  _timeCell(page.pageTotals.instrumentActual),
-                  _timeCell(page.pageTotals.instrumentFstd),
-                  _timeCell(page.pageTotals.instructorSe),
-                  _timeCell(page.pageTotals.instructorMe),
-                  _timeCell(page.pageTotals.instructorFstd),
-                  _timeCell(page.pageTotals.fstdActual),
-                ],
-              ),
+              for (int i = 0; i < rowCount; i++)
+                _buildLeftFlightRow(i < page.entries.length ? page.entries[i] : null),
 
               // Carried Forward
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.grey200),
                 children: [
-                  _cell('CARRIED FWD', bold: true, colSpan: 5),
+                  _cell('C/FWD', bold: true),
                   _cell(''),
                   _cell(''),
                   _cell(''),
@@ -246,7 +233,7 @@ class SacaaPdfGenerator {
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Text(
-              'Grand total flight time (columns 14 to 29): ${TimeUtils.formatMinutesToHhMm(page.carriedForward.totalSingleEngine + page.carriedForward.totalMultiEngine)} hours',
+              'Grand total flight time (columns 14 to 29): ${TimeUtils.formatMinutesToDecimal(page.carriedForward.totalFlightTimeMinutes)} hours',
               style: const pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
             ),
             pw.Text(
@@ -262,11 +249,11 @@ class SacaaPdfGenerator {
   static pw.TableRow _buildLeftFlightRow(Flight? flight) {
     if (flight == null) {
       return pw.TableRow(
-        children: List.generate(13, (_) => _cell('', height: 17)),
+        children: List.generate(13, (_) => _cell('', height: rowHeight)),
       );
     }
 
-    final dateStr = '${flight.date.year.toString().padLeft(4, '0')}-${flight.date.month.toString().padLeft(2, '0')}-${flight.date.day.toString().padLeft(2, '0')}';
+    final dateStr = TimeUtils.formatLogbookDate(flight.date);
 
     int instructorSe = 0;
     int instructorMe = 0;
@@ -305,7 +292,7 @@ class SacaaPdfGenerator {
   }
 
   static pw.Widget _buildRightPage(LedgerPage page) {
-    const rowCount = 14;
+    const rowCount = rowsPerPage;
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: [
@@ -455,11 +442,7 @@ class SacaaPdfGenerator {
               ),
 
 
-              // 14 Flight Rows
-              for (int i = 0; i < rowCount; i++)
-                _buildRightFlightRow(i < page.entries.length ? page.entries[i] : null),
-
-              // Brought Forward
+              // Brought Forward sits above the entries, as in the printed logbook
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.grey100),
                 children: [
@@ -481,34 +464,12 @@ class SacaaPdfGenerator {
                   _timeCell(page.broughtForward.meNightCopilot),
                   _cell(page.broughtForward.landingsDay > 0 ? '${page.broughtForward.landingsDay}' : '-', fontSize: 6),
                   _cell(page.broughtForward.landingsNight > 0 ? '${page.broughtForward.landingsNight}' : '-', fontSize: 6),
-                  _cell('TOTAL B/FWD: ${TimeUtils.formatMinutesToHhMm(page.broughtForward.totalFlightTimeMinutes)}', fontSize: 6.5, bold: true),
+                  _cell('TOTAL B/FWD: ${TimeUtils.formatMinutesToDecimal(page.broughtForward.totalFlightTimeMinutes)}', fontSize: 6.5, bold: true),
                 ],
               ),
 
-              // Page Totals
-              pw.TableRow(
-                children: [
-                  _timeCell(page.pageTotals.seDayDual),
-                  _timeCell(page.pageTotals.seDayPic),
-                  _timeCell(page.pageTotals.seDayPicus),
-                  _timeCell(page.pageTotals.seDayCopilot),
-                  _timeCell(page.pageTotals.seNightDual),
-                  _timeCell(page.pageTotals.seNightPic),
-                  _timeCell(page.pageTotals.seNightPicus),
-                  _timeCell(page.pageTotals.seNightCopilot),
-                  _timeCell(page.pageTotals.meDayDual),
-                  _timeCell(page.pageTotals.meDayPic),
-                  _timeCell(page.pageTotals.meDayPicus),
-                  _timeCell(page.pageTotals.meDayCopilot),
-                  _timeCell(page.pageTotals.meNightDual),
-                  _timeCell(page.pageTotals.meNightPic),
-                  _timeCell(page.pageTotals.meNightPicus),
-                  _timeCell(page.pageTotals.meNightCopilot),
-                  _cell(page.pageTotals.landingsDay > 0 ? '${page.pageTotals.landingsDay}' : '-', fontSize: 6),
-                  _cell(page.pageTotals.landingsNight > 0 ? '${page.pageTotals.landingsNight}' : '-', fontSize: 6),
-                  _cell('PAGE TOTAL: ${TimeUtils.formatMinutesToHhMm(page.pageTotals.totalFlightTimeMinutes)}', fontSize: 6.5, bold: true),
-                ],
-              ),
+              for (int i = 0; i < rowCount; i++)
+                _buildRightFlightRow(i < page.entries.length ? page.entries[i] : null),
 
               // Carried Forward
               pw.TableRow(
@@ -532,7 +493,7 @@ class SacaaPdfGenerator {
                   _timeCell(page.carriedForward.meNightCopilot, bold: true),
                   _cell(page.carriedForward.landingsDay > 0 ? '${page.carriedForward.landingsDay}' : '-', fontSize: 6, bold: true),
                   _cell(page.carriedForward.landingsNight > 0 ? '${page.carriedForward.landingsNight}' : '-', fontSize: 6, bold: true),
-                  _cell('TOTAL C/FWD: ${TimeUtils.formatMinutesToHhMm(page.carriedForward.totalFlightTimeMinutes)}', fontSize: 6.5, bold: true),
+                  _cell('TOTAL C/FWD: ${TimeUtils.formatMinutesToDecimal(page.carriedForward.totalFlightTimeMinutes)}', fontSize: 6.5, bold: true),
                 ],
               ),
             ],
@@ -545,7 +506,7 @@ class SacaaPdfGenerator {
   static pw.TableRow _buildRightFlightRow(Flight? flight) {
     if (flight == null) {
       return pw.TableRow(
-        children: List.generate(19, (_) => _cell('', height: 17)),
+        children: List.generate(19, (_) => _cell('', height: rowHeight)),
       );
     }
 
@@ -619,8 +580,7 @@ class SacaaPdfGenerator {
     String text, {
     bool bold = false,
     double fontSize = 7,
-    double height = 15,
-    int colSpan = 1,
+    double height = rowHeight,
   }) {
     return pw.Container(
       height: height,
@@ -638,7 +598,7 @@ class SacaaPdfGenerator {
   }
 
   static pw.Widget _timeCell(int minutes, {bool bold = false}) {
-    final text = minutes > 0 ? TimeUtils.formatMinutesToHhMm(minutes) : '';
+    final text = minutes > 0 ? TimeUtils.formatMinutesToDecimal(minutes) : '';
     return _cell(text, bold: bold, fontSize: 6.5);
   }
 }
