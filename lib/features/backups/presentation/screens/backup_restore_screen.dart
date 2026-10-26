@@ -18,6 +18,7 @@ import '../providers/backup_providers.dart';
 import '../providers/google_auth_providers.dart';
 import '../widgets/google_sign_in_button.dart';
 import '../../../../core/utils/plural.dart';
+import '../../../../core/layout/responsive.dart';
 
 class BackupRestoreScreen extends ConsumerStatefulWidget {
   final String? initialFilePath;
@@ -189,58 +190,60 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     BackupSettings settings,
     int currentFlightCount,
   ) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        // Top Master Passphrase Status Card
-        _buildMasterPassphraseCard(context, settings),
-        const SizedBox(height: 16),
-
-        // 3-Option Segment Selector
-        Center(
-          child: SegmentedButton<int>(
-            segments: const [
-              ButtonSegment<int>(
-                value: 0,
-                icon: Icon(Icons.sd_storage_outlined),
-                label: Text('Local'),
-              ),
-              ButtonSegment<int>(
-                value: 1,
-                icon: Icon(Icons.cloud_sync_outlined),
-                label: Text('Drive'),
-              ),
-              ButtonSegment<int>(
-                value: 2,
-                icon: Icon(Icons.email_outlined),
-                label: Text('Email'),
-              ),
-            ],
-            selected: {_selectedSegment},
-            onSelectionChanged: (Set<int> newSelection) {
-              setState(() {
-                _selectedSegment = newSelection.first;
-              });
-              if (_selectedSegment == 1 && _driveBackups == null) {
-                _loadDriveBackups();
-              }
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Segment Content
-        if (_selectedSegment == 0) ...[
-          _buildExportCard(context, settings, currentFlightCount),
+    return ContentWidth(
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Top Master Passphrase Status Card
+          _buildMasterPassphraseCard(context, settings),
           const SizedBox(height: 16),
-          _buildRestoreCard(context, settings),
-        ] else if (_selectedSegment == 1) ...[
-          _buildGoogleDriveSyncCard(context, settings),
-        ] else if (_selectedSegment == 2) ...[
-          _buildEmailDispatchCard(context, settings),
+
+          // 3-Option Segment Selector
+          Center(
+            child: SegmentedButton<int>(
+              segments: const [
+                ButtonSegment<int>(
+                  value: 0,
+                  icon: Icon(Icons.sd_storage_outlined),
+                  label: Text('Local'),
+                ),
+                ButtonSegment<int>(
+                  value: 1,
+                  icon: Icon(Icons.cloud_sync_outlined),
+                  label: Text('Drive'),
+                ),
+                ButtonSegment<int>(
+                  value: 2,
+                  icon: Icon(Icons.email_outlined),
+                  label: Text('Email'),
+                ),
+              ],
+              selected: {_selectedSegment},
+              onSelectionChanged: (Set<int> newSelection) {
+                setState(() {
+                  _selectedSegment = newSelection.first;
+                });
+                if (_selectedSegment == 1 && _driveBackups == null) {
+                  _loadDriveBackups();
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Segment Content
+          if (_selectedSegment == 0) ...[
+            _buildExportCard(context, settings, currentFlightCount),
+            const SizedBox(height: 16),
+            _buildRestoreCard(context, settings),
+          ] else if (_selectedSegment == 1) ...[
+            _buildGoogleDriveSyncCard(context, settings),
+          ] else if (_selectedSegment == 2) ...[
+            _buildEmailDispatchCard(context, settings),
+          ],
+          const SizedBox(height: 32),
         ],
-        const SizedBox(height: 32),
-      ],
+      ),
     );
   }
 

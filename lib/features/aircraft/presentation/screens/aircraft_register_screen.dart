@@ -7,6 +7,7 @@ import '../../../endorsements/presentation/widgets/endorsement_details_dialog.da
 import '../../domain/aircraft_model.dart';
 import '../providers/aircraft_providers.dart';
 import '../widgets/endorse_aircraft_dialog.dart';
+import '../../../../core/layout/responsive.dart';
 
 enum AircraftRegisterFilter { all, singleEngine, multiEngine, endorsedOnly }
 
@@ -129,102 +130,104 @@ class _AircraftRegisterScreenState
 
     return Scaffold(
       appBar: AppBar(title: const Text('Aircraft Model Register')),
-      body: Column(
-        children: [
-          // Search & Filter Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by model code or manufacturer...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            tooltip: 'Clear search',
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+      body: ContentWidth(
+        child: Column(
+          children: [
+            // Search & Filter Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search by model code or manufacturer...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              tooltip: 'Clear search',
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
+                    onChanged: (v) => setState(() => _searchQuery = v.trim()),
                   ),
-                  onChanged: (v) => setState(() => _searchQuery = v.trim()),
-                ),
-                const SizedBox(height: 10),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip(
-                        label: 'All (${allEntries.length})',
-                        filter: AircraftRegisterFilter.all,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        label: 'Single-Engine ($seCount)',
-                        filter: AircraftRegisterFilter.singleEngine,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        label: 'Multi-Engine ($meCount)',
-                        filter: AircraftRegisterFilter.multiEngine,
-                      ),
-                      const SizedBox(width: 8),
-                      _buildFilterChip(
-                        label: 'Endorsed Only ($endorsedCount)',
-                        filter: AircraftRegisterFilter.endorsedOnly,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-
-          // List of Aircraft
-          Expanded(
-            child: filteredEntries.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
                       children: [
-                        Icon(
-                          Icons.airplanemode_inactive,
-                          size: 48,
-                          color: theme.colorScheme.outline,
+                        _buildFilterChip(
+                          label: 'All (${allEntries.length})',
+                          filter: AircraftRegisterFilter.all,
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No aircraft models found.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          label: 'Single-Engine ($seCount)',
+                          filter: AircraftRegisterFilter.singleEngine,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          label: 'Multi-Engine ($meCount)',
+                          filter: AircraftRegisterFilter.multiEngine,
+                        ),
+                        const SizedBox(width: 8),
+                        _buildFilterChip(
+                          label: 'Endorsed Only ($endorsedCount)',
+                          filter: AircraftRegisterFilter.endorsedOnly,
+                        ),
                       ],
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredEntries.length,
-                    itemBuilder: (context, index) {
-                      final entry = filteredEntries[index];
-                      return _buildAircraftCard(context, theme, entry);
-                    },
                   ),
-          ),
-        ],
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // List of Aircraft
+            Expanded(
+              child: filteredEntries.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.airplanemode_inactive,
+                            size: 48,
+                            color: theme.colorScheme.outline,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No aircraft models found.',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredEntries.length,
+                      itemBuilder: (context, index) {
+                        final entry = filteredEntries[index];
+                        return _buildAircraftCard(context, theme, entry);
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'aircraft_register_fab',
