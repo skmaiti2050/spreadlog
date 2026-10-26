@@ -91,7 +91,13 @@ class GmailBackupTransport implements BackupTransport {
 
       // Standard direct attachment (<20 MB binary = <25 MB MIME)
       final boundary = '----=_SpreadlogBoundary_${DateTime.now().millisecondsSinceEpoch}';
-      final fileBase64 = base64.encode(encryptedBytes);
+      // RFC 2045 caps base64 body lines at 76 characters; one unbroken line
+      // can be rejected or mangled by mail servers on large backups.
+      final encoded = base64.encode(encryptedBytes);
+      final fileBase64 = [
+        for (var i = 0; i < encoded.length; i += 76)
+          encoded.substring(i, i + 76 > encoded.length ? encoded.length : i + 76),
+      ].join('\r\n');
 
       final buffer = StringBuffer()
         ..writeln('To: $targetEmail')
