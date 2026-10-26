@@ -746,72 +746,86 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Custom SMTP Fallback Card
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.tune, color: _accentWarning, size: 26),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Custom SMTP Server (Advanced)',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
+        // Browsers cannot open raw SMTP sockets and workmanager has no web
+        // implementation, so custom SMTP and scheduled backups are app-only.
+        if (kIsWeb)
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('Custom SMTP server'),
+              subtitle: Text(
+                'Sending through your own mail server and scheduled email '
+                'backups are available in the Android and iOS apps.',
+              ),
+            ),
+          )
+        else
+          // Custom SMTP Fallback Card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.tune, color: _accentWarning, size: 26),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Custom SMTP Server (Advanced)',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-                    Switch(
-                      value: settings.autoBackupEnabled,
-                      onChanged: (enabled) =>
-                          _toggleAutoBackup(settings, enabled),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'For pilots using custom email domains, Outlook, or private mail servers. '
-                  'Requires custom SMTP host, port, TLS, and mailbox credentials.',
-                  style: TextStyle(fontSize: 13, color: Colors.white70),
-                ),
-                if (settings.lastBackupDate != null) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Last Email: ${settings.lastBackupDate!.toLocal().toString().substring(0, 16)} '
-                    '(${settings.lastBackupStatus ?? "OK"})',
-                    style: const TextStyle(fontSize: 12, color: _accentGreen),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.settings),
-                        label: const Text('Configure SMTP'),
-                        onPressed: () => _promptConfigureSmtp(settings),
-                      ),
-                    ),
-                    if (settings.smtpHost != null &&
-                        settings.smtpHost!.isNotEmpty) ...[
-                      const SizedBox(width: 8),
-                      FilledButton.tonalIcon(
-                        icon: const Icon(Icons.send),
-                        label: const Text('Send Test'),
-                        onPressed: () => _sendTestEmailBackup(settings),
+                      Switch(
+                        value: settings.autoBackupEnabled,
+                        onChanged: (enabled) =>
+                            _toggleAutoBackup(settings, enabled),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'For pilots using custom email domains, Outlook, or private mail servers. '
+                    'Requires custom SMTP host, port, TLS, and mailbox credentials.',
+                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
+                  if (settings.lastBackupDate != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Last Email: ${settings.lastBackupDate!.toLocal().toString().substring(0, 16)} '
+                      '(${settings.lastBackupStatus ?? "OK"})',
+                      style: const TextStyle(fontSize: 12, color: _accentGreen),
+                    ),
                   ],
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.settings),
+                          label: const Text('Configure SMTP'),
+                          onPressed: () => _promptConfigureSmtp(settings),
+                        ),
+                      ),
+                      if (settings.smtpHost != null &&
+                          settings.smtpHost!.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        FilledButton.tonalIcon(
+                          icon: const Icon(Icons.send),
+                          label: const Text('Send Test'),
+                          onPressed: () => _sendTestEmailBackup(settings),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -1426,7 +1440,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               '• Created: ${inspection.manifest.createdAt.toLocal().toString().substring(0, 16)}',
             ),
             Text('• Total Flights: ${inspection.manifest.flightCount}'),
-            Text('• Endorsement Page Images: ${inspection.manifest.documentCount}'),
+            Text(
+              '• Endorsement Page Images: ${inspection.manifest.documentCount}',
+            ),
             Text(
               '• Aircraft Models: ${inspection.manifest.aircraftModelCount}',
             ),
