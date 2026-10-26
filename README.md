@@ -69,24 +69,24 @@ logbook pages/slips.
 ## Backup
 
 -   **archive**
--   **cryptography** (AES-256-GCM, SHA-256, Argon2id/PBKDF2)
--   **workmanager** (background execution)
+-   **cryptography** (AES-256-GCM, SHA-256, PBKDF2-HMAC-SHA256)
+-   **workmanager** (background execution, Android/iOS only)
 -   Pluggable backup transports:
-    -   SMTP
-    -   REST API provider
+    -   Google Drive (backup folder in the user's own Drive)
+    -   Gmail API (email the backup to yourself; Drive link above 20 MB)
+    -   Custom SMTP server (Android/iOS only; browsers cannot open SMTP sockets)
     -   OS share/export
 
 The backup format must not depend on an email provider.
 
 ## Monetization
 
--   **in_app_purchase**
--   Local entitlement layer
+The initial releases are **free**, with no purchases or trial limits.
 
-Initial commercial model:
+Planned for a later release (not implemented):
 
--   90-day free trial
--   One-time unlock
+-   **in_app_purchase** with a local entitlement layer
+-   90-day free trial, then a one-time unlock
 -   No subscription required for core functionality
 
 ------------------------------------------------------------------------
@@ -126,7 +126,7 @@ Initial commercial model:
                                 |
                     +-----------+-----------+
                     |           |           |
-                   SMTP       REST        Export
+               Drive/Gmail    SMTP        Export
 ```
 
 ## Critical architectural rule
@@ -819,6 +819,9 @@ constant.
 
 # Monetization
 
+> **Deferred.** The initial releases are free. The design below is for
+> the planned 90-day trial and one-time unlock.
+
 Use an entitlement abstraction:
 
 ``` dart
@@ -1005,18 +1008,20 @@ Physical logbook format
 
 ## Phase 6 --- Backup
 
--   [ ] Manifest
--   [ ] Archive format
--   [ ] Checksums
--   [ ] AES-256-GCM encryption
--   [ ] Manual export
--   [ ] Import
--   [ ] Restore validation
--   [ ] SMTP transport
--   [ ] Primary + recovery email
--   [ ] Scheduled backup
+-   [x] Manifest
+-   [x] Archive format
+-   [x] Checksums
+-   [x] AES-256-GCM encryption
+-   [x] Manual export
+-   [x] Import
+-   [x] Restore validation
+-   [x] Google Drive transport
+-   [x] Gmail API transport
+-   [x] SMTP transport (not yet verified against a real mail server)
+-   [x] Primary + recovery email
+-   [x] Scheduled backup
 
-## Phase 7 --- Monetization
+## Phase 7 --- Monetization (deferred; initial releases are free)
 
 -   [ ] Trial state
 -   [ ] IAP
@@ -1220,8 +1225,7 @@ flutter pub add flutter_riverpod \
   share_plus \
   archive \
   cryptography \
-  workmanager \
-  in_app_purchase
+  workmanager
 ```
 
 Add development/code-generation dependencies:
