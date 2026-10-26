@@ -15,12 +15,20 @@ class BackupIntentService {
   static Stream<String> get onBackupFileReceived => _fileController.stream;
 
   /// Initializes the MethodChannel listener for incoming intents.
-  static void initialize({void Function(String filePath)? onFileReceived}) {
+  ///
+  /// [onInvalidFile] fires when the OS opened a file with Spreadlog that is not
+  /// a Spreadlog backup (Android offers the app for every unknown file type).
+  static void initialize({
+    void Function(String filePath)? onFileReceived,
+    void Function()? onInvalidFile,
+  }) {
     if (kIsWeb || _initialized) return;
     _initialized = true;
 
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'onBackupFileReceived') {
+      if (call.method == 'onInvalidFileReceived') {
+        onInvalidFile?.call();
+      } else if (call.method == 'onBackupFileReceived') {
         final filePath = call.arguments as String?;
         if (filePath != null && filePath.isNotEmpty) {
           debugPrint('BackupIntentService: Incoming backup file: $filePath');

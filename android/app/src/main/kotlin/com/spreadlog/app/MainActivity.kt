@@ -3,6 +3,9 @@ package com.spreadlog.app
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.Executors
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -19,6 +22,9 @@ class MainActivity : FlutterActivity() {
     private var pendingBackupPath: String? = null
     private var methodChannel: MethodChannel? = null
     private var backupListenerReady = false
+    private var pendingInvalidFile = false
+    private val ioExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var scanResult: MethodChannel.Result? = null
 
     private fun startScan(manual: Boolean, result: MethodChannel.Result) {
@@ -93,6 +99,11 @@ class MainActivity : FlutterActivity() {
         handleIntent(intent)
     }
 
+    override fun onDestroy() {
+        ioExecutor.shutdown()
+        super.onDestroy()
+    }
+
     override fun onNewIntent(intent: Intent) {
         handleIntent(intent)
         // Prevent Flutter engine from pushing raw content:// URIs to the Navigator
@@ -112,6 +123,26 @@ class MainActivity : FlutterActivity() {
             intent.data
         } ?: return
 
+        // Backups with scans can be tens of MB; copying on the UI thread risks an ANR.
+        ioExecutor.execute {
+            val path = copyIfBackup(uri)
+            mainHandler.post {
+                // The copy can outlive the activity; its engine is gone then.
+                if (isDestroyed) return@post
+                when {
+                    path != null && backupListenerReady ->
+                        methodChannel?.invokeMethod("onBackupFileReceived", path)
+                    path != null -> pendingBackupPath = path
+                    backupListenerReady ->
+                        methodChannel?.invokeMethod("onInvalidFileReceived", null)
+                    else -> pendingInvalidFile = true
+                }
+            }
+        }
+    }
+
+    /** Copies [uri] to the cache when it starts with the SPBK header; returns the copy's path. */
+    private fun copyIfBackup(uri: Uri): String? {
         try {
             var fileName = "incoming_backup.spbackup"
             if (uri.scheme == "content") {
@@ -133,25 +164,21 @@ class MainActivity : FlutterActivity() {
                 var offset = 0
                 while (offset < header.size) {
                     val read = inputStream.read(header, offset, header.size - offset)
-                    if (read < 0) return
+                    if (read < 0) return null
                     offset += read
                 }
-                if (!header.contentEquals(byteArrayOf(0x53, 0x50, 0x42, 0x4b))) return
+                if (!header.contentEquals(byteArrayOf(0x53, 0x50, 0x42, 0x4b))) return null
                 val cacheFile = File.createTempFile("incoming_", ".spbackup", cacheDir)
                 FileOutputStream(cacheFile).use { outputStream ->
                     outputStream.write(header)
                     inputStream.copyTo(outputStream)
                 }
-                val path = cacheFile.absolutePath
-                if (backupListenerReady) {
-                    methodChannel?.invokeMethod("onBackupFileReceived", path)
-                } else {
-                    pendingBackupPath = path
-                }
+                return cacheFile.absolutePath
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
+        return null
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -174,13 +201,13 @@ class MainActivity : FlutterActivity() {
                     val path = pendingBackupPath
                     pendingBackupPath = null
                     result.success(path)
+                    if (pendingInvalidFile) {
+                        pendingInvalidFile = false
+                        channel.invokeMethod("onInvalidFileReceived", null)
+                    }
                 }
                 else -> result.notImplemented()
             }
-        }
-
-        pendingBackupPath?.let { path ->
-            channel.invokeMethod("onBackupFileReceived", path)
         }
     }
 }

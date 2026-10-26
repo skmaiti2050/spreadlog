@@ -8,6 +8,8 @@ import '../features/backups/presentation/screens/backup_restore_screen.dart';
 import 'router.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<ScaffoldMessengerState> appMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
 
 class AppScrollBehavior extends MaterialScrollBehavior {
   const AppScrollBehavior();
@@ -41,6 +43,15 @@ class _AviationLogbookAppState extends ConsumerState<AviationLogbookApp> {
           );
         }
       },
+      onInvalidFile: () {
+        appMessengerKey.currentState?.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'That file is not a Spreadlog backup (.spbackup), so nothing was opened.',
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -51,6 +62,7 @@ class _AviationLogbookAppState extends ConsumerState<AviationLogbookApp> {
 
     return MaterialApp(
       navigatorKey: appNavigatorKey,
+      scaffoldMessengerKey: appMessengerKey,
       title: 'Spreadlog',
       theme: themeData,
       scrollBehavior: const AppScrollBehavior(),
