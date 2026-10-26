@@ -9,6 +9,7 @@ import '../../domain/flight.dart';
 import '../providers/flights_providers.dart';
 import '../widgets/flight_details_dialog.dart';
 import '../widgets/log_flight_dialog.dart';
+import '../../../../core/utils/plural.dart';
 
 class FlightListScreen extends ConsumerStatefulWidget {
   const FlightListScreen({super.key});
@@ -143,9 +144,9 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete $count Flight Entries?'),
+        title: Text('Delete ${plural(count, 'flight entry', 'flight entries')}?'),
         content: Text(
-          'Are you sure you want to delete $count selected flight entries?\nThis action cannot be undone.',
+          'Are you sure you want to delete ${plural(count, 'selected flight entry', 'selected flight entries')}?\nThis action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -174,7 +175,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$deletedCount flights deleted successfully'),
+              content: Text('${plural(deletedCount, 'flight')} deleted'),
               backgroundColor: Colors.green.shade800,
             ),
           );
@@ -701,7 +702,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                           Chip(
                             avatar: const Icon(Icons.flight_land, size: 14),
                             label: Text(
-                              '${flight.landings.totalCount} ldgs',
+                              plural(flight.landings.totalCount, 'ldg'),
                               style: const TextStyle(fontSize: 11),
                             ),
                             visualDensity: VisualDensity.compact,

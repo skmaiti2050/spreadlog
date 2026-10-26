@@ -17,6 +17,7 @@ import '../../domain/backup_encryptor.dart';
 import '../providers/backup_providers.dart';
 import '../providers/google_auth_providers.dart';
 import '../widgets/google_sign_in_button.dart';
+import '../../../../core/utils/plural.dart';
 
 class BackupRestoreScreen extends ConsumerStatefulWidget {
   final String? initialFilePath;
@@ -339,7 +340,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               children: [
                 Chip(
                   avatar: const Icon(Icons.flight, size: 16),
-                  label: Text('$flightCount Flights'),
+                  label: Text(plural(flightCount, 'flight')),
                 ),
                 const Chip(
                   avatar: Icon(Icons.lock, size: 16),

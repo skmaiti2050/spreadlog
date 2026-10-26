@@ -12,6 +12,7 @@ import '../../domain/endorsement_document.dart';
 import '../../domain/endorsement_page.dart';
 import '../providers/endorsements_providers.dart';
 import '../utils/sample_endorsement_generator.dart';
+import '../../../../core/utils/plural.dart';
 
 class ScanEndorsementDialog extends ConsumerStatefulWidget {
   final EndorsementDocument? supersedingDocument;
@@ -250,7 +251,7 @@ class _ScanEndorsementDialogState extends ConsumerState<ScanEndorsementDialog> {
             content: Text(
               widget.supersedingDocument != null
                   ? 'Replacement endorsement saved successfully'
-                  : 'Document saved to Vault (${_pages.length} pages)',
+                  : 'Document saved to Vault (${plural(_pages.length, 'page')})',
             ),
           ),
         );
