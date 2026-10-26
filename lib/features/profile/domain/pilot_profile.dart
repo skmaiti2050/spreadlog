@@ -8,13 +8,22 @@ class PilotProfile {
   final String defaultPicName;
 
   const PilotProfile({
-    this.pilotName = 'PILOT IN COMMAND',
-    this.licenceNumber = 'ZA-123456',
+    this.pilotName = '',
+    this.licenceNumber = '',
     this.regulatorId = 'sacaa',
     this.defaultPicName = 'SELF',
   });
 
   static const PilotProfile defaultProfile = PilotProfile();
+
+  /// Placeholders that earlier builds stored as defaults; they are not a
+  /// real pilot's details and are read back as empty.
+  static const legacyPlaceholderName = 'PILOT IN COMMAND';
+  static const legacyPlaceholderLicence = 'ZA-123456';
+
+  /// Name and licence appear on every logbook page and summary slip.
+  bool get isComplete =>
+      pilotName.trim().isNotEmpty && licenceNumber.trim().isNotEmpty;
 
   PilotProfile copyWith({
     String? pilotName,
@@ -41,8 +50,8 @@ class PilotProfile {
 
   factory PilotProfile.fromJson(Map<String, dynamic> json) {
     return PilotProfile(
-      pilotName: json['pilotName'] as String? ?? 'PILOT IN COMMAND',
-      licenceNumber: json['licenceNumber'] as String? ?? 'ZA-123456',
+      pilotName: json['pilotName'] as String? ?? '',
+      licenceNumber: json['licenceNumber'] as String? ?? '',
       regulatorId: json['regulatorId'] as String? ?? 'sacaa',
       defaultPicName: json['defaultPicName'] as String? ?? 'SELF',
     );

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/time_utils.dart';
 import '../../../../core/widgets/hint_banner.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
+import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../domain/flight.dart';
 import '../providers/flights_providers.dart';
 import '../widgets/flight_details_dialog.dart';
@@ -267,14 +268,28 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  Text(
-                    '${profile.pilotName} • ${profile.licenceNumber}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  if (profile.isComplete)
+                    Text(
+                      '${profile.pilotName} • ${profile.licenceNumber}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  else
+                    // Name and licence print on every logbook page, so
+                    // prompt for them instead of showing invented values.
+                    InkWell(
+                      onTap: () => EditProfileDialog.show(context),
+                      child: Text(
+                        'Set up your pilot profile ›',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
                 ],
               ),
               actions: [

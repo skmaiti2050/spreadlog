@@ -13,8 +13,14 @@ class PilotProfileRepository {
 
   Future<PilotProfile> getProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    final name = prefs.getString(_keyPilotName) ?? 'PILOT IN COMMAND';
-    final licence = prefs.getString(_keyLicenceNumber) ?? 'ZA-123456';
+    final name = _withoutPlaceholder(
+      prefs.getString(_keyPilotName),
+      PilotProfile.legacyPlaceholderName,
+    );
+    final licence = _withoutPlaceholder(
+      prefs.getString(_keyLicenceNumber),
+      PilotProfile.legacyPlaceholderLicence,
+    );
     final regulator = prefs.getString(_keyRegulatorId) ?? 'sacaa';
     final defaultPic = prefs.getString(_keyDefaultPicName) ?? 'SELF';
 
@@ -25,6 +31,9 @@ class PilotProfileRepository {
       defaultPicName: defaultPic,
     );
   }
+
+  static String _withoutPlaceholder(String? value, String placeholder) =>
+      value == null || value == placeholder ? '' : value;
 
   Future<void> saveProfile(PilotProfile profile) async {
     final prefs = await SharedPreferences.getInstance();

@@ -68,7 +68,7 @@ class AviationAppDrawer extends ConsumerWidget {
                           children: [
                             Text(
                               profile.pilotName.isEmpty
-                                  ? 'Captain'
+                                  ? 'Profile not set up'
                                   : profile.pilotName,
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,

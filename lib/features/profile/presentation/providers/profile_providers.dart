@@ -28,8 +28,8 @@ class PilotProfileNotifier extends Notifier<PilotProfile> {
   }) async {
     final repo = ref.read(pilotProfileRepositoryProvider);
     final updated = state.copyWith(
-      pilotName: pilotName.trim().isNotEmpty ? pilotName.trim() : 'PILOT IN COMMAND',
-      licenceNumber: licenceNumber.trim().isNotEmpty ? licenceNumber.trim() : 'ZA-123456',
+      pilotName: pilotName.trim(),
+      licenceNumber: licenceNumber.trim(),
       regulatorId: regulatorId ?? state.regulatorId,
       defaultPicName: defaultPicName ?? state.defaultPicName,
     );

@@ -3,12 +3,22 @@ import 'package:aviation_logbook/features/profile/domain/pilot_profile.dart';
 
 void main() {
   group('PilotProfile Domain Tests', () {
-    test('Default profile has sensible SACAA defaults', () {
+    test('Default profile has no invented pilot details', () {
       const profile = PilotProfile.defaultProfile;
-      expect(profile.pilotName, 'PILOT IN COMMAND');
-      expect(profile.licenceNumber, 'ZA-123456');
+      expect(profile.pilotName, isEmpty);
+      expect(profile.licenceNumber, isEmpty);
       expect(profile.regulatorId, 'sacaa');
       expect(profile.defaultPicName, 'SELF');
+      expect(profile.isComplete, isFalse);
+    });
+
+    test('isComplete requires both name and licence', () {
+      const named = PilotProfile(pilotName: 'J. DOE');
+      expect(named.isComplete, isFalse);
+      expect(
+        named.copyWith(licenceNumber: '0270000000').isComplete,
+        isTrue,
+      );
     });
 
     test('copyWith updates specified fields correctly', () {
