@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqlite3/common.dart';
@@ -36,13 +37,37 @@ class BackupService {
   final AppDatabase db;
   final BackupEncryptor _encryptor;
   final BackupArchiveService _archiveService;
+  final Future<String> Function() _appVersion;
 
   BackupService({
     required this.db,
     BackupEncryptor? encryptor,
     BackupArchiveService? archiveService,
+    Future<String> Function()? appVersion,
   }) : _encryptor = encryptor ?? BackupEncryptor(),
-       _archiveService = archiveService ?? BackupArchiveService();
+       _archiveService = archiveService ?? BackupArchiveService(),
+       _appVersion = appVersion ?? _platformAppVersion;
+
+  static Future<String> _platformAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      return '${info.version}+${info.buildNumber}';
+    } catch (_) {
+      return 'unknown';
+    }
+  }
+
+  /// Rejects archives written by a newer app build. Drift cannot downgrade a
+  /// schema, so opening such a database would fail or corrupt data.
+  void _ensureCompatible(BackupManifest manifest) {
+    if (manifest.schemaVersion > db.schemaVersion) {
+      throw BackupException(
+        'This backup was created by a newer version of Spreadlog '
+        '(data version ${manifest.schemaVersion}, this app supports '
+        '${db.schemaVersion}). Update the app before restoring it.',
+      );
+    }
+  }
 
   /// Creates a full, tamper-evident, encrypted `.spbackup` binary archive.
   Future<Uint8List> createEncryptedBackup({required String passphrase}) async {
@@ -84,6 +109,7 @@ class BackupService {
       flightCount: flights.length,
       aircraftModelCount: models.length,
       schemaVersion: db.schemaVersion,
+      appVersion: await _appVersion(),
       createdAt: DateTime.now().toUtc(),
     );
 
@@ -111,6 +137,7 @@ class BackupService {
 
     // 2. Unpack & Validate Checksums
     final extracted = await _archiveService.unpackAndValidateZip(zipBytes);
+    _ensureCompatible(extracted.manifest);
 
     return BackupInspectionResult(
       manifest: extracted.manifest,
@@ -140,6 +167,7 @@ class BackupService {
       );
       extracted = await _archiveService.unpackAndValidateZip(zipBytes);
     }
+    _ensureCompatible(extracted.manifest);
 
     // 2. Web Restoration
     if (kIsWeb) {
