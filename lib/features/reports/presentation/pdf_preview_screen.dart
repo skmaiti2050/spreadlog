@@ -1,12 +1,15 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
 
 import '../../reports/domain/sacaa_pdf_generator.dart';
 import '../../flights/domain/ledger_page.dart';
+import 'providers/print_reminder_providers.dart';
 
 /// Clean, simple screen to preview, print, or share the official statutory SACAA logbook PDF.
-class PdfPreviewScreen extends StatelessWidget {
+class PdfPreviewScreen extends ConsumerWidget {
   final List<LedgerPage> pages;
   final String pilotName;
   final String licenceNumber;
@@ -14,12 +17,12 @@ class PdfPreviewScreen extends StatelessWidget {
   const PdfPreviewScreen({
     super.key,
     required this.pages,
-    this.pilotName = 'PILOT IN COMMAND',
-    this.licenceNumber = 'ZA-123456',
+    this.pilotName = '',
+    this.licenceNumber = '',
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Logbook PDF Preview'),
@@ -45,6 +48,11 @@ class PdfPreviewScreen extends StatelessWidget {
         allowPrinting: true,
         allowSharing: true,
         pdfFileName: 'Pilot_Logbook_${DateTime.now().year}.pdf',
+        // Printing or sharing the PDF counts as the 90-day paper copy.
+        onPrinted: (_) =>
+            unawaited(ref.read(lastPrintedProvider.notifier).markPrinted()),
+        onShared: (_) =>
+            unawaited(ref.read(lastPrintedProvider.notifier).markPrinted()),
       ),
     );
   }
