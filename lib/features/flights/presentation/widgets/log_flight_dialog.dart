@@ -88,6 +88,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   late final TextEditingController _instActualController;
   late final TextEditingController _instFstdController;
   late final TextEditingController _navaidsController;
+  late final TextEditingController _placeController;
 
   static const List<Map<String, String>> _popularAirfields = [
     {'code': 'FALA', 'name': 'Lanseria'},
@@ -149,10 +150,14 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
         _navaidsController = TextEditingController(
           text: init.instrumentTime!.navaids ?? '',
         );
+        _placeController = TextEditingController(
+          text: init.instrumentTime!.place ?? '',
+        );
       } else {
         _instActualController = TextEditingController(text: '00:00');
         _instFstdController = TextEditingController(text: '00:00');
         _navaidsController = TextEditingController();
+        _placeController = TextEditingController();
       }
     } else {
       _typeController = TextEditingController(text: 'C172');
@@ -167,6 +172,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       _instActualController = TextEditingController(text: '00:00');
       _instFstdController = TextEditingController(text: '00:00');
       _navaidsController = TextEditingController();
+      _placeController = TextEditingController();
     }
   }
 
@@ -183,6 +189,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     _instActualController.dispose();
     _instFstdController.dispose();
     _navaidsController.dispose();
+    _placeController.dispose();
     super.dispose();
   }
 
@@ -514,9 +521,11 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       instrumentTime:
           (instActualMins > 0 ||
               instFstdMins > 0 ||
-              _navaidsController.text.isNotEmpty)
+              _navaidsController.text.isNotEmpty ||
+              _placeController.text.isNotEmpty)
           ? InstrumentTime(
               navaids: _navaidsController.text.trim(),
+              place: _placeController.text.trim(),
               actualMinutes: instActualMins,
               fstdMinutes: instFstdMins,
             )
@@ -1232,7 +1241,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                             'Actual Instrument Time',
                           ),
                           decoration: InputDecoration(
-                            labelText: 'Actual Inst (Col 9)',
+                            labelText: 'Actual Inst (Col 8)',
                             hintText: '00:00',
                             border: const OutlineInputBorder(),
                             isDense: true,
@@ -1274,7 +1283,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                             'FSTD / Sim Instrument Time',
                           ),
                           decoration: InputDecoration(
-                            labelText: 'FSTD / Sim (Col 10)',
+                            labelText: 'FSTD Inst (Col 9)',
                             hintText: '00:00',
                             border: const OutlineInputBorder(),
                             isDense: true,
@@ -1309,14 +1318,33 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _navaidsController,
-                    decoration: const InputDecoration(
-                      labelText: 'Navaids / Approaches (Col 11)',
-                      hintText: 'e.g. ILS RWY 03, VOR, RNAV',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _navaidsController,
+                          decoration: const InputDecoration(
+                            labelText: 'Navaid used (Col 6)',
+                            hintText: 'e.g. ILS RWY 03, VOR',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _placeController,
+                          textCapitalization: TextCapitalization.characters,
+                          decoration: const InputDecoration(
+                            labelText: 'Place (Col 7)',
+                            hintText: 'e.g. FALA',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
