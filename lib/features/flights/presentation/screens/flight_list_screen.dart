@@ -11,6 +11,7 @@ import '../providers/flights_providers.dart';
 import '../widgets/flight_details_dialog.dart';
 import '../widgets/log_flight_dialog.dart';
 import '../../../../core/utils/plural.dart';
+import '../../../../core/layout/responsive.dart';
 
 class FlightListScreen extends ConsumerStatefulWidget {
   const FlightListScreen({super.key});
@@ -305,54 +306,102 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                   ),
               ],
             ),
-      body: Column(
-        children: [
-          // Totals summary header card
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'TOTAL FLIGHT TIME',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                    Text(
-                      '${TimeUtils.formatMinutesToDecimal(totals.totalFlightTimeMinutes)} hrs',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  TimeUtils.formatMinutesToHhMm(totals.totalFlightTimeMinutes),
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                const Divider(height: 16),
-                if (isUltraNarrow)
-                  Column(
+      body: ContentWidth(
+        child: Column(
+          children: [
+            // Totals summary header card
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Text(
+                        'TOTAL FLIGHT TIME',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                      Text(
+                        '${TimeUtils.formatMinutesToDecimal(totals.totalFlightTimeMinutes)} hrs',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    TimeUtils.formatMinutesToHhMm(
+                      totals.totalFlightTimeMinutes,
+                    ),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  const Divider(height: 16),
+                  if (isUltraNarrow)
+                    Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildMetricColumn(
+                              context,
+                              'Single Engine',
+                              TimeUtils.formatMinutesToHhMm(
+                                totals.totalSingleEngine,
+                              ),
+                            ),
+                            _buildMetricColumn(
+                              context,
+                              'Multi Engine',
+                              TimeUtils.formatMinutesToHhMm(
+                                totals.totalMultiEngine,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildMetricColumn(
+                              context,
+                              'Day / Night',
+                              '${TimeUtils.formatMinutesToHhMm(totals.totalDay)} / ${TimeUtils.formatMinutesToHhMm(totals.totalNight)}',
+                            ),
+                            _buildMetricColumn(
+                              context,
+                              'Landings',
+                              '${totals.totalLandings}',
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  else
+                    // Wrap rather than Row: at large text sizes the four
+                    // metrics flow onto a second line instead of overflowing.
+                    // Full width so spaceBetween has room to spread them.
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        spacing: 16,
+                        runSpacing: 10,
                         children: [
                           _buildMetricColumn(
                             context,
@@ -368,12 +417,6 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                               totals.totalMultiEngine,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
                           _buildMetricColumn(
                             context,
                             'Day / Night',
@@ -386,150 +429,124 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                           ),
                         ],
                       ),
-                    ],
-                  )
-                else
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildMetricColumn(
-                        context,
-                        'Single Engine',
-                        TimeUtils.formatMinutesToHhMm(totals.totalSingleEngine),
-                      ),
-                      _buildMetricColumn(
-                        context,
-                        'Multi Engine',
-                        TimeUtils.formatMinutesToHhMm(totals.totalMultiEngine),
-                      ),
-                      _buildMetricColumn(
-                        context,
-                        'Day / Night',
-                        '${TimeUtils.formatMinutesToHhMm(totals.totalDay)} / ${TimeUtils.formatMinutesToHhMm(totals.totalNight)}',
-                      ),
-                      _buildMetricColumn(
-                        context,
-                        'Landings',
-                        '${totals.totalLandings}',
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-
-          // Search / Filter Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText:
-                    'Search by registration, aircraft type, or remarks...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                suffixIcon: _searchFilter.isNotEmpty
-                    ? IconButton(
-                        tooltip: 'Clear search',
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () => setState(() => _searchFilter = ''),
-                      )
-                    : null,
+                    ),
+                ],
               ),
-              onChanged: (v) =>
-                  setState(() => _searchFilter = v.trim().toLowerCase()),
             ),
-          ),
 
-          // Flight list
-          Expanded(
-            child: flightsAsync.when(
-              data: (flights) {
-                if (flights.isEmpty) {
-                  return Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.flight_takeoff,
-                            size: 64,
-                            color: theme.colorScheme.outline,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No flights recorded yet',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Add your first flight entry to begin calculating totals.',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+            // Search / Filter Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText:
+                      'Search by registration, aircraft type, or remarks...',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  isDense: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  suffixIcon: _searchFilter.isNotEmpty
+                      ? IconButton(
+                          tooltip: 'Clear search',
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () => setState(() => _searchFilter = ''),
+                        )
+                      : null,
+                ),
+                onChanged: (v) =>
+                    setState(() => _searchFilter = v.trim().toLowerCase()),
+              ),
+            ),
+
+            // Flight list
+            Expanded(
+              child: flightsAsync.when(
+                data: (flights) {
+                  if (flights.isEmpty) {
+                    return Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.flight_takeoff,
+                              size: 64,
+                              color: theme.colorScheme.outline,
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                // Apply search filter if present
-                final filteredFlights = visibleFlights;
-
-                if (filteredFlights.isEmpty) {
-                  return const Center(
-                    child: Text('No flights match your search query.'),
-                  );
-                }
-
-                return Column(
-                  children: [
-                    const PrintReminderBanner(),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 2,
-                      ),
-                      child: HintBanner(
-                        hintKey: 'hint_flight_card_details',
-                        message: 'Tap any flight card for its briefing breakdown • Tap the pencil icon to edit in place.',
-                        margin: EdgeInsets.zero,
-                      ),
-                    ),
-                    Expanded(
-                      child: Scrollbar(
-                        thumbVisibility: true,
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          itemCount: filteredFlights.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final flight = filteredFlights[index];
-                            return _buildFlightCard(context, flight);
-                          },
+                            const SizedBox(height: 16),
+                            Text(
+                              'No flights recorded yet',
+                              style: theme.textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Add your first flight entry to begin calculating totals.',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) =>
-                  Center(child: Text('Error loading flights: $err')),
+                    );
+                  }
+
+                  // Apply search filter if present
+                  final filteredFlights = visibleFlights;
+
+                  if (filteredFlights.isEmpty) {
+                    return const Center(
+                      child: Text('No flights match your search query.'),
+                    );
+                  }
+
+                  return Column(
+                    children: [
+                      const PrintReminderBanner(),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 2,
+                        ),
+                        child: HintBanner(
+                          hintKey: 'hint_flight_card_details',
+                          message: 'Tap any flight card for its briefing breakdown • Tap the pencil icon to edit in place.',
+                          margin: EdgeInsets.zero,
+                        ),
+                      ),
+                      Expanded(
+                        child: Scrollbar(
+                          thumbVisibility: true,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            itemCount: filteredFlights.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final flight = filteredFlights[index];
+                              return _buildFlightCard(context, flight);
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) =>
+                    Center(child: Text('Error loading flights: $err')),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: _isSelectionMode
           ? null
