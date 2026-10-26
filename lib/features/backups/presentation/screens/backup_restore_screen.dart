@@ -1450,21 +1450,21 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       ),
     );
 
-    if (shouldProceed != true) return;
+    if (shouldProceed != true || !mounted) return;
 
     setState(() {
       _isLoading = true;
       _loadingMessage = 'Applying restoration with rollback protection...';
     });
 
+    // Captured now: `ref` is unusable if the screen is disposed mid-restore.
+    final container = ProviderScope.containerOf(context, listen: false);
     try {
       await backupService.restoreBackup(
         backupBytes: fileBytes,
         passphrase: passphrase,
         preExtractedBackup: inspection.extractedBackup,
       );
-
-      ref.invalidate(databaseProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1484,6 +1484,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         );
       }
     } finally {
+      // restoreBackup closes the live connection before swapping files, so
+      // reopen it even when the restore fails and the old database is rolled back.
+      container.invalidate(databaseProvider);
       if (mounted) {
         setState(() => _isLoading = false);
       }
