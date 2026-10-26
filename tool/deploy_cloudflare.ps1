@@ -8,6 +8,12 @@ function Assert-NativeSuccess([string]$Step) {
     }
 }
 
+# The Cloudflare login spans several accounts and the account ID is kept out
+# of the repo, so wrangler reads it from this environment variable.
+if (-not $env:CLOUDFLARE_ACCOUNT_ID) {
+    throw "Set CLOUDFLARE_ACCOUNT_ID to the account hosting the spreadlog Worker, e.g. setx CLOUDFLARE_ACCOUNT_ID <id> (then open a new terminal)."
+}
+
 $buildCommit = git rev-parse --short HEAD
 Assert-NativeSuccess "Resolve build commit"
 

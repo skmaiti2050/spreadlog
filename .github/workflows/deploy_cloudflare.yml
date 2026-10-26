@@ -38,5 +38,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy build/web --project-name=spreadlog
+          # The site is a Worker with static assets (wrangler.jsonc), not a
+          # Pages project; same command as tool/deploy_cloudflare.ps1.
+          command: deploy
 
