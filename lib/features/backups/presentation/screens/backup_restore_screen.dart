@@ -1281,13 +1281,17 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
   Future<void> _handlePickAndRestore() async {
     try {
-      final mobile =
-          !kIsWeb &&
-          (defaultTargetPlatform == TargetPlatform.android ||
-              defaultTargetPlatform == TargetPlatform.iOS);
+      final ios = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+      // Android filters by MIME type, and .spbackup has none, so it would fall
+      // back to */*. 'bin' maps to application/octet-stream, the type Android
+      // reports for unknown extensions: the picker then hides photos, PDFs, etc.
+      final android =
+          !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
       final files = await FilePicker.pickFiles(
-        type: mobile ? FileType.any : FileType.custom,
-        allowedExtensions: mobile ? null : const ['spbackup', 'spreadlog'],
+        type: ios ? FileType.any : FileType.custom,
+        allowedExtensions: ios
+            ? null
+            : ['spbackup', 'spreadlog', if (android) 'bin'],
       );
       if (files.isEmpty || !mounted) return;
       final bytes = await files.first.readAsBytes();
