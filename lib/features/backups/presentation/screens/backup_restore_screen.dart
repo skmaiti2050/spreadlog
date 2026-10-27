@@ -502,7 +502,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                   FutureBuilder<bool>(
                     future: authService.canAccessScopes(),
                     builder: (context, snapshot) {
-                      final hasScopes = snapshot.data ?? false;
+                      // Treat "still checking" as granted so the banner doesn't
+                      // flash on every open.
+                      final hasScopes = snapshot.data ?? true;
                       if (!hasScopes) {
                         return Container(
                           padding: const EdgeInsets.all(12),
