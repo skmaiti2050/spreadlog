@@ -938,72 +938,72 @@ Physical logbook format
 
 ## Phase 0 --- Foundation
 
--   [ ] Create Flutter project
--   [ ] Configure analysis/linting
--   [ ] Add Riverpod
--   [ ] Add Drift
--   [ ] Configure SQLite
--   [ ] Configure migrations
--   [ ] Establish feature structure
--   [ ] Establish domain/application/data boundaries
+-   [x] Create Flutter project
+-   [x] Configure analysis/linting
+-   [x] Add Riverpod
+-   [x] Add Drift
+-   [x] Configure SQLite
+-   [x] Configure migrations
+-   [x] Establish feature structure
+-   [x] Establish domain/application/data boundaries
 -   [ ] Configure CI
 
 ## Phase 1 --- Flight Ledger
 
--   [ ] Aircraft model
--   [ ] Aircraft registration
--   [ ] Flight entry
--   [ ] SE/ME time
--   [ ] Day/night
--   [ ] Dual/PIC/PICUS/Copilot
--   [ ] Instrument time
--   [ ] Instruction time
--   [ ] Landings
--   [ ] Solo cross-country
--   [ ] Flight list
--   [ ] Edit/delete policy
--   [ ] Totals engine
--   [ ] Unit tests
+-   [x] Aircraft model
+-   [x] Aircraft registration
+-   [x] Flight entry
+-   [x] SE/ME time
+-   [x] Day/night
+-   [x] Dual/PIC/PICUS/Copilot
+-   [x] Instrument time
+-   [x] Instruction time
+-   [x] Landings
+-   [x] Solo cross-country
+-   [x] Flight list
+-   [x] Edit/delete policy
+-   [x] Totals engine
+-   [x] Unit tests
 
 ## Phase 2 --- Physical Logbook
 
--   [ ] Page layout
--   [ ] Page totals
--   [ ] Brought forward
--   [ ] Carried forward
--   [ ] Grand totals
--   [ ] Multi-page calculations
--   [ ] Exact PDF layout
--   [ ] Print/share
+-   [x] Page layout
+-   [x] Page totals
+-   [x] Brought forward
+-   [x] Carried forward
+-   [x] Grand totals
+-   [x] Multi-page calculations
+-   [x] Exact PDF layout
+-   [x] Print/share
 
 ## Phase 3 --- Career Summaries
 
--   [ ] Basic SE summary
--   [ ] Composite SE/ME/Instructor summary
--   [ ] Cutoff date
+-   [x] Basic SE summary
+-   [x] Composite SE/ME/Instructor summary
+-   [x] Cutoff date
 -   [ ] Aircraft filtering
--   [ ] PDF slip generation
+-   [x] PDF slip generation
 -   [ ] Physical-size validation
 
 ## Phase 4 --- Endorsements
 
--   [ ] Document scanner
--   [ ] Original capture
--   [ ] Processed image
--   [ ] Thumbnail
--   [ ] SHA-256
--   [ ] Categories
--   [ ] Search
+-   [x] Document scanner
+-   [x] Original capture
+-   [x] Processed image
+-   [x] Thumbnail
+-   [x] SHA-256
+-   [x] Categories
+-   [x] Search
 -   [ ] Pagination
--   [ ] Superseded/replacement relationship
+-   [x] Superseded/replacement relationship
 
 ## Phase 5 --- Aircraft Endorsements
 
--   [ ] SE model register
--   [ ] ME model register
--   [ ] Pilot sign-off
--   [ ] Instructor sign-off
--   [ ] Source document attachment
+-   [x] SE model register
+-   [x] ME model register
+-   [x] Pilot sign-off
+-   [x] Instructor sign-off
+-   [x] Source document attachment
 -   [ ] Auto-populate flight aircraft dropdown
 
 ## Phase 6 --- Backup
