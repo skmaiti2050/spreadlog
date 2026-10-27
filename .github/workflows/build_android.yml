@@ -23,6 +23,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
 
+      # The runner has ~14 GB free; debug and release builds together need
+      # more. Drop preinstalled toolchains this job never uses (not the
+      # Android SDK under /usr/local/lib/android).
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /usr/local/share/boost /usr/share/swift /opt/hostedtoolcache/CodeQL
+          df -h /
+
       - name: Setup Java
         uses: actions/setup-java@v6
         with:
