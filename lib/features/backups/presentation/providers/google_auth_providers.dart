@@ -7,7 +7,9 @@ import '../../data/transports/google_drive_backup_transport.dart';
 
 /// Provider for the singleton GoogleAuthService instance.
 final googleAuthServiceProvider = Provider<GoogleAuthService>((ref) {
-  return GoogleAuthService();
+  final service = GoogleAuthService();
+  ref.onDispose(service.dispose);
+  return service;
 });
 
 /// Stream provider listening to the real-time Google Sign-In account changes.
