@@ -87,12 +87,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0B132B) : const Color(0xFF0F172A);
-
     return Scaffold(
-      backgroundColor: bgColor,
+      // Matches splash_background / ic_launcher_background on Android.
+      backgroundColor: const Color(0xFF0F1A2B),
       body: InkWell(
         onTap: _navigateToHome, // Allow quick tap-to-skip
         splashColor: Colors.transparent,
@@ -110,52 +107,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Spacer(),
-                        // Aviation Wings & Jet Emblem
-                        Container(
-                          width: 96,
-                          height: 96,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
-                            ),
-                            border: Border.all(
-                              color: const Color(0xFF38BDF8)
-                                  .withValues(alpha: 0.4),
-                              width: 2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF38BDF8)
-                                    .withValues(alpha: 0.18),
-                                blurRadius: 28,
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              const Icon(
-                                Icons.flight_takeoff,
-                                size: 48,
-                                color: Color(0xFF38BDF8),
-                              ),
-                              Positioned(
-                                top: 22,
-                                right: 24,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFF59E0B),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        // Same artwork and navy as the launcher icon and the
+                        // native splash, so the hand-off is seamless.
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(22),
+                          child: Image.asset(
+                            'assets/icon/app_icon.png',
+                            width: 96,
+                            height: 96,
+                            cacheWidth: (96 *
+                                    MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                           ),
                         ),
                         const SizedBox(height: 24),
