@@ -63,6 +63,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
   List<GoogleDriveBackupItem>? _driveBackups;
   bool _isLoadingDriveBackups = false;
+  // Whether the Drive/Gmail scopes are granted; null until checked. Cached
+  // so the banner doesn't ask Google on every rebuild.
+  bool? _hasGoogleScopes;
   StreamSubscription<String>? _backupIntentSub;
 
   @override
@@ -103,38 +106,56 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
   Future<void> _loadDriveBackups() async {
     final authService = ref.read(googleAuthServiceProvider);
-    if (!authService.isSignedIn) return;
-
-    final hasAccess = await authService.canAccessScopes();
-    if (!hasAccess) {
-      if (mounted) {
-        setState(() {
-          _driveBackups = null;
-          _isLoadingDriveBackups = false;
-        });
-      }
-      return;
-    }
+    // Sign-in can be reported both by the call that made it and by the user
+    // stream, so a second request while one is running is dropped.
+    if (!authService.isSignedIn || _isLoadingDriveBackups) return;
 
     setState(() => _isLoadingDriveBackups = true);
     try {
+      final hasAccess = await authService.canAccessScopes();
+      if (mounted) setState(() => _hasGoogleScopes = hasAccess);
+      if (!hasAccess) {
+        if (mounted) setState(() => _driveBackups = null);
+        return;
+      }
       final driveTransport = ref.read(googleDriveTransportProvider);
       final backups = await driveTransport.listBackups();
-      if (mounted) {
-        setState(() {
-          _driveBackups = backups;
-          _isLoadingDriveBackups = false;
-        });
-      }
+      if (mounted) setState(() => _driveBackups = backups);
     } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingDriveBackups = false);
-      }
+      debugPrint('Loading Drive backups failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingDriveBackups = false);
     }
+  }
+
+  /// Makes sure the Drive and Gmail scopes are granted, asking the user if
+  /// needed. Shows [deniedMessage] and returns false when they aren't.
+  Future<bool> _ensureGoogleScopes(String deniedMessage) async {
+    final authService = ref.read(googleAuthServiceProvider);
+    if (await authService.canAccessScopes()) return true;
+    final granted = await authService.requestScopes();
+    if (!mounted) return granted;
+    setState(() => _hasGoogleScopes = granted);
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(deniedMessage), backgroundColor: _snackWarning),
+      );
+    }
+    return granted;
   }
 
   @override
   Widget build(BuildContext context) {
+    // On web, silent sign-in is reported only through this stream, after
+    // _trySilentGoogleSignIn has already returned null.
+    ref.listen(googleUserStreamProvider, (previous, next) {
+      final user = next.value;
+      if (user == null) {
+        setState(() => _hasGoogleScopes = null);
+      } else if (previous?.value?.id != user.id) {
+        unawaited(_loadDriveBackups());
+      }
+    });
     final settingsAsync = ref.watch(backupSettingsProvider);
     final flightsAsync = ref.watch(flightsStreamProvider);
 
@@ -497,59 +518,41 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     style: TextStyle(fontSize: 12, color: _mutedText),
                   ),
                 ],
-                if (isSignedIn) ...[
+                if (isSignedIn && _hasGoogleScopes == false) ...[
                   const SizedBox(height: 12),
-                  FutureBuilder<bool>(
-                    future: authService.canAccessScopes(),
-                    builder: (context, snapshot) {
-                      // Treat "still checking" as granted so the banner doesn't
-                      // flash on every open.
-                      final hasScopes = snapshot.data ?? true;
-                      if (!hasScopes) {
-                        return Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade900.withValues(
-                              alpha: 0.25,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade900.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber.shade700),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.shield_outlined,
+                          color: Colors.amber,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Google Drive permission required to sync files.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.amber.shade700),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.shield_outlined,
-                                color: Colors.amber,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Google Drive permission required to sync files.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface,
-                                  ),
-                                ),
-                              ),
-                              FilledButton.tonal(
-                                onPressed: () async {
-                                  final ok = await authService.requestScopes();
-                                  if (ok && mounted) {
-                                    setState(() {});
-                                    await _loadDriveBackups();
-                                  }
-                                },
-                                child: const Text('Authorize'),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
+                        ),
+                        FilledButton.tonal(
+                          onPressed: () async {
+                            final ok = await authService.requestScopes();
+                            if (ok && mounted) await _loadDriveBackups();
+                          },
+                          child: const Text('Authorize'),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],
@@ -914,23 +917,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   }
 
   Future<void> _handleBackupToDrive() async {
-    final authService = ref.read(googleAuthServiceProvider);
-    final hasAccess = await authService.canAccessScopes();
-    if (!hasAccess) {
-      final granted = await authService.requestScopes();
-      if (!granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Google Drive permission is required to upload backups.',
-              ),
-              backgroundColor: _snackWarning,
-            ),
-          );
-        }
-        return;
-      }
+    if (!await _ensureGoogleScopes(
+      'Google Drive permission is required to upload backups.',
+    )) {
+      return;
     }
 
     final repo = ref.read(backupSettingsRepositoryProvider);
@@ -1074,21 +1064,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   }
 
   Future<void> _handleSendGmailBackup(String recipientEmail) async {
-    final authService = ref.read(googleAuthServiceProvider);
-    final hasAccess = await authService.canAccessScopes();
-    if (!hasAccess) {
-      final granted = await authService.requestScopes();
-      if (!granted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Gmail permission is required to send backups.'),
-              backgroundColor: _snackWarning,
-            ),
-          );
-        }
-        return;
-      }
+    if (!await _ensureGoogleScopes(
+      'Gmail permission is required to send backups.',
+    )) {
+      return;
     }
 
     final repo = ref.read(backupSettingsRepositoryProvider);
