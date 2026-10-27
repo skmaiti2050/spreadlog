@@ -62,6 +62,10 @@ class EndorsementCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         width: 80,
                         height: 100,
+                        // Decode at thumbnail size, not the full scan.
+                        cacheWidth:
+                            (80 * MediaQuery.devicePixelRatioOf(context))
+                                .round(),
                       ),
                       if (document.isSuperseded)
                         Container(

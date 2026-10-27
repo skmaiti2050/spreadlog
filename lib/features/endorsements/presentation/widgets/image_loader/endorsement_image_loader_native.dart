@@ -6,12 +6,18 @@ import 'endorsement_image_loader_interface.dart';
 
 class NativeEndorsementImageLoader implements EndorsementImageLoader {
   @override
-  Widget buildImage(String path, {BoxFit fit = BoxFit.cover, double? width, double? height}) {
+  Widget buildImage(
+    String path, {
+    BoxFit fit = BoxFit.cover,
+    double? width,
+    double? height,
+    int? cacheWidth,
+  }) {
     if (path.startsWith('data:')) {
       final comma = path.indexOf(',');
       if (comma != -1) {
         final bytes = base64Decode(path.substring(comma + 1));
-        return Image.memory(bytes, fit: fit, width: width, height: height);
+        return Image.memory(bytes, fit: fit, width: width, height: height, cacheWidth: cacheWidth);
       }
     }
     if (path.startsWith('memory://') || path.isEmpty) {
@@ -25,7 +31,7 @@ class NativeEndorsementImageLoader implements EndorsementImageLoader {
     }
     final file = File(path);
     if (file.existsSync()) {
-      return Image.file(file, fit: fit, width: width, height: height);
+      return Image.file(file, fit: fit, width: width, height: height, cacheWidth: cacheWidth);
     }
     return Container(
       color: Colors.grey.shade200,

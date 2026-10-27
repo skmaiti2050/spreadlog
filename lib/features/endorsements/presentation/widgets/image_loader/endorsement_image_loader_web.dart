@@ -5,16 +5,22 @@ import 'endorsement_image_loader_interface.dart';
 
 class WebEndorsementImageLoader implements EndorsementImageLoader {
   @override
-  Widget buildImage(String path, {BoxFit fit = BoxFit.cover, double? width, double? height}) {
+  Widget buildImage(
+    String path, {
+    BoxFit fit = BoxFit.cover,
+    double? width,
+    double? height,
+    int? cacheWidth,
+  }) {
     if (path.startsWith('data:')) {
       final comma = path.indexOf(',');
       if (comma != -1) {
         final bytes = base64Decode(path.substring(comma + 1));
-        return Image.memory(bytes, fit: fit, width: width, height: height);
+        return Image.memory(bytes, fit: fit, width: width, height: height, cacheWidth: cacheWidth);
       }
     }
     if (path.startsWith('http')) {
-      return Image.network(path, fit: fit, width: width, height: height);
+      return Image.network(path, fit: fit, width: width, height: height, cacheWidth: cacheWidth);
     }
     return Container(
       color: Colors.grey.shade200,
