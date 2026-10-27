@@ -51,7 +51,6 @@ backend in V1.
 ## Documents / Scanning
 
 -   **cunning_document_scanner**
--   **flutter_image_compress**
 -   App-private filesystem
 
 Original document captures are immutable. Processed images and
@@ -1215,11 +1214,9 @@ Add production dependencies:
 ```bash
 flutter pub add flutter_riverpod \
   drift \
-  sqlite3_flutter_libs \
   path_provider \
   flutter_secure_storage \
   cunning_document_scanner \
-  flutter_image_compress \
   pdf \
   printing \
   share_plus \
