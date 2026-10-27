@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive icon foreground and Android 13 themed (monochrome) layer. Generated from assets/icon/app_icon.svg (1024 units),
+<!-- Adaptive icon foreground, Android 13 themed (monochrome) layer and splash icon.
+     Generated from assets/icon/app_icon.svg (1024 units),
      scaled so the jet and log lines sit inside the 66dp safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
