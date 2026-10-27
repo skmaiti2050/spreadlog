@@ -28,8 +28,9 @@ class GoogleAuthService {
       '200978100975-hp3kmikut8rpn9prvv973u9p66s2238g.apps.googleusercontent.com';
 
   // GoogleSignIn.instance is a singleton that must be initialized exactly
-  // once per isolate, however many services are created.
-  static Future<void>? _initialization;
+  // once per isolate, however many services are created; keyed by instance
+  // so an injected GoogleSignIn gets its own initialization.
+  static final _initializations = Expando<Future<void>>();
 
   final GoogleSignIn _googleSignIn;
   final _userChanges = StreamController<GoogleSignInAccount?>.broadcast();
@@ -37,18 +38,19 @@ class GoogleAuthService {
   GoogleSignInAccount? _currentUser;
 
   GoogleAuthService({GoogleSignIn? googleSignIn})
-      : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+    : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   Future<void> _ensureInitialized() async {
-    _initialization ??= _googleSignIn.initialize(
-      clientId: kIsWeb ? webClientId : null,
-      serverClientId: kIsWeb ? null : webClientId,
-    );
+    final initialization = _initializations[_googleSignIn] ??= _googleSignIn
+        .initialize(
+          clientId: kIsWeb ? webClientId : null,
+          serverClientId: kIsWeb ? null : webClientId,
+        );
     try {
-      await _initialization;
+      await initialization;
     } catch (_) {
       // Allow a later call to retry, e.g. after a transient platform error.
-      _initialization = null;
+      _initializations[_googleSignIn] = null;
       rethrow;
     }
     _eventsSub ??= _googleSignIn.authenticationEvents.listen(
@@ -61,7 +63,8 @@ class GoogleAuthService {
   }
 
   void _setUser(GoogleSignInAccount? user) {
-    if (user == _currentUser) return;
+    // A sign-in can finish after dispose(); the stream is closed by then.
+    if (user == _currentUser || _userChanges.isClosed) return;
     _currentUser = user;
     _userChanges.add(user);
   }
@@ -75,7 +78,7 @@ class GoogleAuthService {
   /// Stream of user sign-in state changes.
   Stream<GoogleSignInAccount?> get onCurrentUserChanged => _userChanges.stream;
 
-  /// Interactive sign in flow.
+  /// Interactive sign in flow. Returns null if the user cancels.
   ///
   /// On web, sign-in goes through the button rendered by Google Identity
   /// Services instead (see google_sign_in_button_web.dart); this only retries
@@ -85,7 +88,14 @@ class GoogleAuthService {
     if (!_googleSignIn.supportsAuthenticate()) {
       return signInSilently();
     }
-    final account = await _googleSignIn.authenticate(scopeHint: defaultScopes);
+    final GoogleSignInAccount account;
+    try {
+      account = await _googleSignIn.authenticate(scopeHint: defaultScopes);
+    } on GoogleSignInException catch (e) {
+      // Closing the account picker is not an error.
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      rethrow;
+    }
     _setUser(account);
     // Scopes are no longer granted at sign-in; ask while we still have the
     // user's tap, so backups work without a separate "Authorize" step.
@@ -102,8 +112,8 @@ class GoogleAuthService {
     try {
       final user = _currentUser;
       if (user == null) return false;
-      final authorization =
-          await user.authorizationClient.authorizationForScopes(defaultScopes);
+      final authorization = await user.authorizationClient
+          .authorizationForScopes(defaultScopes);
       return authorization != null;
     } catch (e) {
       debugPrint('canAccessScopes check error: $e');
@@ -168,8 +178,8 @@ class GoogleAuthService {
         debugPrint('getAuthenticatedClient: No user logged in');
         return null;
       }
-      final authorization =
-          await user.authorizationClient.authorizationForScopes(defaultScopes);
+      final authorization = await user.authorizationClient
+          .authorizationForScopes(defaultScopes);
       if (authorization == null) {
         debugPrint('getAuthenticatedClient: Scopes not yet authorized');
         return null;
