@@ -1,8 +1,10 @@
-# Majors only, batched monthly. Actions are pinned to major tags (@v7), which
-# already pick up minor and patch releases; minor pub updates are taken by
-# hand with `flutter pub upgrade`. Security alerts are raised regardless.
-# The wranglerVersion pin in deploy_cloudflare.yml is a step input that
-# Dependabot can't see, so bump it by hand.
+# Actions are pinned to major tags (@v7), which already pick up minor and
+# patch releases, so they only get a PR for a new major, batched monthly.
+# Pub version updates are off (taken by hand with `flutter pub upgrade`);
+# security fixes still arrive, grouped into one PR. An `ignore` rule would
+# also suppress those, so it isn't used. Dependabot branches don't trigger
+# CI; only merging to main does. The wranglerVersion pin in
+# deploy_cloudflare.yml is a step input Dependabot can't see; bump it by hand.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -17,11 +19,9 @@ updates:
     directory: /
     schedule:
       interval: monthly
-    ignore:
-      - dependency-name: "*"
-        update-types:
-          - version-update:semver-minor
-          - version-update:semver-patch
+    # 0 disables version-update PRs; security updates have their own limit.
+    open-pull-requests-limit: 0
     groups:
-      pub-majors:
+      pub-security:
+        applies-to: security-updates
         patterns: ["*"]
