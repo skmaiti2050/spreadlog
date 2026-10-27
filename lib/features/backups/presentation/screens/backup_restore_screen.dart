@@ -105,17 +105,15 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final authService = ref.read(googleAuthServiceProvider);
     if (!authService.isSignedIn) return;
 
-    if (kIsWeb) {
-      final hasAccess = await authService.canAccessScopes();
-      if (!hasAccess) {
-        if (mounted) {
-          setState(() {
-            _driveBackups = null;
-            _isLoadingDriveBackups = false;
-          });
-        }
-        return;
+    final hasAccess = await authService.canAccessScopes();
+    if (!hasAccess) {
+      if (mounted) {
+        setState(() {
+          _driveBackups = null;
+          _isLoadingDriveBackups = false;
+        });
       }
+      return;
     }
 
     setState(() => _isLoadingDriveBackups = true);
@@ -499,7 +497,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     style: TextStyle(fontSize: 12, color: _mutedText),
                   ),
                 ],
-                if (isSignedIn && kIsWeb) ...[
+                if (isSignedIn) ...[
                   const SizedBox(height: 12),
                   FutureBuilder<bool>(
                     future: authService.canAccessScopes(),
@@ -915,23 +913,21 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
   Future<void> _handleBackupToDrive() async {
     final authService = ref.read(googleAuthServiceProvider);
-    if (kIsWeb) {
-      final hasAccess = await authService.canAccessScopes();
-      if (!hasAccess) {
-        final granted = await authService.requestScopes();
-        if (!granted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Google Drive permission is required to upload backups.',
-                ),
-                backgroundColor: _snackWarning,
+    final hasAccess = await authService.canAccessScopes();
+    if (!hasAccess) {
+      final granted = await authService.requestScopes();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Google Drive permission is required to upload backups.',
               ),
-            );
-          }
-          return;
+              backgroundColor: _snackWarning,
+            ),
+          );
         }
+        return;
       }
     }
 
@@ -1077,21 +1073,19 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
   Future<void> _handleSendGmailBackup(String recipientEmail) async {
     final authService = ref.read(googleAuthServiceProvider);
-    if (kIsWeb) {
-      final hasAccess = await authService.canAccessScopes();
-      if (!hasAccess) {
-        final granted = await authService.requestScopes();
-        if (!granted) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Gmail permission is required to send backups.'),
-                backgroundColor: _snackWarning,
-              ),
-            );
-          }
-          return;
+    final hasAccess = await authService.canAccessScopes();
+    if (!hasAccess) {
+      final granted = await authService.requestScopes();
+      if (!granted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gmail permission is required to send backups.'),
+              backgroundColor: _snackWarning,
+            ),
+          );
         }
+        return;
       }
     }
 
