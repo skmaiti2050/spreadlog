@@ -1,0 +1,27 @@
+# Majors only, batched monthly. Actions are pinned to major tags (@v7), which
+# already pick up minor and patch releases; minor pub updates are taken by
+# hand with `flutter pub upgrade`. Security alerts are raised regardless.
+# The wranglerVersion pin in deploy_cloudflare.yml is a step input that
+# Dependabot can't see, so bump it by hand.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: pub
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
+    groups:
+      pub-majors:
+        patterns: ["*"]
