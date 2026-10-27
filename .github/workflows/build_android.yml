@@ -1,8 +1,8 @@
 name: Build Android APKs
 
-# Every push to main builds debug and release APKs as downloadable run
-# artifacts. Pushing a version tag (v1.0.6) also publishes the release APK
-# as a GitHub Release.
+# Every push to main builds the release APK as a downloadable run artifact;
+# a manual run (workflow_dispatch) also builds the debug APK. Pushing a
+# version tag (v1.0.6) also publishes the release APK as a GitHub Release.
 on:
   push:
     branches: [main]
@@ -23,8 +23,8 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v7
 
-      # The runner has ~14 GB free; debug and release builds together need
-      # more. Drop preinstalled toolchains this job never uses (not the
+      # The runner has ~14 GB free; a manual run's debug and release builds
+      # together need more. Drop preinstalled toolchains this job never uses (not the
       # Android SDK under /usr/local/lib/android).
       - name: Free Disk Space
         run: |
@@ -91,7 +91,9 @@ jobs:
             echo "keyPassword=$KEY_PASSWORD"
           } > android/key.properties
 
+      # Roughly half the job's time; only worth it when asked for.
       - name: Build Debug APK
+        if: github.event_name == 'workflow_dispatch'
         run: flutter build apk --debug --dart-define=BUILD_COMMIT=${GITHUB_SHA::7}
 
       - name: Build Release APK
