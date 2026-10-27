@@ -1,0 +1,94 @@
+name: Build Android APKs
+
+# Every push to main builds debug and release APKs as downloadable run
+# artifacts. Pushing a version tag (v1.0.6) also publishes the release APK
+# as a GitHub Release.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Generate Drift Code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run Tests
+        run: flutter test
+
+      # build.gradle.kts signs with android/key.properties when it exists and
+      # falls back to the debug key otherwise. Tagged releases must be signed
+      # with the upload key, so a missing secret fails those builds.
+      - name: Write Release Signing Key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not set; tagged releases need the upload key."
+              exit 1
+            fi
+            echo "::warning::No release key configured; the release APK is signed with the debug key."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          {
+            echo "storeFile=upload-keystore.jks"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/key.properties
+
+      - name: Build Debug APK
+        run: flutter build apk --debug
+
+      - name: Build Release APK
+        run: flutter build apk --release
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v7
+        with:
+          name: spreadlog-apks-${{ github.sha }}
+          path: |
+            build/app/outputs/flutter-apk/app-debug.apk
+            build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk "spreadlog-${GITHUB_REF_NAME}.apk"
+          gh release create "$GITHUB_REF_NAME" "spreadlog-${GITHUB_REF_NAME}.apk" \
+            --title "Spreadlog $GITHUB_REF_NAME" --generate-notes
