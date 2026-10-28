@@ -14,6 +14,7 @@ import '../../data/transports/google_drive_backup_transport.dart';
 import '../../data/transports/smtp_backup_transport.dart';
 import '../../domain/backup_exceptions.dart';
 import '../../domain/backup_encryptor.dart';
+import '../../domain/auto_backup_status.dart';
 import '../../domain/backup_file_name.dart';
 import '../providers/backup_providers.dart';
 import '../providers/google_auth_providers.dart';
@@ -584,6 +585,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     value: settings.autoSyncGoogleDrive,
                     onChanged: (val) => _toggleAutoSyncDrive(settings, val),
                   ),
+                  _buildDriveAutoBackupStatus(settings),
                   const Divider(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -1515,6 +1517,38 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     } else if (!settings.autoBackupEnabled) {
       await BackupWorkmanagerService.cancelPeriodicBackup();
     }
+  }
+
+  /// Result of the last background Drive backup, under its switch. Hidden on
+  /// web, which has no background backups.
+  Widget _buildDriveAutoBackupStatus(BackupSettings settings) {
+    final status = driveAutoBackupStatus(
+      enabled: settings.autoSyncGoogleDrive && !kIsWeb,
+      lastRun: settings.lastDriveSyncDate,
+      error: settings.lastDriveSyncError,
+    );
+    if (status == null) return const SizedBox.shrink();
+    final (icon, color) = switch (status.succeeded) {
+      true => (Icons.check_circle_outline, _accentGreen),
+      false => (Icons.error_outline, _accentWarning),
+      null => (Icons.schedule, _mutedText),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              status.message,
+              style: TextStyle(fontSize: 12, color: color),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _schedulePeriodicBackup(int intervalDays) async {
