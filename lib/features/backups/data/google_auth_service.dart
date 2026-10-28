@@ -241,6 +241,9 @@ class GoogleAuthService {
         _setUser(saved);
         return saved;
       }
+      // Web: One Tap shows a "Continue as" prompt, so only ask when this page
+      // doesn't already know the user.
+      if (_currentUser != null) return _currentUser;
       await _ensureInitialized();
       final account = await _googleSignIn.attemptLightweightAuthentication();
       if (account != null) _setUser(GoogleUser.fromIdentity(account));
