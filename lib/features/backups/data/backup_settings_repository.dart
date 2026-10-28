@@ -18,6 +18,11 @@ class BackupSettings {
   final String preferredBackupMethod;
   final String? googleAccountEmail;
 
+  /// When the background Google Drive backup last ran, and why it failed
+  /// (null when it succeeded).
+  final DateTime? lastDriveSyncDate;
+  final String? lastDriveSyncError;
+
   const BackupSettings({
     required this.hasMasterPassphrase,
     this.autoBackupEnabled = false,
@@ -33,6 +38,8 @@ class BackupSettings {
     this.autoSyncGoogleDrive = false,
     this.preferredBackupMethod = 'local',
     this.googleAccountEmail,
+    this.lastDriveSyncDate,
+    this.lastDriveSyncError,
   });
 
   BackupSettings copyWith({
@@ -66,6 +73,8 @@ class BackupSettings {
       autoSyncGoogleDrive: autoSyncGoogleDrive ?? this.autoSyncGoogleDrive,
       preferredBackupMethod: preferredBackupMethod ?? this.preferredBackupMethod,
       googleAccountEmail: googleAccountEmail ?? this.googleAccountEmail,
+      lastDriveSyncDate: lastDriveSyncDate,
+      lastDriveSyncError: lastDriveSyncError,
     );
   }
 }
@@ -88,6 +97,8 @@ class BackupSettingsRepository {
   static const String _prefAutoSyncGoogleDrive = 'sp_auto_sync_google_drive';
   static const String _prefPreferredBackupMethod = 'sp_preferred_backup_method';
   static const String _prefGoogleAccountEmail = 'sp_google_account_email';
+  static const String _prefLastDriveSyncDate = 'sp_last_drive_sync_date';
+  static const String _prefLastDriveSyncError = 'sp_last_drive_sync_error';
 
   final FlutterSecureStorage _secureStorage;
   final SharedPreferencesAsync _prefs;
@@ -114,6 +125,8 @@ class BackupSettingsRepository {
     final autoSyncDrive = await _prefs.getBool(_prefAutoSyncGoogleDrive) ?? false;
     final preferredMethod = await _prefs.getString(_prefPreferredBackupMethod) ?? 'local';
     final googleEmail = await _prefs.getString(_prefGoogleAccountEmail);
+    final driveSyncDateStr = await _prefs.getString(_prefLastDriveSyncDate);
+    final driveSyncError = await _prefs.getString(_prefLastDriveSyncError);
 
     final lastDate = lastDateStr != null ? DateTime.tryParse(lastDateStr) : null;
 
@@ -132,6 +145,10 @@ class BackupSettingsRepository {
       autoSyncGoogleDrive: autoSyncDrive,
       preferredBackupMethod: preferredMethod,
       googleAccountEmail: googleEmail,
+      lastDriveSyncDate: driveSyncDateStr != null
+          ? DateTime.tryParse(driveSyncDateStr)
+          : null,
+      lastDriveSyncError: driveSyncError,
     );
   }
 
@@ -202,5 +219,19 @@ class BackupSettingsRepository {
   }) async {
     await _prefs.setString(_prefLastBackupDate, timestamp.toIso8601String());
     await _prefs.setString(_prefLastBackupStatus, status);
+  }
+
+  /// Records the outcome of a background Google Drive backup. [error] is null
+  /// when it succeeded.
+  Future<void> recordDriveSyncResult({
+    required DateTime timestamp,
+    String? error,
+  }) async {
+    await _prefs.setString(_prefLastDriveSyncDate, timestamp.toIso8601String());
+    if (error == null) {
+      await _prefs.remove(_prefLastDriveSyncError);
+    } else {
+      await _prefs.setString(_prefLastDriveSyncError, error);
+    }
   }
 }

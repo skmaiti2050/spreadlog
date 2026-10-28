@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../domain/backup_exceptions.dart';
 import '../domain/backup_file_name.dart';
 import 'backup_service.dart';
 import 'backup_settings_repository.dart';
@@ -22,89 +23,92 @@ void backupCallbackDispatcher() {
     // Background engines don't register Dart-side plugin implementations
     // (google_sign_in_android, shared_preferences_android, ...) by themselves.
     DartPluginRegistrant.ensureInitialized();
+    final settingsRepo = BackupSettingsRepository();
     try {
-      final settingsRepo = BackupSettingsRepository();
       final settings = await settingsRepo.loadSettings();
-
-      // Check if auto-sync to Google Drive is enabled
+      // Independent: a Drive result must not stop the email backup.
       if (settings.autoSyncGoogleDrive) {
-        final authService = GoogleAuthService();
-        final account = await authService.signInSilently();
-        if (account != null) {
-          final masterPass = await settingsRepo.getMasterPassphrase();
-          if (masterPass != null && masterPass.isNotEmpty) {
-            final db = AppDatabase();
-            try {
-              final backupService = BackupService(db: db);
-              final encryptedBytes = await backupService.createEncryptedBackup(
-                passphrase: masterPass,
-              );
-              final fileName = backupFileName(DateTime.now());
-
-              final transport = GoogleDriveBackupTransport(authService);
-              await transport.dispatchBackup(
-                encryptedBytes: encryptedBytes,
-                suggestedFileName: fileName,
-              );
-
-              await settingsRepo.recordBackupResult(
-                timestamp: DateTime.now().toUtc(),
-                status: 'Google Drive Auto-Sync OK',
-              );
-              return true;
-            } finally {
-              await db.close();
-            }
-          }
-        }
+        await _runDriveBackup(settingsRepo);
       }
-
-      // Check if automated SMTP email backup is enabled
       if (settings.autoBackupEnabled &&
           settings.smtpHost != null &&
           settings.smtpHost!.isNotEmpty) {
-        final masterPass = await settingsRepo.getMasterPassphrase();
-        final smtpPass = await settingsRepo.getSmtpPassword();
-        if (masterPass != null && masterPass.isNotEmpty && smtpPass != null) {
-          final db = AppDatabase();
-          try {
-            final backupService = BackupService(db: db);
-            final encryptedBytes = await backupService.createEncryptedBackup(
-              passphrase: masterPass,
-            );
-            final fileName = backupFileName(DateTime.now());
-
-            final config = SmtpConfig(
-              host: settings.smtpHost!,
-              port: settings.smtpPort,
-              username: settings.smtpUsername ?? '',
-              password: smtpPass,
-              useTls: settings.smtpUseTls,
-              senderEmail: settings.primaryEmail ?? settings.smtpUsername ?? '',
-            );
-
-            final transport = SmtpBackupTransport(config);
-            await transport.dispatchBackup(
-              encryptedBytes: encryptedBytes,
-              suggestedFileName: fileName,
-              recipientEmail: settings.primaryEmail,
-            );
-
-            await settingsRepo.recordBackupResult(
-              timestamp: DateTime.now().toUtc(),
-              status: 'SMTP Auto-Backup OK',
-            );
-            return true;
-          } finally {
-            await db.close();
-          }
-        }
+        await _runSmtpBackup(settingsRepo, settings);
       }
     } catch (e) {
       debugPrint('Background backup task error: $e');
     }
-    return Future.value(true);
+    return true;
   });
+}
+
+/// Uploads an encrypted backup to Google Drive and records the outcome,
+/// which the Drive card shows.
+Future<void> _runDriveBackup(BackupSettingsRepository settingsRepo) async {
+  String? error;
+  try {
+    final authService = GoogleAuthService();
+    final masterPass = await settingsRepo.getMasterPassphrase();
+    if (await authService.signInSilently() == null) {
+      error = 'Not signed in to Google. Sign in on the Drive tab.';
+    } else if (masterPass == null || masterPass.isEmpty) {
+      error = 'No master passphrase set.';
+    } else {
+      final db = AppDatabase();
+      try {
+        final encryptedBytes = await BackupService(db: db)
+            .createEncryptedBackup(passphrase: masterPass);
+        await GoogleDriveBackupTransport(authService).dispatchBackup(
+          encryptedBytes: encryptedBytes,
+          suggestedFileName: backupFileName(DateTime.now()),
+        );
+      } finally {
+        await db.close();
+      }
+    }
+  } on BackupTransportException catch (e) {
+    error = e.message;
+  } catch (e) {
+    error = e.toString();
+  }
+  await settingsRepo.recordDriveSyncResult(
+    timestamp: DateTime.now().toUtc(),
+    error: error,
+  );
+}
+
+/// Emails an encrypted backup through the configured SMTP server.
+Future<void> _runSmtpBackup(
+  BackupSettingsRepository settingsRepo,
+  BackupSettings settings,
+) async {
+  final masterPass = await settingsRepo.getMasterPassphrase();
+  final smtpPass = await settingsRepo.getSmtpPassword();
+  if (masterPass == null || masterPass.isEmpty || smtpPass == null) return;
+  final db = AppDatabase();
+  try {
+    final encryptedBytes = await BackupService(db: db)
+        .createEncryptedBackup(passphrase: masterPass);
+    final config = SmtpConfig(
+      host: settings.smtpHost!,
+      port: settings.smtpPort,
+      username: settings.smtpUsername ?? '',
+      password: smtpPass,
+      useTls: settings.smtpUseTls,
+      senderEmail: settings.primaryEmail ?? settings.smtpUsername ?? '',
+    );
+    await SmtpBackupTransport(config).dispatchBackup(
+      encryptedBytes: encryptedBytes,
+      suggestedFileName: backupFileName(DateTime.now()),
+      recipientEmail: settings.primaryEmail,
+    );
+    await settingsRepo.recordBackupResult(
+      timestamp: DateTime.now().toUtc(),
+      status: 'SMTP Auto-Backup OK',
+    );
+  } finally {
+    await db.close();
+  }
 }
 
 /// Service managing Workmanager background execution for automated backups.
