@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../domain/backup_file_name.dart';
 import 'backup_service.dart';
 import 'backup_settings_repository.dart';
 import 'google_auth_service.dart';
@@ -38,8 +39,7 @@ void backupCallbackDispatcher() {
               final encryptedBytes = await backupService.createEncryptedBackup(
                 passphrase: masterPass,
               );
-              final fileName =
-                  'spreadlog_backup_${DateTime.now().toUtc().millisecondsSinceEpoch}.spbackup';
+              final fileName = backupFileName(DateTime.now());
 
               final transport = GoogleDriveBackupTransport(authService);
               await transport.dispatchBackup(
@@ -72,8 +72,7 @@ void backupCallbackDispatcher() {
             final encryptedBytes = await backupService.createEncryptedBackup(
               passphrase: masterPass,
             );
-            final fileName =
-                'spreadlog_backup_${DateTime.now().toUtc().millisecondsSinceEpoch}.spbackup';
+            final fileName = backupFileName(DateTime.now());
 
             final config = SmtpConfig(
               host: settings.smtpHost!,

@@ -14,6 +14,7 @@ import '../../data/transports/google_drive_backup_transport.dart';
 import '../../data/transports/smtp_backup_transport.dart';
 import '../../domain/backup_exceptions.dart';
 import '../../domain/backup_encryptor.dart';
+import '../../domain/backup_file_name.dart';
 import '../providers/backup_providers.dart';
 import '../providers/google_auth_providers.dart';
 import '../widgets/google_sign_in_button.dart';
@@ -949,8 +950,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         passphrase: passphrase,
       );
 
-      final nowStr = DateTime.now().toIso8601String().substring(0, 10);
-      final fileName = 'spreadlog_backup_$nowStr.spbackup';
+      final fileName = backupFileName(DateTime.now());
 
       final driveTransport = ref.read(googleDriveTransportProvider);
       await driveTransport.dispatchBackup(
@@ -1096,8 +1096,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         passphrase: passphrase,
       );
 
-      final nowStr = DateTime.now().toIso8601String().substring(0, 10);
-      final fileName = 'spreadlog_backup_$nowStr.spbackup';
+      final fileName = backupFileName(DateTime.now());
 
       final gmailTransport = ref.read(gmailTransportProvider);
       await gmailTransport.dispatchBackup(
@@ -1164,8 +1163,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         passphrase: passphrase,
       );
 
-      final nowStr = DateTime.now().toIso8601String().substring(0, 10);
-      final fileName = 'spreadlog_backup_$nowStr.spbackup';
+      final fileName = backupFileName(DateTime.now());
 
       if (!mounted) return;
 
@@ -1237,8 +1235,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         passphrase: passphrase,
       );
 
-      final nowStr = DateTime.now().toIso8601String().substring(0, 10);
-      final fileName = 'spreadlog_backup_$nowStr.spbackup';
+      final fileName = backupFileName(DateTime.now());
 
       if (!mounted) return;
 
@@ -1583,8 +1580,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         passphrase: masterPass,
       );
 
-      final nowStr = DateTime.now().toIso8601String().substring(0, 10);
-      final fileName = 'spreadlog_backup_$nowStr.spbackup';
+      final fileName = backupFileName(DateTime.now());
 
       final config = SmtpConfig(
         host: settings.smtpHost!,
