@@ -1514,11 +1514,23 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     ref.invalidate(backupSettingsProvider);
 
     if (enabled) {
-      await BackupWorkmanagerService.schedulePeriodicBackup(
-        intervalDays: settings.backupIntervalDays,
-      );
+      await _schedulePeriodicBackup(settings.backupIntervalDays);
     } else if (!settings.autoBackupEnabled) {
       await BackupWorkmanagerService.cancelPeriodicBackup();
+    }
+  }
+
+  Future<void> _schedulePeriodicBackup(int intervalDays) async {
+    final scheduled = await BackupWorkmanagerService.schedulePeriodicBackup(
+      intervalDays: intervalDays,
+    );
+    if (!scheduled && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not schedule automatic backups on this device.'),
+          backgroundColor: _snackWarning,
+        ),
+      );
     }
   }
 
@@ -1529,9 +1541,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     ref.invalidate(backupSettingsProvider);
 
     if (enabled) {
-      await BackupWorkmanagerService.schedulePeriodicBackup(
-        intervalDays: settings.backupIntervalDays,
-      );
+      await _schedulePeriodicBackup(settings.backupIntervalDays);
     } else if (!settings.autoSyncGoogleDrive) {
       await BackupWorkmanagerService.cancelPeriodicBackup();
     }

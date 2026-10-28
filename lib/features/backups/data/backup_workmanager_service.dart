@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:ui' show DartPluginRegistrant;
+
 import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -16,6 +18,9 @@ const String periodicBackupTaskKey = 'com.spreadlog.app.periodic_backup';
 @pragma('vm:entry-point')
 void backupCallbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    // Background engines don't register Dart-side plugin implementations
+    // (google_sign_in_android, shared_preferences_android, ...) by themselves.
+    DartPluginRegistrant.ensureInitialized();
     try {
       final settingsRepo = BackupSettingsRepository();
       final settings = await settingsRepo.loadSettings();
@@ -30,8 +35,11 @@ void backupCallbackDispatcher() {
             final db = AppDatabase();
             try {
               final backupService = BackupService(db: db);
-              final encryptedBytes = await backupService.createEncryptedBackup(passphrase: masterPass);
-              final fileName = 'spreadlog_backup_${DateTime.now().toUtc().millisecondsSinceEpoch}.spbackup';
+              final encryptedBytes = await backupService.createEncryptedBackup(
+                passphrase: masterPass,
+              );
+              final fileName =
+                  'spreadlog_backup_${DateTime.now().toUtc().millisecondsSinceEpoch}.spbackup';
 
               final transport = GoogleDriveBackupTransport(authService);
               await transport.dispatchBackup(
@@ -52,15 +60,20 @@ void backupCallbackDispatcher() {
       }
 
       // Check if automated SMTP email backup is enabled
-      if (settings.autoBackupEnabled && settings.smtpHost != null && settings.smtpHost!.isNotEmpty) {
+      if (settings.autoBackupEnabled &&
+          settings.smtpHost != null &&
+          settings.smtpHost!.isNotEmpty) {
         final masterPass = await settingsRepo.getMasterPassphrase();
         final smtpPass = await settingsRepo.getSmtpPassword();
         if (masterPass != null && masterPass.isNotEmpty && smtpPass != null) {
           final db = AppDatabase();
           try {
             final backupService = BackupService(db: db);
-            final encryptedBytes = await backupService.createEncryptedBackup(passphrase: masterPass);
-            final fileName = 'spreadlog_backup_${DateTime.now().toUtc().millisecondsSinceEpoch}.spbackup';
+            final encryptedBytes = await backupService.createEncryptedBackup(
+              passphrase: masterPass,
+            );
+            final fileName =
+                'spreadlog_backup_${DateTime.now().toUtc().millisecondsSinceEpoch}.spbackup';
 
             final config = SmtpConfig(
               host: settings.smtpHost!,
@@ -97,24 +110,30 @@ void backupCallbackDispatcher() {
 
 /// Service managing Workmanager background execution for automated backups.
 class BackupWorkmanagerService {
+  /// Registers the background dispatcher and, when an automatic backup is
+  /// switched on, (re)schedules the periodic task. Call once at app start:
+  /// Workmanager rejects scheduling until it has been initialized.
   static Future<void> initialize() async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return;
     }
     try {
-      await Workmanager().initialize(
-        backupCallbackDispatcher,
-      );
+      await Workmanager().initialize(backupCallbackDispatcher);
+      final settings = await BackupSettingsRepository().loadSettings();
+      if (settings.autoSyncGoogleDrive || settings.autoBackupEnabled) {
+        await schedulePeriodicBackup(intervalDays: settings.backupIntervalDays);
+      }
     } catch (e) {
       debugPrint('Workmanager initialization skipped: $e');
     }
   }
 
-  static Future<void> schedulePeriodicBackup({
+  /// Returns false if the task could not be scheduled.
+  static Future<bool> schedulePeriodicBackup({
     required int intervalDays,
   }) async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
-      return;
+      return false;
     }
     try {
       final duration = Duration(days: intervalDays.clamp(1, 30));
@@ -128,8 +147,10 @@ class BackupWorkmanagerService {
           requiresBatteryNotLow: true,
         ),
       );
+      return true;
     } catch (e) {
       debugPrint('Failed to schedule periodic backup: $e');
+      return false;
     }
   }
 
