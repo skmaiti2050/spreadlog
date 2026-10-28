@@ -576,16 +576,30 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Automatic Background Sync'),
-                    subtitle: const Text(
-                      'Silently upload encrypted backups to Google Drive in the background via WorkManager.',
+                  // Browsers can't run the app in the background, and Google
+                  // gives web pages no refresh token, so this is app-only.
+                  if (kIsWeb)
+                    const ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.info_outline),
+                      title: Text('Automatic Background Sync'),
+                      subtitle: Text(
+                        'Scheduled Drive backups run in the Android and iOS '
+                        'apps. On the web, use Backup to Google Drive Now.',
+                      ),
+                    )
+                  else ...[
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Automatic Background Sync'),
+                      subtitle: const Text(
+                        'Silently upload encrypted backups to Google Drive in the background via WorkManager.',
+                      ),
+                      value: settings.autoSyncGoogleDrive,
+                      onChanged: (val) => _toggleAutoSyncDrive(settings, val),
                     ),
-                    value: settings.autoSyncGoogleDrive,
-                    onChanged: (val) => _toggleAutoSyncDrive(settings, val),
-                  ),
-                  _buildDriveAutoBackupStatus(settings),
+                    _buildDriveAutoBackupStatus(settings),
+                  ],
                   const Divider(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -1519,11 +1533,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     }
   }
 
-  /// Result of the last background Drive backup, under its switch. Hidden on
-  /// web, which has no background backups.
+  /// Result of the last background Drive backup, under its switch.
   Widget _buildDriveAutoBackupStatus(BackupSettings settings) {
     final status = driveAutoBackupStatus(
-      enabled: settings.autoSyncGoogleDrive && !kIsWeb,
+      enabled: settings.autoSyncGoogleDrive,
       lastRun: settings.lastDriveSyncDate,
       error: settings.lastDriveSyncError,
     );
