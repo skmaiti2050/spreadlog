@@ -1,5 +1,21 @@
 import '../../../core/utils/time_utils.dart';
 
+/// Minimum gap between automatic Drive backups. Re-enabling the switch, or the
+/// app re-scheduling at startup, starts a run right away; without this it
+/// would add another backup each time.
+const autoBackupMinGap = Duration(hours: 24);
+
+/// Whether a background Drive run should be skipped because the last one
+/// succeeded less than [autoBackupMinGap] before [now].
+bool skipAutoBackup({
+  required DateTime? lastRun,
+  required String? lastError,
+  required DateTime now,
+}) =>
+    lastRun != null &&
+    lastError == null &&
+    now.difference(lastRun) < autoBackupMinGap;
+
 /// Status line for the background Google Drive backup, or null when it is
 /// switched off. [succeeded] is null until the first run.
 ({String message, bool? succeeded})? driveAutoBackupStatus({

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../domain/auto_backup_status.dart';
 import '../domain/backup_exceptions.dart';
 import '../domain/backup_file_name.dart';
 import 'backup_service.dart';
@@ -28,7 +29,7 @@ void backupCallbackDispatcher() {
       final settings = await settingsRepo.loadSettings();
       // Independent: a Drive result must not stop the email backup.
       if (settings.autoSyncGoogleDrive) {
-        await _runDriveBackup(settingsRepo);
+        await _runDriveBackup(settingsRepo, settings);
       }
       if (settings.autoBackupEnabled &&
           settings.smtpHost != null &&
@@ -43,8 +44,18 @@ void backupCallbackDispatcher() {
 }
 
 /// Uploads an encrypted backup to Google Drive and records the outcome,
-/// which the Drive card shows.
-Future<void> _runDriveBackup(BackupSettingsRepository settingsRepo) async {
+/// which the Drive card shows. Skipped if one succeeded within the last day.
+Future<void> _runDriveBackup(
+  BackupSettingsRepository settingsRepo,
+  BackupSettings settings,
+) async {
+  if (skipAutoBackup(
+    lastRun: settings.lastDriveSyncDate,
+    lastError: settings.lastDriveSyncError,
+    now: DateTime.now().toUtc(),
+  )) {
+    return;
+  }
   String? error;
   try {
     final authService = GoogleAuthService();

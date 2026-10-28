@@ -46,4 +46,48 @@ void main() {
       );
     });
   });
+
+  group('skipAutoBackup', () {
+    final last = DateTime.utc(2026, 10, 28, 9);
+
+    test('skips within 24 hours of a successful run', () {
+      expect(
+        skipAutoBackup(
+          lastRun: last,
+          lastError: null,
+          now: last.add(const Duration(hours: 23, minutes: 59)),
+        ),
+        isTrue,
+      );
+    });
+
+    test('runs once 24 hours have passed', () {
+      expect(
+        skipAutoBackup(
+          lastRun: last,
+          lastError: null,
+          now: last.add(const Duration(hours: 24)),
+        ),
+        isFalse,
+      );
+    });
+
+    test('retries straight away after a failed run', () {
+      expect(
+        skipAutoBackup(
+          lastRun: last,
+          lastError: 'Not signed in to Google.',
+          now: last.add(const Duration(minutes: 5)),
+        ),
+        isFalse,
+      );
+    });
+
+    test('runs when there has been no run yet', () {
+      expect(
+        skipAutoBackup(lastRun: null, lastError: null, now: last),
+        isFalse,
+      );
+    });
+  });
 }
