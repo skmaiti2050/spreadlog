@@ -539,7 +539,11 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Google Drive permission required to sync files.',
+                            // Web tokens don't survive a reload, so there it
+                            // is usually a reconnect, not a first grant.
+                            kIsWeb
+                                ? 'Reconnect Google Drive to sync and see your backups.'
+                                : 'Google Drive permission required to sync files.',
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.onSurface,
@@ -551,7 +555,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                             final ok = await authService.requestScopes();
                             if (ok && mounted) await _loadDriveBackups();
                           },
-                          child: const Text('Authorize'),
+                          child: const Text(kIsWeb ? 'Connect' : 'Authorize'),
                         ),
                       ],
                     ),
@@ -652,7 +656,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       child: Center(
                         child: Text(
-                          'No cloud backups found in Google Drive.\nTap "Backup to Google Drive Now" to upload one.',
+                          _hasGoogleScopes == false
+                              ? 'Allow Google Drive access above to see your backups.'
+                              : 'No cloud backups found in Google Drive.\nTap "Backup to Google Drive Now" to upload one.',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: _mutedText),
                         ),
