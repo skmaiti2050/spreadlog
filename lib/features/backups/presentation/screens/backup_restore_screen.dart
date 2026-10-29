@@ -520,7 +520,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     style: TextStyle(fontSize: 12, color: _mutedText),
                   ),
                 ],
-                if (isSignedIn && _hasGoogleScopes == false) ...[
+                // On web, missing access usually just means the page was
+                // reloaded; the backup list offers the reconnect instead.
+                if (isSignedIn && _hasGoogleScopes == false && !kIsWeb) ...[
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -539,11 +541,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            // Web tokens don't survive a reload, so there it
-                            // is usually a reconnect, not a first grant.
-                            kIsWeb
-                                ? 'Reconnect Google Drive to sync and see your backups.'
-                                : 'Google Drive permission required to sync files.',
+                            'Google Drive permission required to sync files.',
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).colorScheme.onSurface,
@@ -555,7 +553,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                             final ok = await authService.requestScopes();
                             if (ok && mounted) await _loadDriveBackups();
                           },
-                          child: const Text(kIsWeb ? 'Connect' : 'Authorize'),
+                          child: const Text('Authorize'),
                         ),
                       ],
                     ),
@@ -649,6 +647,25 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                       child: Padding(
                         padding: EdgeInsets.all(24),
                         child: CircularProgressIndicator(),
+                      ),
+                    )
+                  else if (kIsWeb && _hasGoogleScopes == false)
+                    // Browser tokens don't survive a reload; reconnecting must
+                    // come from a click, and closes itself if already allowed.
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                        child: FilledButton.tonalIcon(
+                          icon: const Icon(Icons.cloud_sync),
+                          label: const Text('Show Drive backups'),
+                          onPressed: () async {
+                            final authService = ref.read(
+                              googleAuthServiceProvider,
+                            );
+                            final ok = await authService.requestScopes();
+                            if (ok && mounted) await _loadDriveBackups();
+                          },
+                        ),
                       ),
                     )
                   else if (_driveBackups == null || _driveBackups!.isEmpty)
