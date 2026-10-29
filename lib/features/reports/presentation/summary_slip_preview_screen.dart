@@ -1,8 +1,9 @@
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:printing/printing.dart';
 
+import '../../../core/widgets/app_pdf_preview.dart';
 import '../../../../core/widgets/hint_banner.dart';
 import '../../profile/presentation/providers/profile_providers.dart';
 import '../../flights/domain/aircraft_type_summary.dart';
@@ -50,8 +51,8 @@ class SummarySlipPreviewScreen extends ConsumerWidget {
           ),
 
           Expanded(
-            child: PdfPreview(
-              build: (format) async {
+            child: AppPdfPreview(
+              buildPdf: (format) async {
                 final bytes = await SacaaSummarySlipPdfGenerator.generateSlip(
                   typeSummaries: typeSummaries,
                   grandTotals: grandTotals,
@@ -61,11 +62,7 @@ class SummarySlipPreviewScreen extends ConsumerWidget {
                 );
                 return Uint8List.fromList(bytes);
               },
-              canChangeOrientation: false,
-              canChangePageFormat: false,
-              allowPrinting: true,
-              allowSharing: true,
-              pdfFileName: 'Career_Summary_Slip_${slipDate.year}.pdf',
+              fileName: 'Career_Summary_Slip_${slipDate.year}.pdf',
             ),
           ),
         ],

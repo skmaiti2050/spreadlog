@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
+
+import '../../../../core/widgets/app_pdf_preview.dart';
 
 class DocumentPdfPreview extends StatelessWidget {
   final Uint8List bytes;
@@ -16,13 +17,6 @@ class DocumentPdfPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Document PDF')),
-    body: PdfPreview(
-      build: (_) async => bytes,
-      pdfFileName: filename,
-      canChangeOrientation: false,
-      canChangePageFormat: false,
-      allowPrinting: true,
-      allowSharing: true,
-    ),
+    body: AppPdfPreview(buildPdf: (_) async => bytes, fileName: filename),
   );
 }

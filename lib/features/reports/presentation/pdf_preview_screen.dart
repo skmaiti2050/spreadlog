@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:printing/printing.dart';
+
+import '../../../core/widgets/app_pdf_preview.dart';
 
 import '../../reports/domain/sacaa_pdf_generator.dart';
 import '../../flights/domain/ledger_page.dart';
@@ -34,8 +36,8 @@ class PdfPreviewScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: PdfPreview(
-        build: (format) async {
+      body: AppPdfPreview(
+        buildPdf: (format) async {
           final bytes = await SacaaPdfGenerator.generateDocument(
             pages: pages,
             pilotName: pilotName,
@@ -43,18 +45,11 @@ class PdfPreviewScreen extends ConsumerWidget {
           );
           return Uint8List.fromList(bytes);
         },
-        canChangeOrientation: false,
-        canChangePageFormat: false,
-        allowPrinting: true,
-        allowSharing: true,
-        pdfFileName: 'Pilot_Logbook_${DateTime.now().year}.pdf',
+        fileName: 'Pilot_Logbook_${DateTime.now().year}.pdf',
         // Printing or sharing the PDF counts as the 90-day paper copy.
-        onPrinted: (_) =>
-            unawaited(ref.read(lastPrintedProvider.notifier).markPrinted()),
-        onShared: (_) =>
+        onOutput: () =>
             unawaited(ref.read(lastPrintedProvider.notifier).markPrinted()),
       ),
     );
   }
 }
-
