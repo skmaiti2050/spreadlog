@@ -29,108 +29,120 @@ class AviationAppDrawer extends ConsumerWidget {
         top: false,
         child: Column(
           children: [
-            // Pilot Profile & Aviation Header
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                MediaQuery.of(context).padding.top + 20,
-                16,
-                16,
-              ),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
-                border: Border(
-                  bottom: BorderSide(
-                    color: theme.colorScheme.outlineVariant.withValues(
-                      alpha: 0.5,
-                    ),
+            // Pilot Profile & Aviation Header. Tapping it opens the profile,
+            // the same as the Pilot Profile entry below.
+            Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).pop();
+                  EditProfileDialog.show(context);
+                },
+                child: Ink(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    MediaQuery.of(context).padding.top + 20,
+                    16,
+                    16,
                   ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: theme.colorScheme.primary,
-                        child: Icon(
-                          Icons.flight,
-                          color: theme.colorScheme.onPrimary,
-                          size: 26,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: theme.colorScheme.outlineVariant.withValues(
+                          alpha: 0.5,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: theme.colorScheme.primary,
+                            child: Icon(
+                              Icons.flight,
+                              color: theme.colorScheme.onPrimary,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  profile.pilotName.isEmpty
+                                      ? 'Profile not set up'
+                                      : profile.pilotName,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: theme.colorScheme.onPrimaryContainer,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  profile.licenceNumber.isEmpty
+                                      ? 'Licence: Pending'
+                                      : '${profile.licenceNumber} • SACAA',
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: theme.colorScheme.onPrimaryContainer
+                                        .withValues(alpha: 0.8),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface.withValues(
+                            alpha: 0.7,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: theme.colorScheme.outlineVariant.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                        ),
+                        child: Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          spacing: 8,
                           children: [
                             Text(
-                              profile.pilotName.isEmpty
-                                  ? 'Profile not set up'
-                                  : profile.pilotName,
-                              style: theme.textTheme.titleMedium?.copyWith(
+                              'TOTAL TIME',
+                              style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.onPrimaryContainer,
+                                letterSpacing: 1.0,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              profile.licenceNumber.isEmpty
-                                  ? 'Licence: Pending'
-                                  : '${profile.licenceNumber} • SACAA',
+                              '${TimeUtils.formatMinutesToHhMm(totals.totalFlightTimeMinutes)} (${TimeUtils.formatMinutesToDecimal(totals.totalFlightTimeMinutes)} hrs)',
                               style: theme.textTheme.labelMedium?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer
-                                    .withValues(alpha: 0.8),
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.primary,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
-                    ),
-                    child: Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      spacing: 8,
-                      children: [
-                        Text(
-                          'TOTAL TIME',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
-                          ),
-                        ),
-                        Text(
-                          '${TimeUtils.formatMinutesToHhMm(totals.totalFlightTimeMinutes)} (${TimeUtils.formatMinutesToDecimal(totals.totalFlightTimeMinutes)} hrs)',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
 
