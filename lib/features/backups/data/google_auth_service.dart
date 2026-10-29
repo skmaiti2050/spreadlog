@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:googleapis/oauth2/v2.dart' as oauth2;
 import 'package:googleapis_auth/googleapis_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -53,12 +54,17 @@ class GoogleUser {
 /// google_sign_in 7 splits sign-in (who the user is) from authorization
 /// (access tokens for scopes) and no longer tracks the current user.
 ///
-/// On Android, "lightweight" sign-in goes through Credential Manager, which
-/// shows a "Signing in as…" sheet and needs a foreground activity. So the app
-/// signs in interactively once, remembers the account, and afterwards only
-/// asks for access tokens. Token requests are silent once the scopes are
-/// granted and also work from the background backup task. Web keeps using
-/// Google Identity Services' own session.
+/// Every platform signs in interactively once, remembers the account, and
+/// afterwards only asks for access tokens:
+/// - Android: "lightweight" sign-in goes through Credential Manager, which
+///   shows a "Signing in as…" sheet and needs a foreground activity. Token
+///   requests are silent once the scopes are granted, also from the
+///   background backup task.
+/// - Web: sign-in alone grants no API access, and a token popup must come
+///   straight from a click. So "Sign in" is one token request for the API
+///   scopes plus the basic profile, and the profile comes from userinfo.
+///   Tokens last an hour and don't survive a reload; reconnecting is one
+///   click, and the popup closes itself once access was granted before.
 class GoogleAuthService {
   /// Restricted scope allowing sending emails solely to the authenticated user's own inbox.
   static const String gmailSendSelfScope =
@@ -75,6 +81,14 @@ class GoogleAuthService {
   static const String webClientId =
       '200978100975-hp3kmikut8rpn9prvv973u9p66s2238g.apps.googleusercontent.com';
 
+  /// Web sign-in asks for the API scopes and the profile in one popup.
+  static const List<String> _webSignInScopes = [
+    ...defaultScopes,
+    oauth2.Oauth2Api.openidScope,
+    oauth2.Oauth2Api.userinfoEmailScope,
+    oauth2.Oauth2Api.userinfoProfileScope,
+  ];
+
   static const String _prefSignedInUser = 'google_signed_in_user';
 
   // GoogleSignIn.instance is a singleton that must be initialized exactly
@@ -83,15 +97,12 @@ class GoogleAuthService {
   static final _initializations = Expando<Future<void>>();
 
   final GoogleSignIn _googleSignIn;
-  final bool _rememberUser;
   final _userChanges = StreamController<GoogleUser?>.broadcast();
   StreamSubscription<GoogleSignInAuthenticationEvent>? _eventsSub;
   GoogleUser? _currentUser;
 
-  /// [rememberUser] defaults to every platform except web.
-  GoogleAuthService({GoogleSignIn? googleSignIn, bool? rememberUser})
-    : _googleSignIn = googleSignIn ?? GoogleSignIn.instance,
-      _rememberUser = rememberUser ?? !kIsWeb;
+  GoogleAuthService({GoogleSignIn? googleSignIn})
+    : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   Future<void> _ensureInitialized() async {
     final initialization = _initializations[_googleSignIn] ??= _googleSignIn
@@ -124,7 +135,6 @@ class GoogleAuthService {
   }
 
   Future<void> _saveUser(GoogleUser? user) async {
-    if (!_rememberUser) return;
     final prefs = await SharedPreferences.getInstance();
     if (user == null) {
       await prefs.remove(_prefSignedInUser);
@@ -154,16 +164,12 @@ class GoogleAuthService {
   /// Stream of user sign-in state changes.
   Stream<GoogleUser?> get onCurrentUserChanged => _userChanges.stream;
 
-  /// Interactive sign in flow. Returns null if the user cancels.
-  ///
-  /// On web, sign-in goes through the button rendered by Google Identity
-  /// Services instead (see google_sign_in_button_web.dart); this only retries
-  /// the lightweight flow there.
+  /// Interactive sign in flow. Returns null if the user cancels. On web it
+  /// must be called straight from a click, or the browser blocks the popup.
   Future<GoogleUser?> signIn() async {
     await _ensureInitialized();
-    if (!_googleSignIn.supportsAuthenticate()) {
-      return signInSilently();
-    }
+    if (kIsWeb) return _signInWeb();
+    if (!_googleSignIn.supportsAuthenticate()) return null;
     final GoogleSignInAccount account;
     try {
       account = await _googleSignIn.authenticate(scopeHint: defaultScopes);
@@ -185,6 +191,44 @@ class GoogleAuthService {
     return user;
   }
 
+  Future<GoogleUser?> _signInWeb() async {
+    final ClientAuthorizationTokenData? tokens;
+    try {
+      tokens = await GoogleSignInPlatform.instance
+          .clientAuthorizationTokensForScopes(
+            const ClientAuthorizationTokensForScopesParameters(
+              request: AuthorizationRequestDetails(
+                scopes: _webSignInScopes,
+                userId: null,
+                email: null,
+                promptIfUnauthorized: true,
+              ),
+            ),
+          );
+    } on GoogleSignInException catch (e) {
+      // Closing the popup is not an error.
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      rethrow;
+    }
+    if (tokens == null) return null;
+    final client = GoogleSignInClientAuthorization(
+      accessToken: tokens.accessToken,
+    ).authClient(scopes: _webSignInScopes);
+    try {
+      final info = await oauth2.Oauth2Api(client).userinfo.get();
+      final user = GoogleUser(
+        id: info.id!,
+        email: info.email!,
+        displayName: info.name,
+      );
+      _setUser(user);
+      await _saveUser(user);
+      return user;
+    } finally {
+      client.close();
+    }
+  }
+
   /// Access tokens for [defaultScopes], for the current user. Returns null
   /// when [promptIfUnauthorized] is false and the user would have to approve.
   Future<GoogleSignInClientAuthorization?> _authorize({
@@ -193,6 +237,8 @@ class GoogleAuthService {
     final user = _currentUser;
     if (user == null) return null;
     await _ensureInitialized();
+    // On web the plugin caches tokens per userId, and passing one also forces
+    // the account chooser; the page has a single user, so web leaves it out.
     // GoogleSignInAccount.authorizationClient makes this same call, but an
     // account object only comes from a fresh sign-in.
     final tokens = await GoogleSignInPlatform.instance
@@ -200,8 +246,8 @@ class GoogleAuthService {
           ClientAuthorizationTokensForScopesParameters(
             request: AuthorizationRequestDetails(
               scopes: defaultScopes,
-              userId: user.id,
-              email: user.email,
+              userId: kIsWeb ? null : user.id,
+              email: kIsWeb ? null : user.email,
               promptIfUnauthorized: promptIfUnauthorized,
             ),
           ),
@@ -231,23 +277,13 @@ class GoogleAuthService {
     }
   }
 
-  /// Restores the signed-in account without showing any UI (app startup and
-  /// background sync). Apps remember the account; web asks Google Identity
-  /// Services, which may report it later through [onCurrentUserChanged].
+  /// Restores the remembered account without showing any UI (app startup
+  /// and background sync).
   Future<GoogleUser?> signInSilently() async {
     try {
-      if (_rememberUser) {
-        final saved = _currentUser ?? await _loadSavedUser();
-        _setUser(saved);
-        return saved;
-      }
-      // Web: One Tap shows a "Continue as" prompt, so only ask when this page
-      // doesn't already know the user.
-      if (_currentUser != null) return _currentUser;
-      await _ensureInitialized();
-      final account = await _googleSignIn.attemptLightweightAuthentication();
-      if (account != null) _setUser(GoogleUser.fromIdentity(account));
-      return _currentUser;
+      final saved = _currentUser ?? await _loadSavedUser();
+      _setUser(saved);
+      return saved;
     } catch (e) {
       debugPrint('Google Silent Sign-In skipped: $e');
       return null;

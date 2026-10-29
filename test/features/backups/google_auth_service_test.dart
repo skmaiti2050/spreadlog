@@ -94,10 +94,7 @@ void main() {
             '{"id":"42","email":"pilot@example.com","displayName":"Pilot"}',
       });
       final googleSignIn = _FakeGoogleSignIn();
-      final service = GoogleAuthService(
-        googleSignIn: googleSignIn,
-        rememberUser: true,
-      );
+      final service = GoogleAuthService(googleSignIn: googleSignIn);
 
       final user = await service.signInSilently();
 
@@ -112,20 +109,15 @@ void main() {
         'google_signed_in_user':
             '{"id":"42","email":"pilot@example.com","displayName":null}',
       });
-      final service = GoogleAuthService(
-        googleSignIn: _FakeGoogleSignIn(),
-        rememberUser: true,
-      );
+      final service = GoogleAuthService(googleSignIn: _FakeGoogleSignIn());
       await service.signInSilently();
 
       await service.signOut();
 
       expect(service.isSignedIn, isFalse);
       expect(
-        await GoogleAuthService(
-          googleSignIn: _FakeGoogleSignIn(),
-          rememberUser: true,
-        ).signInSilently(),
+        await GoogleAuthService(googleSignIn: _FakeGoogleSignIn())
+            .signInSilently(),
         isNull,
       );
     });
