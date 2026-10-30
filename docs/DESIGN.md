@@ -1,3 +1,8 @@
+# Spreadlog design document
+
+The original product and architecture design, kept as a reference. For
+what Spreadlog is and how to use or build it, see the [README](../README.md).
+
 # Aviation Logbook
 
 A local-first, low-cost mobile aviation logbook for pilots, designed
@@ -80,13 +85,15 @@ The backup format must not depend on an email provider.
 
 ## Monetization
 
-The initial releases are **free**, with no purchases or trial limits.
+Spreadlog is **free and open source** (Apache-2.0), with no purchases,
+trials or limits.
 
-Planned for a later release (not implemented):
+Paid features will only be added if users ask for them, as separate,
+optional modules developed outside this repository under their own
+license. The free app stays complete on its own.
 
--   **in_app_purchase** with a local entitlement layer
--   90-day free trial, then a one-time unlock
--   No subscription required for core functionality
+The earlier plan (an `in_app_purchase` entitlement layer, a 90-day trial
+and a one-time unlock) is dropped.
 
 ------------------------------------------------------------------------
 
@@ -1020,13 +1027,10 @@ Physical logbook format
 -   [x] Primary + recovery email
 -   [x] Scheduled backup
 
-## Phase 7 --- Monetization (deferred; initial releases are free)
+## Phase 7 --- Monetization (dropped)
 
--   [ ] Trial state
--   [ ] IAP
--   [ ] Entitlement service
--   [ ] Restore purchases
--   [ ] Offline entitlement behavior
+The app stays free. Any paid features would be separate modules outside
+this repository; see Monetization above.
 
 ------------------------------------------------------------------------
 
@@ -1297,9 +1301,3 @@ V1 is ready when a pilot can:
 
 The application should remain useful even if every external service
 disappears.
-
-## License
-
-Spreadlog is free and open source under the [Apache License 2.0](LICENSE).
-See [NOTICE](NOTICE) for attribution and for the proprietary Google
-Play services components used by the Android build.
