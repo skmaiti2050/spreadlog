@@ -26,6 +26,8 @@ your logbook.
 
 ![Flights list on a desktop browser](docs/screenshots/desktop-flights.png)
 
+![Google Drive backups, signed in](docs/screenshots/desktop-drive.png)
+
 Screenshots show sample data.
 
 ## Features
