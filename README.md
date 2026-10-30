@@ -13,6 +13,21 @@ encrypted backup of everything, including your signed endorsement pages.
 Free and open source. No account, no subscription, and no server holding
 your logbook.
 
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/phone-flights.png" alt="Flights list with career totals on a phone" width="260">
+  <img src="docs/screenshots/phone-backup.png" alt="Encrypted backup and restore on a phone" width="260">
+</p>
+
+![The logbook spread: 30 lines a page with brought-forward totals](docs/screenshots/desktop-logbook.png)
+
+![Logbook PDF preview in the SA-CATS 61 Appendix A layout](docs/screenshots/desktop-pdf-left.png)
+
+![Flights list on a desktop browser](docs/screenshots/desktop-flights.png)
+
+Screenshots show sample data.
+
 ## Features
 
 **Logbook**
