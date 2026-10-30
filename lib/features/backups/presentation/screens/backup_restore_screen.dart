@@ -36,7 +36,8 @@ class BackupRestoreScreen extends ConsumerStatefulWidget {
       _BackupRestoreScreenState();
 }
 
-class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
+class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
+    with WidgetsBindingObserver {
   // Accents are tuned per brightness: the mid-tone shades that read well on
   // the dark themes fall below 3:1 contrast on the light theme's surfaces.
   bool get _isDark => Theme.of(context).brightness == Brightness.dark;
@@ -70,11 +71,15 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   // so the banner doesn't ask Google on every rebuild.
   bool? _hasGoogleScopes;
   StreamSubscription<String>? _backupIntentSub;
+  // Re-reads settings for a short while after an automatic backup is
+  // switched on, so the result of the queued background run shows up.
+  Timer? _statusRefreshTimer;
 
   @override
   void initState() {
     super.initState();
     BackupRestoreScreen.isScreenActive = true;
+    WidgetsBinding.instance.addObserver(this);
 
     // Listen for incoming backup files while this screen is active
     _backupIntentSub = BackupIntentService.onBackupFileReceived.listen((path) {
@@ -85,6 +90,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
 
     // Silently attempt Google sign-in on screen open
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Settings are cached app-wide; background backups write to storage
+      // directly, so reload them to show their latest results.
+      ref.invalidate(backupSettingsProvider);
       _trySilentGoogleSignIn();
       if (widget.initialFilePath != null) {
         _restoreFromPath(widget.initialFilePath!);
@@ -95,8 +103,30 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   @override
   void dispose() {
     BackupRestoreScreen.isScreenActive = false;
+    WidgetsBinding.instance.removeObserver(this);
+    _statusRefreshTimer?.cancel();
     _backupIntentSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(backupSettingsProvider);
+    }
+  }
+
+  /// Polls settings every 15 seconds for 2 minutes after a switch-on.
+  void _refreshStatusForAWhile() {
+    _statusRefreshTimer?.cancel();
+    var ticks = 0;
+    _statusRefreshTimer = Timer.periodic(const Duration(seconds: 15), (t) {
+      if (!mounted || ++ticks > 8) {
+        t.cancel();
+        return;
+      }
+      ref.invalidate(backupSettingsProvider);
+    });
   }
 
   Future<void> _trySilentGoogleSignIn() async {
@@ -1620,6 +1650,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       intervalDays: intervalDays,
       runSoon: true,
     );
+    if (scheduled) _refreshStatusForAWhile();
     if (!scheduled && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
