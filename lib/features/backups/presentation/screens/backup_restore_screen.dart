@@ -601,7 +601,11 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                       value: settings.autoSyncGoogleDrive,
                       onChanged: (val) => _toggleAutoSyncDrive(settings, val),
                     ),
-                    _buildDriveAutoBackupStatus(settings),
+                    _buildAutoBackupStatus(
+                      enabled: settings.autoSyncGoogleDrive,
+                      lastRun: settings.lastDriveSyncDate,
+                      error: settings.lastDriveSyncError,
+                    ),
                   ],
                   const Divider(height: 24),
                   SizedBox(
@@ -750,6 +754,8 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final userAsync = ref.watch(googleUserStreamProvider);
     final user = userAsync.value ?? authService.currentUser;
     final isSignedIn = user != null;
+    final hasSmtpServer =
+        settings.smtpHost != null && settings.smtpHost!.isNotEmpty;
 
     return Column(
       children: [
@@ -841,11 +847,6 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                           ),
                         ),
                       ),
-                      Switch(
-                        value: settings.autoBackupEnabled,
-                        onChanged: (enabled) =>
-                            _toggleAutoBackup(settings, enabled),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -853,6 +854,27 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     'For pilots using custom email domains, Outlook, or private mail servers. '
                     'Requires custom SMTP host, port, TLS, and mailbox credentials.',
                     style: TextStyle(fontSize: 13, color: _mutedText),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Automatic email backups'),
+                    subtitle: Text(
+                      hasSmtpServer
+                          ? 'Sends an encrypted backup through this SMTP '
+                                'server every ${settings.backupIntervalDays} '
+                                'days.'
+                          : 'Configure an SMTP server first.',
+                    ),
+                    value: settings.autoBackupEnabled,
+                    onChanged: hasSmtpServer
+                        ? (enabled) => _toggleAutoBackup(settings, enabled)
+                        : null,
+                  ),
+                  _buildAutoBackupStatus(
+                    enabled: settings.autoBackupEnabled && hasSmtpServer,
+                    lastRun: settings.lastEmailAutoDate,
+                    error: settings.lastEmailAutoError,
                   ),
                   if (settings.lastBackupDate != null) ...[
                     const SizedBox(height: 8),
@@ -1557,12 +1579,16 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     }
   }
 
-  /// Result of the last background Drive backup, under its switch.
-  Widget _buildDriveAutoBackupStatus(BackupSettings settings) {
-    final status = driveAutoBackupStatus(
-      enabled: settings.autoSyncGoogleDrive,
-      lastRun: settings.lastDriveSyncDate,
-      error: settings.lastDriveSyncError,
+  /// Result of the last automatic backup (Drive or email), under its switch.
+  Widget _buildAutoBackupStatus({
+    required bool enabled,
+    required DateTime? lastRun,
+    required String? error,
+  }) {
+    final status = autoBackupStatus(
+      enabled: enabled,
+      lastRun: lastRun,
+      error: error,
     );
     if (status == null) return const SizedBox.shrink();
     final (icon, color) = switch (status.succeeded) {
