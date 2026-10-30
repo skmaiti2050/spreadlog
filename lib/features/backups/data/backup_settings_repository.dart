@@ -23,6 +23,10 @@ class BackupSettings {
   final DateTime? lastDriveSyncDate;
   final String? lastDriveSyncError;
 
+  /// The same for the automatic SMTP email backup.
+  final DateTime? lastEmailAutoDate;
+  final String? lastEmailAutoError;
+
   const BackupSettings({
     required this.hasMasterPassphrase,
     this.autoBackupEnabled = false,
@@ -40,6 +44,8 @@ class BackupSettings {
     this.googleAccountEmail,
     this.lastDriveSyncDate,
     this.lastDriveSyncError,
+    this.lastEmailAutoDate,
+    this.lastEmailAutoError,
   });
 
   BackupSettings copyWith({
@@ -75,6 +81,8 @@ class BackupSettings {
       googleAccountEmail: googleAccountEmail ?? this.googleAccountEmail,
       lastDriveSyncDate: lastDriveSyncDate,
       lastDriveSyncError: lastDriveSyncError,
+      lastEmailAutoDate: lastEmailAutoDate,
+      lastEmailAutoError: lastEmailAutoError,
     );
   }
 }
@@ -99,6 +107,8 @@ class BackupSettingsRepository {
   static const String _prefGoogleAccountEmail = 'sp_google_account_email';
   static const String _prefLastDriveSyncDate = 'sp_last_drive_sync_date';
   static const String _prefLastDriveSyncError = 'sp_last_drive_sync_error';
+  static const String _prefLastEmailAutoDate = 'sp_last_email_auto_date';
+  static const String _prefLastEmailAutoError = 'sp_last_email_auto_error';
 
   final FlutterSecureStorage _secureStorage;
   final SharedPreferencesAsync _prefs;
@@ -127,6 +137,8 @@ class BackupSettingsRepository {
     final googleEmail = await _prefs.getString(_prefGoogleAccountEmail);
     final driveSyncDateStr = await _prefs.getString(_prefLastDriveSyncDate);
     final driveSyncError = await _prefs.getString(_prefLastDriveSyncError);
+    final emailAutoDateStr = await _prefs.getString(_prefLastEmailAutoDate);
+    final emailAutoError = await _prefs.getString(_prefLastEmailAutoError);
 
     final lastDate = lastDateStr != null ? DateTime.tryParse(lastDateStr) : null;
 
@@ -149,6 +161,10 @@ class BackupSettingsRepository {
           ? DateTime.tryParse(driveSyncDateStr)
           : null,
       lastDriveSyncError: driveSyncError,
+      lastEmailAutoDate: emailAutoDateStr != null
+          ? DateTime.tryParse(emailAutoDateStr)
+          : null,
+      lastEmailAutoError: emailAutoError,
     );
   }
 
@@ -219,6 +235,20 @@ class BackupSettingsRepository {
   }) async {
     await _prefs.setString(_prefLastBackupDate, timestamp.toIso8601String());
     await _prefs.setString(_prefLastBackupStatus, status);
+  }
+
+  /// Records the outcome of an automatic SMTP email backup. [error] is null
+  /// when it succeeded.
+  Future<void> recordEmailAutoResult({
+    required DateTime timestamp,
+    String? error,
+  }) async {
+    await _prefs.setString(_prefLastEmailAutoDate, timestamp.toIso8601String());
+    if (error == null) {
+      await _prefs.remove(_prefLastEmailAutoError);
+    } else {
+      await _prefs.setString(_prefLastEmailAutoError, error);
+    }
   }
 
   /// Records the outcome of a background Google Drive backup. [error] is null

@@ -89,43 +89,61 @@ Future<void> _runDriveBackup(
   );
 }
 
-/// Emails an encrypted backup through the configured SMTP server.
+/// Emails an encrypted backup through the configured SMTP server and records
+/// the outcome, which the Email card shows. Skipped if one succeeded within
+/// the last day.
 Future<void> _runSmtpBackup(
   BackupSettingsRepository settingsRepo,
   BackupSettings settings,
 ) async {
-  final masterPass = await settingsRepo.getMasterPassphrase();
-  final smtpPass = await settingsRepo.getSmtpPassword();
-  if (masterPass == null ||
-      masterPass.isEmpty ||
-      smtpPass == null ||
-      !isEmailAddress(settings.primaryEmail)) {
+  if (skipAutoBackup(
+    lastRun: settings.lastEmailAutoDate,
+    lastError: settings.lastEmailAutoError,
+    now: DateTime.now().toUtc(),
+  )) {
     return;
   }
-  final db = AppDatabase();
+  String? error;
   try {
-    final encryptedBytes = await BackupService(db: db)
-        .createEncryptedBackup(passphrase: masterPass);
-    final config = SmtpConfig(
-      host: settings.smtpHost!,
-      port: settings.smtpPort,
-      username: settings.smtpUsername ?? '',
-      password: smtpPass,
-      useTls: settings.smtpUseTls,
-      senderEmail: settings.primaryEmail!,
-    );
-    await SmtpBackupTransport(config).dispatchBackup(
-      encryptedBytes: encryptedBytes,
-      suggestedFileName: backupFileName(DateTime.now()),
-      recipientEmail: settings.primaryEmail,
-    );
-    await settingsRepo.recordBackupResult(
-      timestamp: DateTime.now().toUtc(),
-      status: 'SMTP Auto-Backup OK',
-    );
-  } finally {
-    await db.close();
+    final masterPass = await settingsRepo.getMasterPassphrase();
+    final smtpPass = await settingsRepo.getSmtpPassword();
+    if (masterPass == null || masterPass.isEmpty) {
+      error = 'No master passphrase set.';
+    } else if (smtpPass == null || smtpPass.isEmpty) {
+      error = 'No SMTP password saved. Open Configure SMTP.';
+    } else if (!isEmailAddress(settings.primaryEmail)) {
+      error = 'No recipient email address. Open Configure SMTP.';
+    } else {
+      final db = AppDatabase();
+      try {
+        final encryptedBytes = await BackupService(db: db)
+            .createEncryptedBackup(passphrase: masterPass);
+        final config = SmtpConfig(
+          host: settings.smtpHost!,
+          port: settings.smtpPort,
+          username: settings.smtpUsername ?? '',
+          password: smtpPass,
+          useTls: settings.smtpUseTls,
+          senderEmail: settings.primaryEmail!,
+        );
+        await SmtpBackupTransport(config).dispatchBackup(
+          encryptedBytes: encryptedBytes,
+          suggestedFileName: backupFileName(DateTime.now()),
+          recipientEmail: settings.primaryEmail,
+        );
+      } finally {
+        await db.close();
+      }
+    }
+  } on BackupTransportException catch (e) {
+    error = e.message;
+  } catch (e) {
+    error = e.toString();
   }
+  await settingsRepo.recordEmailAutoResult(
+    timestamp: DateTime.now().toUtc(),
+    error: error,
+  );
 }
 
 /// Service managing Workmanager background execution for automated backups.
