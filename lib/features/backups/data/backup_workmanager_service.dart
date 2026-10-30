@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../core/utils/email_address.dart';
 import '../domain/auto_backup_status.dart';
 import '../domain/backup_exceptions.dart';
 import '../domain/backup_file_name.dart';
@@ -95,7 +96,12 @@ Future<void> _runSmtpBackup(
 ) async {
   final masterPass = await settingsRepo.getMasterPassphrase();
   final smtpPass = await settingsRepo.getSmtpPassword();
-  if (masterPass == null || masterPass.isEmpty || smtpPass == null) return;
+  if (masterPass == null ||
+      masterPass.isEmpty ||
+      smtpPass == null ||
+      !isEmailAddress(settings.primaryEmail)) {
+    return;
+  }
   final db = AppDatabase();
   try {
     final encryptedBytes = await BackupService(db: db)
@@ -106,7 +112,7 @@ Future<void> _runSmtpBackup(
       username: settings.smtpUsername ?? '',
       password: smtpPass,
       useTls: settings.smtpUseTls,
-      senderEmail: settings.primaryEmail ?? settings.smtpUsername ?? '',
+      senderEmail: settings.primaryEmail!,
     );
     await SmtpBackupTransport(config).dispatchBackup(
       encryptedBytes: encryptedBytes,

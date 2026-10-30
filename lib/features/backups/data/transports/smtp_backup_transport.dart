@@ -45,7 +45,9 @@ class SmtpBackupTransport implements BackupTransport {
   }) async {
     final targetRecipient = recipientEmail ?? config.senderEmail;
     if (targetRecipient.isEmpty) {
-      throw const BackupTransportException('No recipient email specified for SMTP backup.');
+      throw const BackupTransportException(
+        'No recipient email specified for SMTP backup.',
+      );
     }
 
     try {
@@ -62,7 +64,8 @@ class SmtpBackupTransport implements BackupTransport {
         ..from = Address(config.senderEmail, 'Spreadlog Backup')
         ..recipients.add(targetRecipient)
         ..subject = 'Spreadlog Encrypted Logbook Backup - $suggestedFileName'
-        ..text = 'Attached is your automated, AES-256-GCM encrypted Spreadlog backup ($suggestedFileName).\n\n'
+        ..text =
+            'Attached is your automated, AES-256-GCM encrypted Spreadlog backup ($suggestedFileName).\n\n'
             'Keep your master passphrase safe. You will need it to restore this logbook archive.'
         ..attachments.add(
           StreamAttachment(
@@ -77,6 +80,14 @@ class SmtpBackupTransport implements BackupTransport {
       }
 
       await send(message, smtpServer);
+    } on MailerException catch (e) {
+      // e.g. "Invalid message." alone hides which address or login failed.
+      final details = e.problems.map((p) => p.msg).join('; ');
+      throw BackupTransportException(
+        'SMTP server refused the backup: '
+        '${details.isEmpty ? e.message : details}',
+        e,
+      );
     } catch (e) {
       throw BackupTransportException('Failed to send backup via SMTP: $e', e);
     }

@@ -21,6 +21,7 @@ import '../providers/google_auth_providers.dart';
 import '../widgets/google_sign_in_button.dart';
 import '../../../../core/utils/plural.dart';
 import '../../../../core/layout/responsive.dart';
+import '../../../../core/utils/email_address.dart';
 
 class BackupRestoreScreen extends ConsumerStatefulWidget {
   final String? initialFilePath;
@@ -856,7 +857,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                   if (settings.lastBackupDate != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Last Email: ${settings.lastBackupDate!.toLocal().toString().substring(0, 16)} '
+                      'Last email backup: ${settings.lastBackupDate!.toLocal().toString().substring(0, 16)} '
                       '(${settings.lastBackupStatus ?? "OK"})',
                       style: TextStyle(fontSize: 12, color: _accentGreen),
                     ),
@@ -1638,6 +1639,18 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       );
       return;
     }
+    // The SMTP login is often not an email address (e.g. Mailtrap), so the
+    // backup needs an explicit address to come from and go to.
+    final recipient = settings.primaryEmail;
+    if (!isEmailAddress(recipient)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Add a recipient email address in Configure SMTP.'),
+          backgroundColor: _snackWarning,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -1658,14 +1671,14 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
         username: settings.smtpUsername!,
         password: smtpPass,
         useTls: settings.smtpUseTls,
-        senderEmail: settings.primaryEmail ?? settings.smtpUsername!,
+        senderEmail: recipient!,
       );
 
       final transport = SmtpBackupTransport(config);
       await transport.dispatchBackup(
         encryptedBytes: encryptedBytes,
         suggestedFileName: fileName,
-        recipientEmail: settings.primaryEmail,
+        recipientEmail: recipient,
       );
 
       await repo.recordBackupResult(
@@ -1677,9 +1690,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Test backup dispatched via SMTP to ${settings.primaryEmail ?? settings.smtpUsername}',
-            ),
+            content: Text('Test backup dispatched via SMTP to $recipient'),
             backgroundColor: _snackSuccess,
           ),
         );
@@ -1815,9 +1826,13 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final userCtrl = TextEditingController(text: settings.smtpUsername ?? '');
     final passCtrl = TextEditingController();
     final primaryEmailCtrl = TextEditingController(
-      text: settings.primaryEmail ?? '',
+      // Gmail-style logins are the mailbox address; use it as a starting point.
+      text:
+          settings.primaryEmail ??
+          (isEmailAddress(settings.smtpUsername) ? settings.smtpUsername! : ''),
     );
     bool useTls = settings.smtpUseTls;
+    String? recipientError;
 
     final repo = ref.read(backupSettingsRepositoryProvider);
     final existingPass = await repo.getSmtpPassword();
@@ -1868,8 +1883,11 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: primaryEmailCtrl,
-                  decoration: const InputDecoration(
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
                     labelText: 'Recipient Email Address',
+                    helperText: 'Backups are sent from and to this address.',
+                    errorText: recipientError,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1888,7 +1906,15 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
+              onPressed: () {
+                if (!isEmailAddress(primaryEmailCtrl.text.trim())) {
+                  setDialogState(
+                    () => recipientError = 'Enter a valid email address.',
+                  );
+                  return;
+                }
+                Navigator.of(ctx).pop(true);
+              },
               child: const Text('Save'),
             ),
           ],
