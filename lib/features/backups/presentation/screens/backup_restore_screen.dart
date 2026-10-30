@@ -1615,8 +1615,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   }
 
   Future<void> _schedulePeriodicBackup(int intervalDays) async {
+    // Switching a backup on runs it soon instead of at the next weekly slot.
     final scheduled = await BackupWorkmanagerService.schedulePeriodicBackup(
       intervalDays: intervalDays,
+      runSoon: true,
     );
     if (!scheduled && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

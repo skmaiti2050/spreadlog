@@ -18,6 +18,9 @@ import 'transports/smtp_backup_transport.dart';
 /// Unique task identifier for periodic automated backups.
 const String periodicBackupTaskKey = 'com.spreadlog.app.periodic_backup';
 
+/// One-off run queued when an automatic backup is switched on.
+const String backupNowTaskKey = 'com.spreadlog.app.backup_now';
+
 /// Callback dispatcher invoked by Android/iOS background Workmanager.
 @pragma('vm:entry-point')
 void backupCallbackDispatcher() {
@@ -167,8 +170,14 @@ class BackupWorkmanagerService {
   }
 
   /// Returns false if the task could not be scheduled.
+  ///
+  /// The periodic task is shared by the Drive and email backups and keeps
+  /// its timetable when updated, so switching one on could wait up to a full
+  /// interval. [runSoon] also queues a one-off run; the 24-hour skip stops
+  /// the backup that already ran today from repeating.
   static Future<bool> schedulePeriodicBackup({
     required int intervalDays,
+    bool runSoon = false,
   }) async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
       return false;
@@ -185,6 +194,15 @@ class BackupWorkmanagerService {
           requiresBatteryNotLow: true,
         ),
       );
+      if (runSoon) {
+        await Workmanager().registerOneOffTask(
+          backupNowTaskKey,
+          periodicBackupTaskKey,
+          initialDelay: const Duration(seconds: 10),
+          existingWorkPolicy: ExistingWorkPolicy.replace,
+          constraints: Constraints(networkType: NetworkType.connected),
+        );
+      }
       return true;
     } catch (e) {
       debugPrint('Failed to schedule periodic backup: $e');
@@ -198,6 +216,7 @@ class BackupWorkmanagerService {
     }
     try {
       await Workmanager().cancelByUniqueName(periodicBackupTaskKey);
+      await Workmanager().cancelByUniqueName(backupNowTaskKey);
     } catch (e) {
       debugPrint('Failed to cancel periodic backup: $e');
     }
