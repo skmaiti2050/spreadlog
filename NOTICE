@@ -1,0 +1,8 @@
+Spreadlog
+Copyright 2026 Sujit Maiti
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The Android build uses Google Play services (ML Kit document scanner, Google
+Sign-In, Drive and Gmail APIs), which are proprietary Google software provided
+under Google's own terms and are not covered by this license.

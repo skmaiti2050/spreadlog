@@ -1297,3 +1297,9 @@ V1 is ready when a pilot can:
 
 The application should remain useful even if every external service
 disappears.
+
+## License
+
+Spreadlog is free and open source under the [Apache License 2.0](LICENSE).
+See [NOTICE](NOTICE) for attribution and for the proprietary Google
+Play services components used by the Android build.
