@@ -335,7 +335,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
                       ),
                       Text(
                         isConfigured
-                            ? 'Passphrase saved in hardware-backed secure storage.'
+                            ? (kIsWeb
+                                  ? 'Passphrase saved in this browser.'
+                                  : 'Passphrase saved in hardware-backed secure storage.')
                             : 'Not set yet. You will be asked for one when you create a backup.',
                         style: TextStyle(
                           fontSize: 12,
