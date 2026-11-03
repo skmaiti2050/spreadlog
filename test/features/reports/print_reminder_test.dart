@@ -60,4 +60,17 @@ void main() {
       isTrue,
     );
   });
+
+  test('a snooze hides an overdue reminder for a week', () {
+    bool dueSnoozed(int daysAgoSnoozed) => PrintReminder.isDue(
+      now: now,
+      lastPrintedAt: null,
+      entryCreatedAt: [daysAgo(120)],
+      snoozedAt: daysAgo(daysAgoSnoozed),
+    );
+
+    expect(dueSnoozed(0), isFalse);
+    expect(dueSnoozed(6), isFalse);
+    expect(dueSnoozed(7), isTrue);
+  });
 }

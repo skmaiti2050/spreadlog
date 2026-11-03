@@ -38,12 +38,47 @@ final lastPrintedProvider = NotifierProvider<LastPrintedNotifier, DateTime?>(
   LastPrintedNotifier.new,
 );
 
-/// True when SACAA's 90-day paper printout of the logbook is overdue.
+/// When the print reminder was last put off with "Later", persisted locally.
+class ReminderSnoozedNotifier extends Notifier<DateTime?> {
+  static const _prefKey = 'spreadlog_print_reminder_snoozed_at';
+
+  @override
+  DateTime? build() {
+    unawaited(_load());
+    return null;
+  }
+
+  Future<void> _load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_prefKey);
+      if (stored != null) state = DateTime.tryParse(stored);
+    } catch (_) {}
+  }
+
+  Future<void> snooze([DateTime? at]) async {
+    final snoozedAt = at ?? DateTime.now();
+    state = snoozedAt;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefKey, snoozedAt.toIso8601String());
+    } catch (_) {}
+  }
+}
+
+final reminderSnoozedProvider =
+    NotifierProvider<ReminderSnoozedNotifier, DateTime?>(
+      ReminderSnoozedNotifier.new,
+    );
+
+/// True when SACAA's 90-day paper printout of the logbook is overdue and
+/// the reminder isn't snoozed.
 final printReminderDueProvider = Provider<bool>((ref) {
   final flights = ref.watch(flightsStreamProvider).value ?? const [];
   return PrintReminder.isDue(
     now: DateTime.now(),
     lastPrintedAt: ref.watch(lastPrintedProvider),
     entryCreatedAt: flights.map((f) => f.createdAt),
+    snoozedAt: ref.watch(reminderSnoozedProvider),
   );
 });

@@ -74,4 +74,29 @@ void main() {
 
     expect(find.text('Print now'), findsNothing);
   });
+
+  testWidgets('Later is remembered after a restart', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await _pumpBanner(tester, [oldEntry]);
+    await tester.tap(find.text('Later'));
+    await tester.pumpAndSettle();
+
+    // A fresh ProviderScope reloads state from SharedPreferences.
+    await tester.pumpWidget(const SizedBox());
+    await _pumpBanner(tester, [oldEntry]);
+
+    expect(find.text('Print now'), findsNothing);
+  });
+
+  testWidgets('comes back once the snooze has run out', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'spreadlog_print_reminder_snoozed_at': DateTime.now()
+          .subtract(const Duration(days: 8))
+          .toIso8601String(),
+    });
+
+    await _pumpBanner(tester, [oldEntry]);
+
+    expect(find.text('Print now'), findsOneWidget);
+  });
 }

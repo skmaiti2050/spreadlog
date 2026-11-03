@@ -7,7 +7,7 @@ import '../pdf_preview_screen.dart';
 import '../providers/print_reminder_providers.dart';
 
 /// Prompts for the paper copy SACAA requires every 90 days. "Later" hides
-/// it until the screen is rebuilt from scratch; printing or sharing the PDF
+/// it for a week (remembered across restarts); printing or sharing the PDF
 /// clears it for the next 90 days.
 class PrintReminderBanner extends ConsumerStatefulWidget {
   const PrintReminderBanner({super.key});
@@ -18,11 +18,9 @@ class PrintReminderBanner extends ConsumerStatefulWidget {
 }
 
 class _PrintReminderBannerState extends ConsumerState<PrintReminderBanner> {
-  bool _snoozed = false;
-
   @override
   Widget build(BuildContext context) {
-    if (_snoozed || !ref.watch(printReminderDueProvider)) {
+    if (!ref.watch(printReminderDueProvider)) {
       return const SizedBox.shrink();
     }
     final scheme = Theme.of(context).colorScheme;
@@ -55,7 +53,8 @@ class _PrintReminderBannerState extends ConsumerState<PrintReminderBanner> {
                 spacing: 8,
                 children: [
                   TextButton(
-                    onPressed: () => setState(() => _snoozed = true),
+                    onPressed: () =>
+                        ref.read(reminderSnoozedProvider.notifier).snooze(),
                     child: const Text('Later'),
                   ),
                   FilledButton.tonal(
