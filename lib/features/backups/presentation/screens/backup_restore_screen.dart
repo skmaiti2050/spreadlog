@@ -547,9 +547,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
                         icon: const Icon(Icons.logout, size: 16),
                         label: const Text('Sign Out'),
                         onPressed: _handleGoogleSignOut,
-                      )
-                    else
-                      buildGoogleSignInButton(onPressed: _handleGoogleSignIn),
+                      ),
                   ],
                 ),
                 if (!isSignedIn) ...[
@@ -558,6 +556,15 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
                     'Connect your Google Account to automatically store and sync your AES-256 encrypted '
                     'flight logbook in Google Drive. Zero passwords stored, and only Spreadlog files are accessed.',
                     style: TextStyle(fontSize: 12, color: _mutedText),
+                  ),
+                  const SizedBox(height: 12),
+                  // Below the text rather than beside the title, which it
+                  // squeezed into wrapping at phone width.
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: buildGoogleSignInButton(
+                      onPressed: _handleGoogleSignIn,
+                    ),
                   ),
                 ],
                 // On web, missing access usually just means the page was
