@@ -419,14 +419,21 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
                     onPressed: () => _handleSaveToDevice(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.share),
-                    label: const Text('Share File'),
-                    onPressed: () => _handleExport(),
+                // Desktop browsers can't share files, so share_plus falls
+                // back to downloading, the same as Save. Phone browsers
+                // have the Web Share sheet.
+                if (!kIsWeb ||
+                    defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.iOS) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.share),
+                      label: const Text('Share File'),
+                      onPressed: () => _handleExport(),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ],
