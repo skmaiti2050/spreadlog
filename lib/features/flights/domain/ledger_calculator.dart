@@ -1,6 +1,7 @@
 import '../../aircraft/domain/aircraft_model.dart';
 import 'aircraft_type_summary.dart';
 import 'flight.dart';
+import 'flight_filter.dart';
 import 'flight_time.dart';
 import 'instruction_time.dart';
 import 'ledger_page.dart';
@@ -150,10 +151,24 @@ class LedgerCalculator {
     var accumulated = LedgerTotals.zero;
 
     for (final flight in flights) {
-      if (startDate != null && flight.date.isBefore(startDate)) {
+      if (startDate != null &&
+          DateTime(
+            flight.date.year,
+            flight.date.month,
+            flight.date.day,
+          ).isBefore(
+            DateTime(startDate.year, startDate.month, startDate.day),
+          )) {
         continue;
       }
-      if (cutoffDate != null && flight.date.isAfter(cutoffDate)) {
+      if (cutoffDate != null &&
+          DateTime(
+            flight.date.year,
+            flight.date.month,
+            flight.date.day,
+          ).isAfter(
+            DateTime(cutoffDate.year, cutoffDate.month, cutoffDate.day),
+          )) {
         continue;
       }
       accumulated += calculateFlightTotals(flight);
@@ -224,7 +239,7 @@ class LedgerCalculator {
     required DateTime asOfDate,
   }) {
     // 12 months immediately preceding the application date
-    final startDate = DateTime(asOfDate.year - 1, asOfDate.month, asOfDate.day);
+    final startDate = FlightFilter.yearBefore(asOfDate);
     return calculateTotals(flights, startDate: startDate, cutoffDate: asOfDate);
   }
 
@@ -238,7 +253,8 @@ class LedgerCalculator {
     final Map<String, DateTime> lastFlownMap = {};
 
     for (final flight in flights) {
-      final type = (flight.aircraftModelId != null &&
+      final type =
+          (flight.aircraftModelId != null &&
               flight.aircraftModelId!.trim().isNotEmpty)
           ? flight.aircraftModelId!.trim()
           : 'AIRCRAFT';
@@ -264,4 +280,3 @@ class LedgerCalculator {
     return summaries;
   }
 }
-

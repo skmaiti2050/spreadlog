@@ -65,8 +65,8 @@ class SacaaProfile implements RegulatorProfile {
   static const _calculator = LedgerCalculator();
 
   @override
-  LedgerTotals calculateTotals(List<Flight> flights, {DateTime? cutoffDate}) {
-    return _calculator.calculateTotals(flights, cutoffDate: cutoffDate);
+  LedgerTotals calculateTotals(List<Flight> flights, {DateTime? startDate, DateTime? cutoffDate}) {
+    return _calculator.calculateTotals(flights, startDate: startDate, cutoffDate: cutoffDate);
   }
 
   @override

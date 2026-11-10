@@ -1,8 +1,11 @@
 import 'package:aviation_logbook/core/utils/time_utils.dart';
 import 'package:aviation_logbook/features/aircraft/domain/aircraft_model.dart';
 import 'package:aviation_logbook/features/flights/domain/flight.dart';
+import 'package:aviation_logbook/features/flights/domain/flight_filter.dart';
 import 'package:aviation_logbook/features/flights/domain/flight_time.dart';
 import 'package:aviation_logbook/features/flights/domain/hobbs_reading.dart';
+import 'package:aviation_logbook/features/flights/domain/ledger_calculator.dart';
+import 'package:aviation_logbook/features/regulators/domain/sacaa_profile.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Flight flight(
@@ -102,4 +105,90 @@ void main() {
     },
   );
 
+  test(
+    'combined filters include the whole final day and search model names',
+    () {
+      final flights = [
+        flight('before', DateTime(2025, 12, 31)),
+        flight('first', DateTime(2026, 1, 1)),
+        flight('last', DateTime(2026, 1, 31, 23, 59)),
+        flight(
+          'other',
+          DateTime(2026, 1, 12),
+          registration: 'ZS-XYZ',
+          model: 'PA28',
+        ),
+        flight('after', DateTime(2026, 2, 1)),
+      ];
+      final filter = FlightFilter(
+        query: 'cessna',
+        startDate: DateTime(2026, 1),
+        endDate: DateTime(2026, 1, 31),
+        registrations: {'ZS-ABC'},
+        modelIds: {'C172'},
+        category: AircraftCategory.aeroplane,
+        aircraftClass: AircraftClass.singleEngine,
+        role: PilotRole.pic,
+        period: TimePeriod.day,
+      );
+      final selected = filter.apply(
+        flights,
+        models: {
+          'C172': const AircraftModel(
+            id: 'C172',
+            manufacturer: 'Cessna',
+            model: '172',
+            aircraftClass: AircraftClass.singleEngine,
+            category: AircraftCategory.aeroplane,
+          ),
+        },
+      );
+      expect(selected.map((f) => f.id), ['last', 'first']);
+      expect(
+        const LedgerCalculator()
+            .calculateTotals(selected)
+            .totalFlightTimeMinutes,
+        180,
+      );
+      expect(flights.first.id, 'before');
+      expect(const FlightFilter(role: PilotRole.dual).apply(flights), isEmpty);
+    },
+  );
+
+  test(
+    'multi-selection unions values and sorting is stable and reversible',
+    () {
+      final flights = [
+        flight('b', DateTime(2026), duration: 60),
+        flight('a', DateTime(2026), duration: 60),
+        flight('c', DateTime(2026), registration: 'ZS-XYZ', duration: 120),
+      ];
+      final selected = const FlightFilter(
+        registrations: {'ZS-ABC', 'ZS-XYZ'},
+        sort: FlightSort.duration,
+      ).apply(flights);
+      expect(selected.map((f) => f.id), ['a', 'b', 'c']);
+      expect(
+        const FlightFilter(
+          sort: FlightSort.duration,
+          descending: true,
+        ).apply(flights).map((f) => f.id),
+        ['c', 'b', 'a'],
+      );
+    },
+  );
+
+  test('regulator forwards start and cutoff dates', () {
+    final flights = [
+      flight('old', DateTime(2025)),
+      flight('in', DateTime(2026, 2, 28)),
+      flight('out', DateTime(2026, 3)),
+    ];
+    final totals = const SacaaProfile().calculateTotals(
+      flights,
+      startDate: DateTime(2026, 2),
+      cutoffDate: DateTime(2026, 2, 28),
+    );
+    expect(totals.totalFlightTimeMinutes, 90);
+  });
 }

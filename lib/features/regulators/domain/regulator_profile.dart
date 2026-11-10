@@ -29,7 +29,11 @@ abstract class RegulatorProfile {
 
   List<LedgerColumnDefinition> getColumns();
 
-  LedgerTotals calculateTotals(List<Flight> flights, {DateTime? cutoffDate});
+  LedgerTotals calculateTotals(
+    List<Flight> flights, {
+    DateTime? startDate,
+    DateTime? cutoffDate,
+  });
 
   List<LedgerPage> paginate(
     List<Flight> flights, {
@@ -42,4 +46,3 @@ abstract class RegulatorProfile {
     required String licenceNumber,
   });
 }
-
