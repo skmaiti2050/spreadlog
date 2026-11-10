@@ -15,6 +15,7 @@ void main() {
       await db.aircraftDao.getAllModels();
       // Recreate the previous version's schema: the only v4 addition is history.
       await db.customStatement('DROP TABLE endorsement_corrections');
+      await db.customStatement('DROP TABLE flight_drafts');
       await db.customStatement(
         'ALTER TABLE endorsement_documents_table DROP COLUMN pages_json',
       );
@@ -39,7 +40,7 @@ void main() {
       expect(
         (await db.customSelect('PRAGMA user_version').getSingle())
             .data['user_version'],
-        6,
+        db.schemaVersion,
       );
     } finally {
       await db.close();
