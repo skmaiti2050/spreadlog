@@ -36,26 +36,28 @@ Screenshots show sample data.
 - Flight entry for every SACAA column: single- and multi-engine time, day
   and night, PIC, PICUS, dual and co-pilot, instrument (actual and FSTD),
   instructor time, landings, navaids and place.
-- Totals calculated in whole minutes, so they never drift from rounding.
+- Hours/minutes, decimal-hour and Hobbs-reading entry, with totals calculated
+  in whole minutes so they never drift from rounding.
 - A spread view of the paper logbook: 30 lines a page, brought forward at
   the top and carried forward at the bottom.
 
 **Reports**
 - A printable logbook PDF in the SA-CATS 61 Appendix A layout.
-- A career summary slip by aircraft type, up to any date.
+- Summary slips by aircraft type for all time, a selected period, or filtered
+  flights, with registration/type filters and selectable sorting.
 - A reminder to print a paper copy every 90 days.
 - Page-by-page preview with print, share or download.
 
 **Endorsements and fleet**
 - An endorsement vault for the instructor-signed pages: scanned on Android,
   stored as captured, and checked against a SHA-256 hash.
-- An aircraft register with model endorsements.
+- An aircraft register with model endorsements and inline one-off model entry.
 
 **Backups**
 - AES-256-GCM encrypted `.spbackup` archives, protected by your own
   passphrase.
 - Save or share the file, back up to Google Drive (on Android, automatically
-  in the background), email it to yourself through Gmail, or send it through
+  in the background; on web, while the app is open), email it through Gmail, or send it through
   your own SMTP server (Android).
 - Restore on any device, with every file checked before anything is replaced.
 
