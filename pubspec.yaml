@@ -60,6 +60,7 @@ dependencies:
   package_info_plus: ^10.2.2
 
 dev_dependencies:
+  http: ^1.6.0
   flutter_test:
     sdk: flutter
 

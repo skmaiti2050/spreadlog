@@ -9,6 +9,7 @@ import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../../reports/presentation/widgets/print_reminder_banner.dart';
 import '../../../../core/widgets/storage_warning_banner.dart';
+import '../../../backups/presentation/widgets/web_backup_banner.dart';
 import '../../domain/flight.dart';
 import '../../domain/flight_filter.dart';
 import '../../domain/ledger_calculator.dart';
@@ -452,6 +453,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
               ),
             ),
 
+            const WebBackupBanner(),
             // Search / Filter Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

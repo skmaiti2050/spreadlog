@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:io';
 
 import 'package:sqlite3/sqlite3.dart' as sql;
@@ -24,6 +25,7 @@ void main() {
     late Directory tempDir;
 
     setUp(() async {
+      SharedPreferences.setMockInitialValues({});
       tempDir = await Directory.systemTemp.createTemp('backup_test_');
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
@@ -342,6 +344,7 @@ void main() {
       );
 
       expect(inspection.manifest.appVersion, '9.9.9+42');
+      expect(inspection.manifest.pilotProfile, isNotNull);
     });
   });
 }

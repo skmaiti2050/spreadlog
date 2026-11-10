@@ -11,10 +11,10 @@ class BackupFileEntry {
   });
 
   Map<String, dynamic> toJson() => {
-        'relativePath': relativePath,
-        'sha256': sha256,
-        'sizeBytes': sizeBytes,
-      };
+    'relativePath': relativePath,
+    'sha256': sha256,
+    'sizeBytes': sizeBytes,
+  };
 
   factory BackupFileEntry.fromJson(Map<String, dynamic> json) {
     return BackupFileEntry(
@@ -47,6 +47,7 @@ class BackupManifest {
   final int schemaVersion;
   final BackupFileEntry databaseEntry;
   final List<BackupFileEntry> documentEntries;
+  final Map<String, dynamic>? pilotProfile;
   final int flightCount;
   final int documentCount;
   final int aircraftModelCount;
@@ -58,33 +59,39 @@ class BackupManifest {
     required this.schemaVersion,
     required this.databaseEntry,
     required this.documentEntries,
+    this.pilotProfile,
     required this.flightCount,
     required this.documentCount,
     required this.aircraftModelCount,
   });
 
   Map<String, dynamic> toJson() => {
-        'manifestVersion': manifestVersion,
-        'createdAt': createdAt.toIso8601String(),
-        'appVersion': appVersion,
-        'schemaVersion': schemaVersion,
-        'databaseEntry': databaseEntry.toJson(),
-        'documentEntries': documentEntries.map((e) => e.toJson()).toList(),
-        'flightCount': flightCount,
-        'documentCount': documentCount,
-        'aircraftModelCount': aircraftModelCount,
-      };
+    if (pilotProfile != null) 'pilotProfile': pilotProfile,
+    'manifestVersion': manifestVersion,
+    'createdAt': createdAt.toIso8601String(),
+    'appVersion': appVersion,
+    'schemaVersion': schemaVersion,
+    'databaseEntry': databaseEntry.toJson(),
+    'documentEntries': documentEntries.map((e) => e.toJson()).toList(),
+    'flightCount': flightCount,
+    'documentCount': documentCount,
+    'aircraftModelCount': aircraftModelCount,
+  };
 
   factory BackupManifest.fromJson(Map<String, dynamic> json) {
     return BackupManifest(
-      manifestVersion: json['manifestVersion'] as int? ?? currentManifestVersion,
+      manifestVersion:
+          json['manifestVersion'] as int? ?? currentManifestVersion,
       createdAt: DateTime.parse(json['createdAt'] as String),
       appVersion: json['appVersion'] as String? ?? '1.0.0',
       schemaVersion: json['schemaVersion'] as int? ?? 1,
-      databaseEntry: BackupFileEntry.fromJson(json['databaseEntry'] as Map<String, dynamic>),
+      databaseEntry: BackupFileEntry.fromJson(
+        json['databaseEntry'] as Map<String, dynamic>,
+      ),
       documentEntries: (json['documentEntries'] as List<dynamic>? ?? [])
           .map((e) => BackupFileEntry.fromJson(e as Map<String, dynamic>))
           .toList(),
+      pilotProfile: json['pilotProfile'] as Map<String, dynamic>?,
       flightCount: json['flightCount'] as int? ?? 0,
       documentCount: json['documentCount'] as int? ?? 0,
       aircraftModelCount: json['aircraftModelCount'] as int? ?? 0,

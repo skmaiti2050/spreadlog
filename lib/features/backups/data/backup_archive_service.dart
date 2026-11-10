@@ -30,6 +30,7 @@ class BackupArchiveService {
     required int flightCount,
     required int aircraftModelCount,
     required int schemaVersion,
+    Map<String, dynamic>? pilotProfile,
     String appVersion = '1.0.0',
     DateTime? createdAt,
   }) async {
@@ -69,6 +70,7 @@ class BackupArchiveService {
 
     // 3. Assemble and add manifest.json
     final manifest = BackupManifest(
+      pilotProfile: pilotProfile,
       manifestVersion: BackupManifest.currentManifestVersion,
       createdAt: now,
       appVersion: appVersion,

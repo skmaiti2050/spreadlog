@@ -1,3 +1,5 @@
+import '../../../profile/presentation/providers/profile_providers.dart';
+
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
@@ -154,6 +156,8 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
       final driveTransport = ref.read(googleDriveTransportProvider);
       final backups = await driveTransport.listBackups();
       if (mounted) setState(() => _driveBackups = backups);
+    } on BackupAuthorizationException {
+      if (mounted) setState(() => _hasGoogleScopes = false);
     } catch (e) {
       debugPrint('Loading Drive backups failed: $e');
     } finally {
@@ -625,34 +629,27 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  // Browsers can't run the app in the background, and Google
-                  // gives web pages no refresh token, so this is app-only.
-                  if (kIsWeb)
-                    const ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(Icons.info_outline),
-                      title: Text('Automatic Background Sync'),
-                      subtitle: Text(
-                        'Scheduled Drive backups run in the Android and iOS '
-                        'apps. On the web, use Backup to Google Drive Now.',
-                      ),
-                    )
-                  else ...[
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Automatic Background Sync'),
-                      subtitle: const Text(
-                        'Silently upload encrypted backups to Google Drive in the background via WorkManager.',
-                      ),
-                      value: settings.autoSyncGoogleDrive,
-                      onChanged: (val) => _toggleAutoSyncDrive(settings, val),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      kIsWeb
+                          ? 'Automatic backups while app is open'
+                          : 'Automatic Background Sync',
                     ),
+                    subtitle: const Text(
+                      kIsWeb
+                          ? 'Back up pending changes to Drive while this app is open. Reconnect when Google access expires.'
+                          : 'Upload encrypted backups in the background via WorkManager.',
+                    ),
+                    value: settings.autoSyncGoogleDrive,
+                    onChanged: (val) => _toggleAutoSyncDrive(settings, val),
+                  ),
+                  if (!kIsWeb)
                     _buildAutoBackupStatus(
                       enabled: settings.autoSyncGoogleDrive,
                       lastRun: settings.lastDriveSyncDate,
                       error: settings.lastDriveSyncError,
                     ),
-                  ],
                   const Divider(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -1054,22 +1051,30 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
 
     try {
       final backupService = ref.read(backupServiceProvider);
-      final encryptedBytes = await backupService.createEncryptedBackup(
+      final auth = ref.read(googleAuthServiceProvider);
+      final owner = auth.currentUser?.email;
+      final driveTransport = ref.read(googleDriveTransportProvider);
+      final freshness = ref.read(backupFreshnessProvider);
+      final tracked = await backupService.createTrackedBackup(
         passphrase: passphrase,
       );
 
       final fileName = backupFileName(DateTime.now());
 
-      final driveTransport = ref.read(googleDriveTransportProvider);
+      if (owner == null || auth.currentUser?.email != owner) {
+        throw const BackupAuthorizationException();
+      }
       await driveTransport.dispatchBackup(
-        encryptedBytes: encryptedBytes,
+        encryptedBytes: tracked.bytes,
         suggestedFileName: fileName,
       );
 
+      await freshness.recordSuccess(tracked.fingerprint, owner);
       await repo.recordBackupResult(
         timestamp: DateTime.now().toUtc(),
         status: 'Google Drive Sync OK',
       );
+      if (!mounted) return;
       ref.invalidate(backupSettingsProvider);
       await _loadDriveBackups();
 
@@ -1077,7 +1082,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Backup saved to Google Drive ($fileName • ${(encryptedBytes.length / 1024).toStringAsFixed(1)} KB)',
+              'Backup saved to Google Drive ($fileName • ${(tracked.bytes.length / 1024).toStringAsFixed(1)} KB)',
             ),
             backgroundColor: _snackSuccess,
           ),
@@ -1603,6 +1608,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
       // restoreBackup closes the live connection before swapping files, so
       // reopen it even when the restore fails and the old database is rolled back.
       container.invalidate(databaseProvider);
+      container.invalidate(pilotProfileProvider);
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -1618,7 +1624,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
     await repo.updateSettings(updated);
     ref.invalidate(backupSettingsProvider);
 
-    if (enabled) {
+    if (enabled && !kIsWeb) {
       await _schedulePeriodicBackup(settings.backupIntervalDays);
     } else if (!settings.autoBackupEnabled) {
       await BackupWorkmanagerService.cancelPeriodicBackup();
@@ -1683,7 +1689,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen>
     await repo.updateSettings(updated);
     ref.invalidate(backupSettingsProvider);
 
-    if (enabled) {
+    if (enabled && !kIsWeb) {
       await _schedulePeriodicBackup(settings.backupIntervalDays);
     } else if (!settings.autoSyncGoogleDrive) {
       await BackupWorkmanagerService.cancelPeriodicBackup();

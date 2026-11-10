@@ -100,6 +100,8 @@ class GoogleAuthService {
   final _userChanges = StreamController<GoogleUser?>.broadcast();
   StreamSubscription<GoogleSignInAuthenticationEvent>? _eventsSub;
   GoogleUser? _currentUser;
+  String? _lastAccessToken;
+  bool _authorizationExpired = false;
 
   GoogleAuthService({GoogleSignIn? googleSignIn})
     : _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
@@ -211,6 +213,8 @@ class GoogleAuthService {
       rethrow;
     }
     if (tokens == null) return null;
+    _lastAccessToken = tokens.accessToken;
+    _authorizationExpired = false;
     final client = GoogleSignInClientAuthorization(
       accessToken: tokens.accessToken,
     ).authClient(scopes: _webSignInScopes);
@@ -235,7 +239,9 @@ class GoogleAuthService {
     required bool promptIfUnauthorized,
   }) async {
     final user = _currentUser;
-    if (user == null) return null;
+    if (user == null || (_authorizationExpired && !promptIfUnauthorized)) {
+      return null;
+    }
     await _ensureInitialized();
     // On web the plugin caches tokens per userId, and passing one also forces
     // the account chooser; the page has a single user, so web leaves it out.
@@ -252,9 +258,27 @@ class GoogleAuthService {
             ),
           ),
         );
+    if (tokens != null) {
+      _lastAccessToken = tokens.accessToken;
+      _authorizationExpired = false;
+    }
     return tokens == null
         ? null
         : GoogleSignInClientAuthorization(accessToken: tokens.accessToken);
+  }
+
+  Future<void> invalidateAuthorization() async {
+    _authorizationExpired = true;
+    final token = _lastAccessToken;
+    _lastAccessToken = null;
+    if (token == null) return;
+    try {
+      await GoogleSignInPlatform.instance.clearAuthorizationToken(
+        ClearAuthorizationTokenParams(accessToken: token),
+      );
+    } catch (_) {
+      // Keep access paused even when the platform cannot clear its cache.
+    }
   }
 
   /// Checks whether required scopes are authorized without showing any UI or popups.

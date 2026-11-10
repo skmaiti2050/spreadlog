@@ -14,6 +14,9 @@ import '../domain/backup_encryptor.dart';
 import '../domain/backup_exceptions.dart';
 import '../domain/backup_manifest.dart';
 import 'backup_archive_service.dart';
+import 'backup_freshness_service.dart';
+import '../../profile/data/pilot_profile_repository.dart';
+import '../../profile/domain/pilot_profile.dart';
 import 'sqlite_loader/sqlite_loader.dart';
 
 /// Inspection result produced before committing a restore.
@@ -60,11 +63,37 @@ class BackupService {
   /// Rejects archives written by a newer app build. Drift cannot downgrade a
   /// schema, so opening such a database would fail or corrupt data.
   void _ensureCompatible(BackupManifest manifest) {
+    if (manifest.pilotProfile != null) {
+      try {
+        PilotProfile.fromJson(manifest.pilotProfile!);
+      } catch (error) {
+        throw CorruptedBackupException(
+          'Invalid pilot profile in backup: $error',
+        );
+      }
+    }
     if (manifest.schemaVersion > db.schemaVersion) {
       throw BackupException(
         'This backup was created by a newer version of Spreadlog '
         '(data version ${manifest.schemaVersion}, this app supports '
         '${db.schemaVersion}). Update the app before restoring it.',
+      );
+    }
+  }
+
+  Future<({Uint8List bytes, String fingerprint})> createTrackedBackup({
+    required String passphrase,
+  }) async {
+    final fingerprint = await BackupFreshnessService(db).fingerprint();
+    final bytes = await createEncryptedBackup(passphrase: passphrase);
+    return (bytes: bytes, fingerprint: fingerprint);
+  }
+
+  Future<void> _restoreProfile(BackupManifest manifest) async {
+    final profile = manifest.pilotProfile;
+    if (profile != null) {
+      await const PilotProfileRepository().saveProfile(
+        PilotProfile.fromJson(profile),
       );
     }
   }
@@ -104,6 +133,8 @@ class BackupService {
 
     // 3. Create ZIP archive with manifest.json and checksums
     final zipBytes = await _archiveService.createZipArchive(
+      pilotProfile: (await const PilotProfileRepository().getProfile())
+          .toJson(),
       databaseBytes: dbBytes,
       documentFiles: documentFiles,
       flightCount: flights.length,
@@ -169,9 +200,21 @@ class BackupService {
     }
     _ensureCompatible(extracted.manifest);
 
+    final previousProfile = extracted.manifest.pilotProfile == null
+        ? null
+        : await const PilotProfileRepository().getProfile();
+
     // 2. Web Restoration
     if (kIsWeb) {
-      await restorePortableSnapshot(extracted);
+      try {
+        await _restoreProfile(extracted.manifest);
+        await restorePortableSnapshot(extracted);
+      } catch (_) {
+        if (previousProfile != null) {
+          await const PilotProfileRepository().saveProfile(previousProfile);
+        }
+        rethrow;
+      }
       return extracted.manifest;
     }
 
@@ -277,6 +320,8 @@ class BackupService {
         restoredDb.close();
       }
 
+      await _restoreProfile(extracted.manifest);
+
       // Restore succeeded, clean up rollback safety copy
       if (await rollbackFile.exists()) {
         await rollbackFile.delete();
@@ -306,6 +351,16 @@ class BackupService {
         try {
           if (await file.exists()) await file.delete();
         } catch (_) {}
+      }
+      if (previousProfile != null) {
+        try {
+          await const PilotProfileRepository().saveProfile(previousProfile);
+        } catch (profileError) {
+          throw BackupException(
+            'Logbook rollback completed, but the pilot profile could not be restored.',
+            profileError,
+          );
+        }
       }
       throw BackupException('Failed to restore backup: $e', e);
     }

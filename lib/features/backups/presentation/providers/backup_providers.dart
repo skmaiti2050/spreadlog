@@ -1,3 +1,5 @@
+import '../../data/backup_freshness_service.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../flights/presentation/providers/flights_providers.dart';
@@ -8,7 +10,9 @@ import '../../data/transports/share_backup_transport.dart';
 import '../../domain/backup_encryptor.dart';
 
 /// Provider for the secure BackupSettingsRepository.
-final backupSettingsRepositoryProvider = Provider<BackupSettingsRepository>((ref) {
+final backupSettingsRepositoryProvider = Provider<BackupSettingsRepository>((
+  ref,
+) {
   return BackupSettingsRepository();
 });
 
@@ -44,4 +48,8 @@ final backupServiceProvider = Provider<BackupService>((ref) {
 /// Provider for OS Share / file export transport.
 final shareBackupTransportProvider = Provider<ShareBackupTransport>((ref) {
   return ShareBackupTransport();
+});
+
+final backupFreshnessProvider = Provider<BackupFreshnessService>((ref) {
+  return BackupFreshnessService(ref.watch(databaseProvider));
 });

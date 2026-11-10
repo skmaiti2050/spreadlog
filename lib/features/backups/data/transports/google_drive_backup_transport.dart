@@ -33,14 +33,26 @@ class GoogleDriveBackupTransport implements BackupTransport {
   @override
   String get name => 'Google Drive Cloud Sync';
 
-  Future<drive.DriveApi> _getDriveApi() async {
+  bool _unauthorized(Object error) =>
+      (error is drive.DetailedApiRequestError && error.status == 401) ||
+      (error is BackupException &&
+          error.cause is Object &&
+          _unauthorized(error.cause as Object));
+
+  Future<T> _withDriveApi<T>(Future<T> Function(drive.DriveApi api) run) async {
     final client = await _authService.getAuthenticatedClient();
-    if (client == null) {
-      throw const BackupTransportException(
-        'Google account is not connected or Drive permissions were not granted. Please sign in and allow access.',
-      );
+    if (client == null) throw const BackupAuthorizationException();
+    try {
+      return await run(drive.DriveApi(client));
+    } catch (error) {
+      if (_unauthorized(error)) {
+        await _authService.invalidateAuthorization();
+        throw const BackupAuthorizationException();
+      }
+      rethrow;
+    } finally {
+      client.close();
     }
-    return drive.DriveApi(client);
   }
 
   /// Finds or creates the dedicated Spreadlog folder in Google Drive.
@@ -67,7 +79,10 @@ class GoogleDriveBackupTransport implements BackupTransport {
       return createdFolder.id!;
     } catch (e) {
       debugPrint('Failed to get or create Google Drive folder: $e');
-      throw BackupTransportException('Could not create Google Drive folder: $e', e);
+      throw BackupTransportException(
+        'Could not create Google Drive folder: $e',
+        e,
+      );
     }
   }
 
@@ -77,29 +92,33 @@ class GoogleDriveBackupTransport implements BackupTransport {
     required String suggestedFileName,
   }) async {
     try {
-      final api = await _getDriveApi();
-      final folderId = await _getOrCreateFolder(api);
+      return await _withDriveApi((api) async {
+        final folderId = await _getOrCreateFolder(api);
 
-      final fileMetadata = drive.File()
-        ..name = suggestedFileName
-        ..parents = [folderId]
-        ..mimeType = 'application/octet-stream'
-        ..description =
-            'Encrypted Spreadlog Aviation Logbook Archive (${DateTime.now().toUtc().toIso8601String()})';
+        final fileMetadata = drive.File()
+          ..name = suggestedFileName
+          ..parents = [folderId]
+          ..mimeType = 'application/octet-stream'
+          ..description =
+              'Encrypted Spreadlog Aviation Logbook Archive (${DateTime.now().toUtc().toIso8601String()})';
 
-      final media = drive.Media(
-        Stream.value(encryptedBytes),
-        encryptedBytes.length,
-      );
+        final media = drive.Media(
+          Stream.value(encryptedBytes),
+          encryptedBytes.length,
+        );
 
-      final created = await api.files.create(
-        fileMetadata,
-        uploadMedia: media,
-      );
-      return created.id ?? '';
+        final created = await api.files.create(
+          fileMetadata,
+          uploadMedia: media,
+        );
+        return created.id ?? '';
+      });
     } catch (e) {
       if (e is BackupTransportException) rethrow;
-      throw BackupTransportException('Failed to upload backup to Google Drive: $e', e);
+      throw BackupTransportException(
+        'Failed to upload backup to Google Drive: $e',
+        e,
+      );
     }
   }
 
@@ -118,61 +137,76 @@ class GoogleDriveBackupTransport implements BackupTransport {
   /// Lists all `.spreadlog` encrypted backup archives stored in Google Drive.
   Future<List<GoogleDriveBackupItem>> listBackups() async {
     try {
-      final api = await _getDriveApi();
-      final folderId = await _getOrCreateFolder(api);
+      return await _withDriveApi((api) async {
+        final folderId = await _getOrCreateFolder(api);
 
-      final query = "'$folderId' in parents and trashed = false";
-      final result = await api.files.list(
-        q: query,
-        spaces: 'drive',
-        $fields: 'files(id, name, size, createdTime, modifiedTime)',
-        orderBy: 'createdTime desc',
-      );
-
-      final files = result.files ?? [];
-      return files.map((f) {
-        return GoogleDriveBackupItem(
-          id: f.id ?? '',
-          name: f.name ?? 'spreadlog_backup.spreadlog',
-          sizeBytes: int.tryParse(f.size ?? '0') ?? 0,
-          createdTime: f.createdTime,
-          modifiedTime: f.modifiedTime,
+        final query = "'$folderId' in parents and trashed = false";
+        final result = await api.files.list(
+          q: query,
+          spaces: 'drive',
+          $fields: 'files(id, name, size, createdTime, modifiedTime)',
+          orderBy: 'createdTime desc',
         );
-      }).toList();
+
+        final files = result.files ?? [];
+        return files.map((f) {
+          return GoogleDriveBackupItem(
+            id: f.id ?? '',
+            name: f.name ?? 'spreadlog_backup.spreadlog',
+            sizeBytes: int.tryParse(f.size ?? '0') ?? 0,
+            createdTime: f.createdTime,
+            modifiedTime: f.modifiedTime,
+          );
+        }).toList();
+      });
     } catch (e) {
+      if (e is BackupAuthorizationException) rethrow;
       debugPrint('Failed to list Google Drive backups: $e');
-      throw BackupTransportException('Failed to list backups from Google Drive: $e', e);
+      throw BackupTransportException(
+        'Failed to list backups from Google Drive: $e',
+        e,
+      );
     }
   }
 
   /// Downloads the encrypted bytes of a specific backup from Google Drive.
   Future<Uint8List> downloadBackup(String fileId) async {
     try {
-      final api = await _getDriveApi();
-      final media = await api.files.get(
-        fileId,
-        downloadOptions: drive.DownloadOptions.fullMedia,
-      ) as drive.Media;
+      return await _withDriveApi((api) async {
+        final media = await api.files.get(
+          fileId,
+          downloadOptions: drive.DownloadOptions.fullMedia,
+        ) as drive.Media;
 
-      final bytes = <int>[];
-      await for (final chunk in media.stream) {
-        bytes.addAll(chunk);
-      }
-      return Uint8List.fromList(bytes);
+        final bytes = <int>[];
+        await for (final chunk in media.stream) {
+          bytes.addAll(chunk);
+        }
+        return Uint8List.fromList(bytes);
+      });
     } catch (e) {
+      if (e is BackupAuthorizationException) rethrow;
       debugPrint('Failed to download Google Drive backup: $e');
-      throw BackupTransportException('Failed to download backup from Google Drive: $e', e);
+      throw BackupTransportException(
+        'Failed to download backup from Google Drive: $e',
+        e,
+      );
     }
   }
 
   /// Deletes a specific backup from Google Drive.
   Future<void> deleteBackup(String fileId) async {
     try {
-      final api = await _getDriveApi();
-      await api.files.delete(fileId);
+      return await _withDriveApi((api) async {
+        await api.files.delete(fileId);
+      });
     } catch (e) {
+      if (e is BackupAuthorizationException) rethrow;
       debugPrint('Failed to delete Google Drive backup: $e');
-      throw BackupTransportException('Failed to delete backup from Google Drive: $e', e);
+      throw BackupTransportException(
+        'Failed to delete backup from Google Drive: $e',
+        e,
+      );
     }
   }
 }

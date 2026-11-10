@@ -38,3 +38,8 @@ class UnsupportedBackupVersionException extends BackupException {
 class BackupTransportException extends BackupException {
   const BackupTransportException(super.message, [super.cause]);
 }
+
+class BackupAuthorizationException extends BackupTransportException {
+  const BackupAuthorizationException()
+    : super('Reconnect Google Drive to resume backups.');
+}

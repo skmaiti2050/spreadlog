@@ -44,8 +44,10 @@ void main() {
         flightCount: 1,
         aircraftModelCount: 1,
         schemaVersion: source.schemaVersion,
+        pilotProfile: {'pilotName': 'Pilot', 'licenceNumber': '123'},
       );
       final unpacked = await archive.unpackAndValidateZip(bytes);
+      expect(unpacked.manifest.pilotProfile?['pilotName'], 'Pilot');
       await BackupService(db: target).restorePortableSnapshot(unpacked);
       final restored = (await FlightsRepository(
         target.flightsDao,
