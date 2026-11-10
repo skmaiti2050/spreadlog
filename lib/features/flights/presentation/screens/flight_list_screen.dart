@@ -1,3 +1,5 @@
+import '../../../aircraft/domain/aircraft_model.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,11 @@ import '../../../profile/presentation/widgets/edit_profile_dialog.dart';
 import '../../../reports/presentation/widgets/print_reminder_banner.dart';
 import '../../../../core/widgets/storage_warning_banner.dart';
 import '../../domain/flight.dart';
+import '../../domain/flight_filter.dart';
+import '../../domain/ledger_calculator.dart';
+import '../../../aircraft/presentation/providers/aircraft_providers.dart';
+import '../../../reports/presentation/summary_slip_preview_screen.dart';
+import '../widgets/flight_filter_dialog.dart';
 import '../providers/flights_providers.dart';
 import '../widgets/flight_details_dialog.dart';
 import '../widgets/log_flight_dialog.dart';
@@ -25,6 +32,14 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
   bool _isSelectionMode = false;
   final Set<String> _selectedFlightIds = {};
   String _searchFilter = '';
+  FlightFilter _filter = const FlightFilter();
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<void> _openEditFlightDialog(Flight flight) async {
     try {
@@ -201,23 +216,23 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
   @override
   Widget build(BuildContext context) {
     final flightsAsync = ref.watch(flightsStreamProvider);
-    final totals = ref.watch(grandTotalsProvider);
+    final models = <String, AircraftModel>{
+      for (final model
+          in ref.watch(allAircraftModelsProvider).value ??
+              const <AircraftModel>[])
+        model.id: model,
+    };
+    final activeFilter = _filter.withQuery(_searchFilter);
+    final visibleFlights = activeFilter.apply(
+      flightsAsync.value ?? <Flight>[],
+      models: models,
+    );
+    final totals = const LedgerCalculator().calculateTotals(visibleFlights);
     final profile = ref.watch(pilotProfileProvider);
     final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
     final isUltraNarrow = screenWidth < 380;
 
-    final visibleFlights = (flightsAsync.value ?? <Flight>[])
-        .where(
-          (f) =>
-              _searchFilter.isEmpty ||
-              f.registration.toLowerCase().contains(_searchFilter) ||
-              (f.aircraftModelId?.toLowerCase().contains(_searchFilter) ??
-                  false) ||
-              f.remarks.toLowerCase().contains(_searchFilter) ||
-              f.picName.toLowerCase().contains(_searchFilter),
-        )
-        .toList();
     final visibleIds = visibleFlights.map((f) => f.id).toSet();
     // Reconcile local selection whenever the stream or search changes.
     _selectedFlightIds.retainAll(visibleIds);
@@ -326,7 +341,9 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'TOTAL FLIGHT TIME',
+                        activeFilter.isFiltered
+                            ? 'FILTERED FLIGHT TIME'
+                            : 'TOTAL FLIGHT TIME',
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: theme.colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w600,
@@ -439,6 +456,7 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: TextField(
+                controller: _searchController,
                 decoration: InputDecoration(
                   hintText:
                       'Search by registration, aircraft type, or remarks...',
@@ -451,7 +469,10 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
                       ? IconButton(
                           tooltip: 'Clear search',
                           icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () => setState(() => _searchFilter = ''),
+                          onPressed: () => setState(() {
+                            _searchFilter = '';
+                            _searchController.clear();
+                          }),
                         )
                       : null,
                 ),
@@ -460,6 +481,53 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
               ),
             ),
 
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Wrap(
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.filter_list),
+                    label: Text(
+                      activeFilter.isFiltered
+                          ? 'Filters active'
+                          : 'Filter & sort',
+                    ),
+                    onPressed: () async {
+                      final result = await FlightFilterDialog.show(
+                        context,
+                        initial: activeFilter,
+                        flights: flightsAsync.value ?? [],
+                      );
+                      if (result != null && mounted) {
+                        setState(() {
+                          _filter = result;
+                          _searchFilter = result.query;
+                          _searchController.text = result.query;
+                        });
+                      }
+                    },
+                  ),
+                  TextButton.icon(
+                    icon: const Icon(Icons.summarize_outlined),
+                    label: const Text('Summary for selection'),
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute<void>(
+                        builder: (_) => SummarySlipPreviewScreen(
+                          initialFilter: activeFilter,
+                          typeSummaries: const [],
+                          grandTotals: totals,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '${visibleFlights.length} flights · ${activeFilter.periodLabel}',
+                  ),
+                ],
+              ),
+            ),
             // Flight list
             Expanded(
               child: flightsAsync.when(

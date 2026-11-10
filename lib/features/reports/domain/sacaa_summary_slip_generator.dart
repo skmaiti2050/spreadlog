@@ -19,6 +19,7 @@ class SacaaSummarySlipPdfGenerator {
     required String pilotName,
     required String licenceNumber,
     required DateTime date,
+    String? selectionLabel,
   }) async {
     final doc = pw.Document(
       title: 'SACAA Career Logbook Summary - $pilotName',
@@ -47,6 +48,8 @@ class SacaaSummarySlipPdfGenerator {
                 'Print on standard A4 and cut along dashed border to insert into physical logbook',
                 style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
               ),
+              if (selectionLabel != null)
+                pw.Text('Period: $selectionLabel', style: const pw.TextStyle(fontSize: 9)),
               pw.SizedBox(height: 16),
 
               // The physical cut-out summary slip

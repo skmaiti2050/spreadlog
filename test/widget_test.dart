@@ -1,3 +1,5 @@
+import 'package:aviation_logbook/features/aircraft/domain/aircraft_model.dart';
+import 'package:aviation_logbook/features/aircraft/presentation/providers/aircraft_providers.dart';
 import 'package:aviation_logbook/app/app.dart';
 import 'package:aviation_logbook/features/flights/domain/flight.dart';
 import 'package:aviation_logbook/features/flights/presentation/providers/flights_providers.dart';
@@ -26,6 +28,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          allAircraftModelsProvider.overrideWith(
+            (ref) => Stream<List<AircraftModel>>.value([]),
+          ),
           flightsStreamProvider.overrideWith(
             (ref) => Stream<List<Flight>>.value([]),
           ),
@@ -69,6 +74,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          allAircraftModelsProvider.overrideWith(
+            (ref) => Stream<List<AircraftModel>>.value([]),
+          ),
           flightsStreamProvider.overrideWith(
             (ref) => Stream<List<Flight>>.value([]),
           ),
