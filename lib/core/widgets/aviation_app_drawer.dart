@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/backups/presentation/screens/backup_restore_screen.dart';
+import '../../features/app_lock/presentation/app_lock_controller.dart';
+import '../../features/app_lock/presentation/app_lock_settings_screen.dart';
 import '../../features/flights/presentation/providers/flights_providers.dart';
 import '../../features/profile/presentation/providers/profile_providers.dart';
 import '../../features/profile/presentation/widgets/edit_profile_dialog.dart';
@@ -237,6 +239,22 @@ class AviationAppDrawer extends ConsumerWidget {
                       ref.read(aviationThemeProvider.notifier).cycleNext();
                     },
                   ),
+                  if (ref.watch(appLockSupportedProvider))
+                    _buildDrawerTile(
+                      context: context,
+                      icon: Icons.lock_outline,
+                      label: 'App lock',
+                      subtitle: 'Device authentication',
+                      isSelected: false,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const AppLockSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),

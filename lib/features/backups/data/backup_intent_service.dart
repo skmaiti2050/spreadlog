@@ -1,15 +1,46 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Service managing OS intent requests when the user taps or opens a .spbackup or .spreadlog file.
 class BackupIntentService {
-  static const MethodChannel _channel = MethodChannel('com.spreadlog.app/backup_intent');
+  static const MethodChannel _channel = MethodChannel(
+    'com.spreadlog.app/backup_intent',
+  );
 
-  static final StreamController<String> _fileController = StreamController<String>.broadcast();
+  static final StreamController<String> _fileController =
+      StreamController<String>.broadcast();
 
   static bool _initialized = false;
+  static bool _deliveryPaused = false;
+  static final _queued = <String?>[];
+  static void Function(String)? _onFileReceived;
+  static void Function()? _onInvalidFile;
+
+  static void setDeliveryPaused(bool paused) {
+    _deliveryPaused = paused;
+    if (paused) return;
+    final queued = List<String?>.of(_queued);
+    _queued.clear();
+    for (final path in queued) {
+      _deliver(path);
+    }
+  }
+
+  static void _deliver(String? path) {
+    if (_deliveryPaused) {
+      _queued.add(path);
+      return;
+    }
+    if (path == null) {
+      _onInvalidFile?.call();
+    } else {
+      _fileController.add(path);
+      _onFileReceived?.call(path);
+    }
+  }
 
   /// Stream of file paths received while the application is active or resumed.
   static Stream<String> get onBackupFileReceived => _fileController.stream;
@@ -24,16 +55,17 @@ class BackupIntentService {
   }) {
     if (kIsWeb || _initialized) return;
     _initialized = true;
+    _onFileReceived = onFileReceived;
+    _onInvalidFile = onInvalidFile;
 
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'onInvalidFileReceived') {
-        onInvalidFile?.call();
+        _deliver(null);
       } else if (call.method == 'onBackupFileReceived') {
         final filePath = call.arguments as String?;
         if (filePath != null && filePath.isNotEmpty) {
           debugPrint('BackupIntentService: Incoming backup file: $filePath');
-          _fileController.add(filePath);
-          onFileReceived?.call(filePath);
+          _deliver(filePath);
         }
       }
     });

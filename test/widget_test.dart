@@ -1,3 +1,4 @@
+import 'package:aviation_logbook/features/app_lock/presentation/app_lock_controller.dart';
 import 'package:aviation_logbook/features/aircraft/domain/aircraft_model.dart';
 import 'package:aviation_logbook/features/aircraft/presentation/providers/aircraft_providers.dart';
 import 'package:aviation_logbook/app/app.dart';
@@ -28,6 +29,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appLockSupportedProvider.overrideWithValue(false),
           allAircraftModelsProvider.overrideWith(
             (ref) => Stream<List<AircraftModel>>.value([]),
           ),
@@ -74,6 +76,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appLockSupportedProvider.overrideWithValue(false),
           allAircraftModelsProvider.overrideWith(
             (ref) => Stream<List<AircraftModel>>.value([]),
           ),

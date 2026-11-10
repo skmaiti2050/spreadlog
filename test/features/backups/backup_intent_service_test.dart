@@ -10,7 +10,9 @@ void main() {
   group('BackupIntentService Tests', () {
     test('getFileName extracts name from Unix and Windows path strings', () {
       expect(
-        BackupIntentService.getFileName('/storage/emulated/0/Download/flight_backup.spbackup'),
+        BackupIntentService.getFileName(
+          '/storage/emulated/0/Download/flight_backup.spbackup',
+        ),
         equals('flight_backup.spbackup'),
       );
       expect(
@@ -22,34 +24,75 @@ void main() {
     test('getPendingBackupPath queries channel and returns path', () async {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
-        if (call.method == 'getPendingBackupPath') {
-          return '/data/user/0/com.spreadlog.app/cache/test.spbackup';
-        }
-        return null;
-      });
+            if (call.method == 'getPendingBackupPath') {
+              return '/data/user/0/com.spreadlog.app/cache/test.spbackup';
+            }
+            return null;
+          });
 
       final path = await BackupIntentService.getPendingBackupPath();
-      expect(path, equals('/data/user/0/com.spreadlog.app/cache/test.spbackup'));
-    });
-
-    test('onBackupFileReceived receives path emitted by method channel', () async {
-      String? callbackPath;
-      BackupIntentService.initialize(onFileReceived: (p) => callbackPath = p);
-
-      final futureEmission = BackupIntentService.onBackupFileReceived.first;
-
-      // Simulate native platform sending an incoming file intent
-      const codec = StandardMethodCodec();
-      final byteData = codec.encodeMethodCall(
-        const MethodCall('onBackupFileReceived', '/data/user/0/cache/warm_start.spbackup'),
+      expect(
+        path,
+        equals('/data/user/0/com.spreadlog.app/cache/test.spbackup'),
       );
-
-      await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .handlePlatformMessage('com.spreadlog.app/backup_intent', byteData, (_) {});
-
-      final receivedPath = await futureEmission;
-      expect(receivedPath, equals('/data/user/0/cache/warm_start.spbackup'));
-      expect(callbackPath, equals('/data/user/0/cache/warm_start.spbackup'));
     });
+
+    test(
+      'onBackupFileReceived receives path emitted by method channel',
+      () async {
+        String? callbackPath;
+        BackupIntentService.initialize(onFileReceived: (p) => callbackPath = p);
+
+        final futureEmission = BackupIntentService.onBackupFileReceived.first;
+
+        // Simulate native platform sending an incoming file intent
+        const codec = StandardMethodCodec();
+        final byteData = codec.encodeMethodCall(
+          const MethodCall(
+            'onBackupFileReceived',
+            '/data/user/0/cache/warm_start.spbackup',
+          ),
+        );
+
+        await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .handlePlatformMessage(
+              'com.spreadlog.app/backup_intent',
+              byteData,
+              (_) {},
+            );
+
+        final receivedPath = await futureEmission;
+        expect(receivedPath, equals('/data/user/0/cache/warm_start.spbackup'));
+        expect(callbackPath, equals('/data/user/0/cache/warm_start.spbackup'));
+      },
+    );
+    test(
+      'incoming files are withheld until the app lock releases delivery',
+      () async {
+        final received = <String>[];
+        final subscription = BackupIntentService.onBackupFileReceived.listen(
+          received.add,
+        );
+        addTearDown(subscription.cancel);
+        BackupIntentService.setDeliveryPaused(true);
+        const codec = StandardMethodCodec();
+        await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .handlePlatformMessage(
+              'com.spreadlog.app/backup_intent',
+              codec.encodeMethodCall(
+                const MethodCall('onBackupFileReceived', '/queued.spbackup'),
+              ),
+              (_) {},
+            );
+        await Future<void>.delayed(Duration.zero);
+        expect(received, isEmpty);
+        BackupIntentService.setDeliveryPaused(false);
+        await Future<void>.delayed(Duration.zero);
+        expect(received, ['/queued.spbackup']);
+        BackupIntentService.setDeliveryPaused(false);
+        await Future<void>.delayed(Duration.zero);
+        expect(received, hasLength(1));
+      },
+    );
   });
 }
