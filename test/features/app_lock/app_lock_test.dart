@@ -45,6 +45,12 @@ class FakeStore implements AppLockSettingsStore {
   }
 }
 
+class PendingStore extends FakeStore {
+  final loaded = Completer<AppLockSettings>();
+  @override
+  Future<AppLockSettings> load() => loaded.future;
+}
+
 void main() {
   final start = DateTime(2026, 11, 10);
   for (final delay in RelockDelay.values) {
@@ -180,6 +186,62 @@ void main() {
       expect(auth.calls, 0);
     },
   );
+  test(
+    'successful settings authentication waits for the resumed lifecycle',
+    () async {
+      final auth = FakeAuthenticator()..pending = Completer();
+      final store = FakeStore(const AppLockSettings());
+      final lock = AppLockController(
+        supported: true,
+        authenticator: auth,
+        store: store,
+      );
+      addTearDown(lock.dispose);
+      await lock.initialize();
+      expect(auth.calls, 0);
+      expect(lock.policy.settings.enabled, isFalse);
+      final change = lock.changeSettings(const AppLockSettings(enabled: true));
+      lock.inactive();
+      auth.pending!.complete(AuthenticationResult.success);
+      await Future<void>.delayed(Duration.zero);
+      expect(store.settings.enabled, isFalse);
+      expect(lock.busy, isTrue);
+      lock.resumed();
+      await change;
+      expect(store.settings.enabled, isTrue);
+      expect(auth.calls, 1);
+    },
+  );
+
+  testWidgets(
+    'fresh startup shows no authentication UI or prompt while loading',
+    (tester) async {
+      final auth = FakeAuthenticator();
+      final store = PendingStore();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appLockSupportedProvider.overrideWithValue(true),
+            deviceAuthenticatorProvider.overrideWithValue(auth),
+            appLockSettingsStoreProvider.overrideWithValue(store),
+          ],
+          child: const MaterialApp(
+            home: AppLockGate(child: Scaffold(body: Text('Logbook'))),
+          ),
+        ),
+      );
+      expect(find.text('Opening Spreadlog…'), findsOneWidget);
+      expect(find.textContaining('fingerprint'), findsNothing);
+      expect(find.text('Authenticating…'), findsNothing);
+      expect(auth.calls, 0);
+      store.loaded.complete(const AppLockSettings());
+      await tester.pumpAndSettle();
+      expect(find.text('Logbook'), findsOneWidget);
+      expect(auth.calls, 0);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   testWidgets('gate hides startup content and preserves input through relock', (
     tester,
   ) async {

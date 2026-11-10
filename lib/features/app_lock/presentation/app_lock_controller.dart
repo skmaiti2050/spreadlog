@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -39,6 +41,7 @@ class AppLockController extends ChangeNotifier {
   bool ready = false;
   bool busy = false;
   bool _foreground = true;
+  Completer<void>? _foregroundWaiter;
   bool _disposed = false;
   String message = '';
   bool get covered =>
@@ -72,11 +75,13 @@ class AppLockController extends ChangeNotifier {
 
   void inactive() {
     _foreground = false;
+    _foregroundWaiter ??= Completer<void>();
     _emit();
   }
 
   void background() {
     _foreground = false;
+    _foregroundWaiter ??= Completer<void>();
     // Native authentication may launch the device credential Activity. Its
     // lifecycle must not recursively lock or restart the authentication.
     if (!busy) policy.background(now());
@@ -85,6 +90,8 @@ class AppLockController extends ChangeNotifier {
 
   void resumed() {
     _foreground = true;
+    _foregroundWaiter?.complete();
+    _foregroundWaiter = null;
     if (!busy) policy.resume(now());
     _emit();
   }
@@ -99,7 +106,11 @@ class AppLockController extends ChangeNotifier {
       AuthenticationResult.lockedOut => 'Device authentication is locked. Unlock your device with its PIN or password, then try again.',
       AuthenticationResult.failed => 'Device authentication failed. Try again.',
     };
-    return result == AuthenticationResult.success && _foreground;
+    if (result != AuthenticationResult.success) return false;
+    // Android may complete authentication before delivering resumed. Retain
+    // the verified result, but keep content covered until the app is visible.
+    if (!_foreground) await _foregroundWaiter!.future;
+    return !_disposed && _foreground;
   }
 
   Future<void> unlock() async {
@@ -150,6 +161,8 @@ class AppLockController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _foregroundWaiter?.complete();
+    _foregroundWaiter = null;
     super.dispose();
   }
 }

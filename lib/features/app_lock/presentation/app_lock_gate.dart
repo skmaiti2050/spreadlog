@@ -64,6 +64,11 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
   @override
   Widget build(BuildContext context) {
     final covered = _lock.covered;
+    if (!_lock.ready && _lock.message.isEmpty) {
+      return const Scaffold(
+        body: SafeArea(child: Center(child: Text('Opening Spreadlog…'))),
+      );
+    }
     return Stack(
       fit: StackFit.expand,
       children: [
