@@ -12,12 +12,15 @@ class FlightsTable extends Table {
   TextColumn get remarks => text().withDefault(const Constant(''))();
   BoolColumn get soloCrossCountry =>
       boolean().withDefault(const Constant(false))();
-  IntColumn get fstdActualMinutes =>
-      integer().withDefault(const Constant(0))();
+  IntColumn get fstdActualMinutes => integer().withDefault(const Constant(0))();
+  IntColumn get hobbsStartTenths => integer().nullable()();
+  IntColumn get hobbsEndTenths => integer().nullable()();
+  TextColumn get durationSource => text().withDefault(const Constant('hhMm'))();
+  TextColumn get durationAdjustmentReason =>
+      text().withDefault(const Constant(''))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override
   Set<Column> get primaryKey => {id};
 }
-

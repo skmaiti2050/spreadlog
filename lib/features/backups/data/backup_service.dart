@@ -80,7 +80,7 @@ class BackupService {
     final List<ArchiveFileItem> documentFiles;
 
     if (kIsWeb) {
-      dbBytes = await _createWebDatabaseSnapshot();
+      dbBytes = await createPortableDatabaseSnapshot();
       documentFiles = await _collectWebDocumentFiles();
     } else {
       final docsDir = await getApplicationDocumentsDirectory();
@@ -171,7 +171,7 @@ class BackupService {
 
     // 2. Web Restoration
     if (kIsWeb) {
-      await _restoreWeb(extracted);
+      await restorePortableSnapshot(extracted);
       return extracted.manifest;
     }
 
@@ -312,7 +312,7 @@ class BackupService {
   }
 
   // --- WEB RESTORATION ENGINE ---
-  Future<void> _restoreWeb(ExtractedBackup extracted) async {
+  Future<void> restorePortableSnapshot(ExtractedBackup extracted) async {
     final sqlite = await getPlatformSqliteLoader().load();
     final fs = InMemoryFileSystem(
       name: 'mem_restore_${DateTime.now().microsecondsSinceEpoch}',
@@ -437,6 +437,14 @@ class BackupService {
                   id: Value(row['id'] as String),
                   date: Value(_parseDateTime(row['date'])),
                   aircraftModelId: Value(row['aircraft_model_id'] as String?),
+                  hobbsStartTenths: Value(row['hobbs_start_tenths'] as int?),
+                  hobbsEndTenths: Value(row['hobbs_end_tenths'] as int?),
+                  durationSource: Value(
+                    (row['duration_source'] as String?) ?? 'hhMm',
+                  ),
+                  durationAdjustmentReason: Value(
+                    (row['duration_adjustment_reason'] as String?) ?? '',
+                  ),
                   registration: Value(row['registration'] as String),
                   picName: Value(row['pic_name'] as String),
                   remarks: Value((row['remarks'] as String?) ?? ''),
@@ -584,7 +592,10 @@ class BackupService {
   }
 
   // --- WEB DATABASE EXPORT ENGINE ---
-  Future<Uint8List> _createWebDatabaseSnapshot() async {
+  Future<Uint8List> createPortableDatabaseSnapshot() =>
+      db.transaction(_createPortableDatabaseSnapshot);
+
+  Future<Uint8List> _createPortableDatabaseSnapshot() async {
     final sqlite = await getPlatformSqliteLoader().load();
     final fs = InMemoryFileSystem(
       name: 'mem_export_${DateTime.now().microsecondsSinceEpoch}',
@@ -612,7 +623,11 @@ class BackupService {
           solo_cross_country INTEGER NOT NULL DEFAULT 0,
           fstd_actual_minutes INTEGER NOT NULL DEFAULT 0,
           created_at INTEGER NOT NULL,
-          updated_at INTEGER NOT NULL
+          updated_at INTEGER NOT NULL,
+          hobbs_start_tenths INTEGER,
+          hobbs_end_tenths INTEGER,
+          duration_source TEXT NOT NULL DEFAULT 'hhMm',
+          duration_adjustment_reason TEXT NOT NULL DEFAULT ''
         );
         CREATE TABLE flight_times_table (
           id TEXT NOT NULL PRIMARY KEY,
@@ -704,7 +719,7 @@ class BackupService {
       final flights = await db.select(db.flightsTable).get();
       for (final f in flights) {
         exportDb.execute(
-          'INSERT INTO flights_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          'INSERT INTO flights_table VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
           [
             f.id,
             f.date.millisecondsSinceEpoch ~/ 1000,
@@ -716,6 +731,10 @@ class BackupService {
             f.fstdActualMinutes,
             f.createdAt.millisecondsSinceEpoch ~/ 1000,
             f.updatedAt.millisecondsSinceEpoch ~/ 1000,
+            f.hobbsStartTenths,
+            f.hobbsEndTenths,
+            f.durationSource,
+            f.durationAdjustmentReason,
           ],
         );
       }

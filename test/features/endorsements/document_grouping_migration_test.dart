@@ -29,6 +29,14 @@ void main() {
     await db.customStatement(
       'ALTER TABLE endorsement_documents_table DROP COLUMN pages_json',
     );
+    for (final column in [
+      'hobbs_start_tenths',
+      'hobbs_end_tenths',
+      'duration_source',
+      'duration_adjustment_reason',
+    ]) {
+      await db.customStatement('ALTER TABLE flights_table DROP COLUMN $column');
+    }
     await db.customStatement('PRAGMA user_version = 4');
     await db.close();
     db = AppDatabase(NativeDatabase(file));

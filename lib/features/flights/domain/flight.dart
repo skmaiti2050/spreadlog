@@ -1,3 +1,4 @@
+import '../../aircraft/domain/aircraft_model.dart';
 import 'flight_time.dart';
 import 'instruction_time.dart';
 import 'instrument_time.dart';
@@ -8,11 +9,16 @@ class Flight {
   final String id;
   final DateTime date;
   final String? aircraftModelId;
+  final AircraftCategory aircraftCategory;
   final String registration;
   final String picName;
   final String remarks;
   final bool soloCrossCountry;
   final int fstdActualMinutes;
+  final int? hobbsStartTenths;
+  final int? hobbsEndTenths;
+  final String durationSource;
+  final String durationAdjustmentReason;
   final List<FlightTime> flightTimes;
   final InstrumentTime? instrumentTime;
   final List<InstructionTime> instructionTimes;
@@ -24,11 +30,16 @@ class Flight {
     required this.id,
     required this.date,
     this.aircraftModelId,
+    this.aircraftCategory = AircraftCategory.aeroplane,
     required this.registration,
     required this.picName,
     this.remarks = '',
     this.soloCrossCountry = false,
     this.fstdActualMinutes = 0,
+    this.hobbsStartTenths,
+    this.hobbsEndTenths,
+    this.durationSource = 'hhMm',
+    this.durationAdjustmentReason = '',
     this.flightTimes = const [],
     this.instrumentTime,
     this.instructionTimes = const [],
@@ -40,7 +51,10 @@ class Flight {
   /// Total operational flight duration for this flight in integer minutes.
   /// Matches SACAA Appendix A total flight time: FSTD actual (Col 13) + Col 14..29.
   int get totalDurationMinutes {
-    final flightTimeSum = flightTimes.fold<int>(0, (sum, ft) => sum + ft.durationMinutes);
+    final flightTimeSum = flightTimes.fold<int>(
+      0,
+      (sum, ft) => sum + ft.durationMinutes,
+    );
     return fstdActualMinutes + flightTimeSum;
   }
 
@@ -51,11 +65,16 @@ class Flight {
     String? id,
     DateTime? date,
     String? aircraftModelId,
+    AircraftCategory? aircraftCategory,
     String? registration,
     String? picName,
     String? remarks,
     bool? soloCrossCountry,
     int? fstdActualMinutes,
+    int? hobbsStartTenths,
+    int? hobbsEndTenths,
+    String? durationSource,
+    String? durationAdjustmentReason,
     List<FlightTime>? flightTimes,
     InstrumentTime? instrumentTime,
     List<InstructionTime>? instructionTimes,
@@ -67,11 +86,17 @@ class Flight {
       id: id ?? this.id,
       date: date ?? this.date,
       aircraftModelId: aircraftModelId ?? this.aircraftModelId,
+      aircraftCategory: aircraftCategory ?? this.aircraftCategory,
       registration: registration ?? this.registration,
       picName: picName ?? this.picName,
       remarks: remarks ?? this.remarks,
       soloCrossCountry: soloCrossCountry ?? this.soloCrossCountry,
       fstdActualMinutes: fstdActualMinutes ?? this.fstdActualMinutes,
+      hobbsStartTenths: hobbsStartTenths ?? this.hobbsStartTenths,
+      hobbsEndTenths: hobbsEndTenths ?? this.hobbsEndTenths,
+      durationSource: durationSource ?? this.durationSource,
+      durationAdjustmentReason:
+          durationAdjustmentReason ?? this.durationAdjustmentReason,
       flightTimes: flightTimes ?? this.flightTimes,
       instrumentTime: instrumentTime ?? this.instrumentTime,
       instructionTimes: instructionTimes ?? this.instructionTimes,
@@ -93,4 +118,3 @@ class Flight {
   String toString() =>
       'Flight(id: $id, date: $date, reg: $registration, total: ${totalDurationMinutes}m)';
 }
-

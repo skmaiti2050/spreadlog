@@ -10,52 +10,65 @@ import '../tables/landings_table.dart';
 
 part 'flights_dao.g.dart';
 
-@DriftAccessor(tables: [
-  FlightsTable,
-  FlightTimesTable,
-  InstrumentTimesTable,
-  InstructionTimesTable,
-  LandingsTable,
-  AircraftModelsTable,
-])
+@DriftAccessor(
+  tables: [
+    FlightsTable,
+    FlightTimesTable,
+    InstrumentTimesTable,
+    InstructionTimesTable,
+    LandingsTable,
+    AircraftModelsTable,
+  ],
+)
 class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
   FlightsDao(super.db);
 
   /// Selects all flights ordered by date descending (newest first).
   Future<List<FlightsTableData>> getAllFlights() {
-    return (select(flightsTable)..orderBy([(t) => OrderingTerm.desc(t.date)])).get();
+    return (select(
+      flightsTable,
+    )..orderBy([(t) => OrderingTerm.desc(t.date)])).get();
   }
 
   /// Watches all flights ordered by date descending.
   Stream<List<FlightsTableData>> watchAllFlights() {
-    return (select(flightsTable)..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
+    return (select(
+      flightsTable,
+    )..orderBy([(t) => OrderingTerm.desc(t.date)])).watch();
   }
 
   /// Gets flight times for a flight.
   Future<List<FlightTimesTableData>> getFlightTimes(String flightId) {
-    return (select(flightTimesTable)..where((t) => t.flightId.equals(flightId))).get();
+    return (select(
+      flightTimesTable,
+    )..where((t) => t.flightId.equals(flightId))).get();
   }
 
   /// Gets instrument time entry for a flight.
   Future<InstrumentTimesTableData?> getInstrumentTime(String flightId) {
-    return (select(instrumentTimesTable)..where((t) => t.flightId.equals(flightId)))
-        .getSingleOrNull();
+    return (select(
+      instrumentTimesTable,
+    )..where((t) => t.flightId.equals(flightId))).getSingleOrNull();
   }
 
   /// Gets instruction times for a flight.
   Future<List<InstructionTimesTableData>> getInstructionTimes(String flightId) {
-    return (select(instructionTimesTable)..where((t) => t.flightId.equals(flightId))).get();
+    return (select(
+      instructionTimesTable,
+    )..where((t) => t.flightId.equals(flightId))).get();
   }
 
   /// Gets landings for a flight.
   Future<LandingsTableData?> getLandings(String flightId) {
-    return (select(landingsTable)..where((t) => t.flightId.equals(flightId)))
-        .getSingleOrNull();
+    return (select(
+      landingsTable,
+    )..where((t) => t.flightId.equals(flightId))).getSingleOrNull();
   }
 
   /// Inserts a flight along with all related sub-entries in a transaction.
   Future<void> insertCompleteFlight({
     required FlightsTableCompanion flight,
+    int? aircraftCategory,
     required List<FlightTimesTableCompanion> flightTimes,
     InstrumentTimesTableCompanion? instrumentTime,
     List<InstructionTimesTableCompanion> instructionTimes = const [],
@@ -63,11 +76,23 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
   }) {
     return transaction(() async {
       // Ensure foreign key constraint is satisfied if aircraftModelId is provided
-      if (flight.aircraftModelId.present && flight.aircraftModelId.value != null) {
+      if (flight.aircraftModelId.present &&
+          flight.aircraftModelId.value != null) {
         final modelId = flight.aircraftModelId.value!.trim();
         if (modelId.isNotEmpty) {
-          final acClass = flightTimes.isNotEmpty ? flightTimes.first.aircraftClass.value : 0;
-          await ensureAircraftModelExists(modelId: modelId, aircraftClass: acClass);
+          final acClass = flightTimes.isNotEmpty
+              ? flightTimes.first.aircraftClass.value
+              : 0;
+          await ensureAircraftModelExists(
+            modelId: modelId,
+            aircraftClass: acClass,
+            category:
+                aircraftCategory ??
+                (flight.fstdActualMinutes.present &&
+                        flight.fstdActualMinutes.value > 0
+                    ? 2
+                    : 0),
+          );
         }
       }
 
@@ -89,12 +114,15 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
 
   /// Gets a single flight by ID.
   Future<FlightsTableData?> getFlight(String flightId) {
-    return (select(flightsTable)..where((t) => t.id.equals(flightId))).getSingleOrNull();
+    return (select(
+      flightsTable,
+    )..where((t) => t.id.equals(flightId))).getSingleOrNull();
   }
 
   /// Updates an existing flight and all its related child entries atomically.
   Future<void> updateCompleteFlight({
     required FlightsTableCompanion flight,
+    int? aircraftCategory,
     required List<FlightTimesTableCompanion> flightTimes,
     InstrumentTimesTableCompanion? instrumentTime,
     List<InstructionTimesTableCompanion> instructionTimes = const [],
@@ -102,23 +130,45 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
   }) {
     return transaction(() async {
       // Ensure foreign key constraint is satisfied if aircraftModelId is provided
-      if (flight.aircraftModelId.present && flight.aircraftModelId.value != null) {
+      if (flight.aircraftModelId.present &&
+          flight.aircraftModelId.value != null) {
         final modelId = flight.aircraftModelId.value!.trim();
         if (modelId.isNotEmpty) {
-          final acClass = flightTimes.isNotEmpty ? flightTimes.first.aircraftClass.value : 0;
-          await ensureAircraftModelExists(modelId: modelId, aircraftClass: acClass);
+          final acClass = flightTimes.isNotEmpty
+              ? flightTimes.first.aircraftClass.value
+              : 0;
+          await ensureAircraftModelExists(
+            modelId: modelId,
+            aircraftClass: acClass,
+            category:
+                aircraftCategory ??
+                (flight.fstdActualMinutes.present &&
+                        flight.fstdActualMinutes.value > 0
+                    ? 2
+                    : 0),
+          );
         }
       }
 
       // Update flight record
-      await (update(flightsTable)..where((t) => t.id.equals(flight.id.value))).write(flight);
+      await (update(
+        flightsTable,
+      )..where((t) => t.id.equals(flight.id.value))).write(flight);
 
       // Clean up previous child entries to prevent orphans
       final flightId = flight.id.value;
-      await (delete(flightTimesTable)..where((t) => t.flightId.equals(flightId))).go();
-      await (delete(instrumentTimesTable)..where((t) => t.flightId.equals(flightId))).go();
-      await (delete(instructionTimesTable)..where((t) => t.flightId.equals(flightId))).go();
-      await (delete(landingsTable)..where((t) => t.flightId.equals(flightId))).go();
+      await (delete(
+        flightTimesTable,
+      )..where((t) => t.flightId.equals(flightId))).go();
+      await (delete(
+        instrumentTimesTable,
+      )..where((t) => t.flightId.equals(flightId))).go();
+      await (delete(
+        instructionTimesTable,
+      )..where((t) => t.flightId.equals(flightId))).go();
+      await (delete(
+        landingsTable,
+      )..where((t) => t.flightId.equals(flightId))).go();
 
       // Insert new child entries
       for (final ft in flightTimes) {
@@ -163,7 +213,8 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
   }
 
   Future<void> insertAircraftModel(AircraftModelsTableCompanion model) {
-    return into(aircraftModelsTable).insert(model, mode: InsertMode.insertOrIgnore);
+    return into(aircraftModelsTable)
+        .insert(model, mode: InsertMode.insertOrIgnore);
   }
 
   /// Ensures an aircraft model exists in SQLite database so foreign key never fails.
@@ -176,7 +227,7 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
     await into(aircraftModelsTable).insert(
       AircraftModelsTableCompanion(
         id: Value(modelId),
-        manufacturer: Value(manufacturer ?? 'SACAA'),
+        manufacturer: Value(manufacturer ?? ''),
         model: Value(modelId),
         aircraftClass: Value(aircraftClass),
         category: Value(category),
@@ -186,4 +237,3 @@ class FlightsDao extends DatabaseAccessor<AppDatabase> with _$FlightsDaoMixin {
     );
   }
 }
-

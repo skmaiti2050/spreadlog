@@ -18,6 +18,9 @@ class FlightsRepository {
   Future<List<Flight>> getAllFlights() async {
     final flightRows = await _dao.getAllFlights();
     final flights = <Flight>[];
+    final models = {
+      for (final model in await _dao.getAllAircraftModels()) model.id: model,
+    };
 
     for (final row in flightRows) {
       final flightTimesRows = await _dao.getFlightTimes(row.id);
@@ -30,11 +33,17 @@ class FlightsRepository {
           id: row.id,
           date: row.date,
           aircraftModelId: row.aircraftModelId,
+          aircraftCategory: AircraftCategory
+              .values[models[row.aircraftModelId]?.category ?? 0],
           registration: row.registration,
           picName: row.picName,
           remarks: row.remarks,
           soloCrossCountry: row.soloCrossCountry,
           fstdActualMinutes: row.fstdActualMinutes,
+          hobbsStartTenths: row.hobbsStartTenths,
+          hobbsEndTenths: row.hobbsEndTenths,
+          durationSource: row.durationSource,
+          durationAdjustmentReason: row.durationAdjustmentReason,
           flightTimes: flightTimesRows.map((ft) {
             return FlightTime(
               id: ft.id,
@@ -80,6 +89,9 @@ class FlightsRepository {
   Stream<List<Flight>> watchAllFlights() {
     return _dao.watchAllFlights().asyncMap((rows) async {
       final flights = <Flight>[];
+      final models = {
+        for (final model in await _dao.getAllAircraftModels()) model.id: model,
+      };
       for (final row in rows) {
         final flightTimesRows = await _dao.getFlightTimes(row.id);
         final instrumentRow = await _dao.getInstrumentTime(row.id);
@@ -91,11 +103,17 @@ class FlightsRepository {
             id: row.id,
             date: row.date,
             aircraftModelId: row.aircraftModelId,
+            aircraftCategory: AircraftCategory
+                .values[models[row.aircraftModelId]?.category ?? 0],
             registration: row.registration,
             picName: row.picName,
             remarks: row.remarks,
             soloCrossCountry: row.soloCrossCountry,
             fstdActualMinutes: row.fstdActualMinutes,
+            hobbsStartTenths: row.hobbsStartTenths,
+            hobbsEndTenths: row.hobbsEndTenths,
+            durationSource: row.durationSource,
+            durationAdjustmentReason: row.durationAdjustmentReason,
             flightTimes: flightTimesRows.map((ft) {
               return FlightTime(
                 id: ft.id,
@@ -154,12 +172,18 @@ class FlightsRepository {
       remarks: Value(flight.remarks),
       soloCrossCountry: Value(flight.soloCrossCountry),
       fstdActualMinutes: Value(flight.fstdActualMinutes),
+      hobbsStartTenths: Value(flight.hobbsStartTenths),
+      hobbsEndTenths: Value(flight.hobbsEndTenths),
+      durationSource: Value(flight.durationSource),
+      durationAdjustmentReason: Value(flight.durationAdjustmentReason),
       createdAt: Value(flight.createdAt),
       updatedAt: Value(flight.updatedAt),
     );
 
     final flightTimeCompanions = flight.flightTimes.map((ft) {
-      final ftId = ft.id ?? '${flight.id}_ft_${ft.aircraftClass.index}_${ft.period.index}_${ft.role.index}';
+      final ftId =
+          ft.id ??
+          '${flight.id}_ft_${ft.aircraftClass.index}_${ft.period.index}_${ft.role.index}';
       return FlightTimesTableCompanion(
         id: Value(ftId),
         flightId: Value(flight.id),
@@ -204,6 +228,9 @@ class FlightsRepository {
 
     await _dao.insertCompleteFlight(
       flight: flightCompanion,
+      aircraftCategory: flight.isFstd
+          ? AircraftCategory.fstd.index
+          : flight.aircraftCategory.index,
       flightTimes: flightTimeCompanions,
       instrumentTime: instrumentCompanion,
       instructionTimes: instructionCompanions,
@@ -222,12 +249,18 @@ class FlightsRepository {
       remarks: Value(flight.remarks),
       soloCrossCountry: Value(flight.soloCrossCountry),
       fstdActualMinutes: Value(flight.fstdActualMinutes),
+      hobbsStartTenths: Value(flight.hobbsStartTenths),
+      hobbsEndTenths: Value(flight.hobbsEndTenths),
+      durationSource: Value(flight.durationSource),
+      durationAdjustmentReason: Value(flight.durationAdjustmentReason),
       createdAt: Value(flight.createdAt),
       updatedAt: Value(DateTime.now()),
     );
 
     final flightTimeCompanions = flight.flightTimes.map((ft) {
-      final ftId = ft.id ?? '${flight.id}_ft_${ft.aircraftClass.index}_${ft.period.index}_${ft.role.index}';
+      final ftId =
+          ft.id ??
+          '${flight.id}_ft_${ft.aircraftClass.index}_${ft.period.index}_${ft.role.index}';
       return FlightTimesTableCompanion(
         id: Value(ftId),
         flightId: Value(flight.id),
@@ -272,6 +305,9 @@ class FlightsRepository {
 
     await _dao.updateCompleteFlight(
       flight: flightCompanion,
+      aircraftCategory: flight.isFstd
+          ? AircraftCategory.fstd.index
+          : flight.aircraftCategory.index,
       flightTimes: flightTimeCompanions,
       instrumentTime: instrumentCompanion,
       instructionTimes: instructionCompanions,
@@ -289,4 +325,3 @@ class FlightsRepository {
     return _dao.deleteFlights(flightIds);
   }
 }
-

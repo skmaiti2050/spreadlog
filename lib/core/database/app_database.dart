@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? conn.openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   Future<void> _createCorrectionHistory() => customStatement('''
     CREATE TABLE IF NOT EXISTS endorsement_corrections (
@@ -53,6 +53,15 @@ class AppDatabase extends _$AppDatabase {
         await _createCorrectionHistory();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 6) {
+          await m.addColumn(flightsTable, flightsTable.hobbsStartTenths);
+          await m.addColumn(flightsTable, flightsTable.hobbsEndTenths);
+          await m.addColumn(flightsTable, flightsTable.durationSource);
+          await m.addColumn(
+            flightsTable,
+            flightsTable.durationAdjustmentReason,
+          );
+        }
         if (from < 2) {
           await m.createTable(endorsementDocumentsTable);
         }

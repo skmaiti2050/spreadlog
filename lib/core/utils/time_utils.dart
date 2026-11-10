@@ -1,7 +1,4 @@
-enum TimeEntryFormat {
-  hhMm,
-  decimalTenths,
-}
+enum TimeEntryFormat { hhMm, decimalTenths }
 
 /// Aviation time format and conversion utilities.
 ///
@@ -34,8 +31,8 @@ class TimeUtils {
       final positiveFormatted = formatMinutesToDecimal(-minutes);
       return '-$positiveFormatted';
     }
-    final hours = minutes / 60.0;
-    return hours.toStringAsFixed(1);
+    final tenths = (minutes * 10 + 30) ~/ 60;
+    return '${tenths ~/ 10}.${tenths % 10}';
   }
 
   /// Parses an "HH:MM" or "H:MM" string into integer minutes.
@@ -60,16 +57,24 @@ class TimeUtils {
 
   /// Parses decimal hours (e.g. "1.3" or "1.5") into integer minutes.
   ///
-  /// Rounds to nearest integer minute: 1.3 hours = 78 minutes.
+  /// Accepts whole hours or a single decimal digit. One tenth is six minutes.
   /// Returns null if format is invalid.
   static int? tryParseDecimalToMinutes(String input) {
     final trimmed = input.trim();
-    final value = double.tryParse(trimmed);
-    if (value == null || value < 0) {
-      return null;
-    }
-    return (value * 60).round();
+    final tenths = tryParseHourTenths(trimmed);
+    return tenths == null ? null : tenths * 6;
   }
+
+  static int? tryParseHourTenths(String input) {
+    final match = RegExp(r'^(\d+)(?:\.(\d))?$').firstMatch(input.trim());
+    if (match == null) return null;
+    final whole = int.tryParse(match[1]!);
+    if (whole == null || whole > 100000000) return null;
+    return whole * 10 + int.parse(match[2] ?? '0');
+  }
+
+  static String formatHourTenths(int tenths) =>
+      '${tenths ~/ 10}.${tenths % 10}';
 
   /// Parses duration string according to the given [format].
   static int? tryParseToMinutes(String input, TimeEntryFormat format) {
@@ -92,13 +97,33 @@ class TimeUtils {
   }
 
   static const List<String> _monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   static const List<String> _monthNamesFull = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   /// Formats [dt] into "dd MMM yyyy" (e.g. "15 Aug 2026").
@@ -123,5 +148,3 @@ class TimeUtils {
     return '$day/$month/${dt.year.toString().padLeft(4, '0')}';
   }
 }
-
-
