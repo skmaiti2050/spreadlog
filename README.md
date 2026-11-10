@@ -38,6 +38,12 @@ Screenshots show sample data.
   instructor time, landings, navaids and place.
 - Hours/minutes, decimal-hour and Hobbs-reading entry, with totals calculated
   in whole minutes so they never drift from rounding.
+- Recover unfinished new and edited entries with Resume / Discard. Drafts
+  stay outside logged totals and travel with encrypted backups.
+- Remember the time-entry mode and offer editable aircraft details from
+  matching registrations and the current Fleet.
+- Optional Android app lock using device biometrics or PIN/password, with
+  immediate, one-minute or five-minute relocking. Lock settings stay on the device.
 - A spread view of the paper logbook: 30 lines a page, brought forward at
   the top and carried forward at the bottom.
 
