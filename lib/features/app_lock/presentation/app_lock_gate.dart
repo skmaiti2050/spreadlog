@@ -18,6 +18,7 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
     with WidgetsBindingObserver {
   late final AppLockController _lock;
   bool _opened = false;
+  bool _authenticationInterrupted = false;
 
   @override
   void initState() {
@@ -26,7 +27,24 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
     WidgetsBinding.instance.addObserver(this);
     _lock.addListener(_changed);
     BackupIntentService.setDeliveryPaused(_lock.supported);
-    unawaited(_lock.initialize());
+    unawaited(_initialize());
+  }
+
+  Future<void> _initialize() async {
+    await _lock.initialize();
+    _scheduleUnlock();
+  }
+
+  void _scheduleUnlock() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted &&
+          _lock.ready &&
+          _lock.policy.settings.enabled &&
+          _lock.policy.locked &&
+          !_lock.busy) {
+        unawaited(_lock.unlock());
+      }
+    });
   }
 
   void _changed() {
@@ -43,8 +61,13 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     switch (state) {
       case AppLifecycleState.resumed:
+        final returningFromAuthentication =
+            _authenticationInterrupted || _lock.busy;
+        _authenticationInterrupted = false;
         _lock.resumed();
+        if (!returningFromAuthentication) _scheduleUnlock();
       case AppLifecycleState.inactive:
+        _authenticationInterrupted = _authenticationInterrupted || _lock.busy;
         _lock.inactive();
       case AppLifecycleState.hidden || AppLifecycleState.paused:
         _lock.background();
@@ -113,7 +136,7 @@ class _AppLockGateState extends ConsumerState<AppLockGate>
                                     unawaited(
                                       _lock.ready
                                           ? _lock.unlock()
-                                          : _lock.initialize(),
+                                          : _initialize(),
                                     );
                                   },
                             child: Text(

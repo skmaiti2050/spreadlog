@@ -242,10 +242,75 @@ void main() {
     },
   );
 
-  testWidgets('gate hides startup content and preserves input through relock', (
+  testWidgets('enabled lock authenticates automatically on launch and return', (
     tester,
   ) async {
     final auth = FakeAuthenticator();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appLockSupportedProvider.overrideWithValue(true),
+          deviceAuthenticatorProvider.overrideWithValue(auth),
+          appLockSettingsStoreProvider.overrideWithValue(FakeStore()),
+        ],
+        child: const MaterialApp(
+          home: AppLockGate(child: Scaffold(body: Text('Logbook'))),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(auth.calls, 1);
+    expect(find.text('Logbook'), findsOneWidget);
+    for (final state in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await tester.pumpAndSettle();
+    expect(auth.calls, 2);
+    expect(find.text('Logbook'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+    'returning from canceled automatic authentication does not reprompt',
+    (tester) async {
+      final auth = FakeAuthenticator()..pending = Completer();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appLockSupportedProvider.overrideWithValue(true),
+            deviceAuthenticatorProvider.overrideWithValue(auth),
+            appLockSettingsStoreProvider.overrideWithValue(FakeStore()),
+          ],
+          child: const MaterialApp(
+            home: AppLockGate(child: Scaffold(body: Text('Logbook'))),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(auth.calls, 1);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      auth.pending!.complete(AuthenticationResult.canceled);
+      await tester.pumpAndSettle();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(auth.calls, 1);
+      expect(find.text('Logbook'), findsNothing);
+      expect(find.text('Unlock'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets('gate hides startup content and preserves input through relock', (
+    tester,
+  ) async {
+    final auth = FakeAuthenticator()..result = AuthenticationResult.canceled;
     final store = FakeStore();
     final input = TextEditingController();
     addTearDown(input.dispose);
@@ -272,9 +337,11 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Private logbook'), findsNothing);
+    auth.result = AuthenticationResult.success;
     await tester.tap(find.text('Unlock'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'unfinished');
+    auth.result = AuthenticationResult.canceled;
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pump();
     expect(find.text('Private logbook'), findsNothing);
@@ -285,7 +352,8 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     expect(find.text('Private logbook'), findsNothing);
-    expect(auth.calls, 1);
+    expect(auth.calls, 3);
+    auth.result = AuthenticationResult.success;
     await tester.tap(find.text('Unlock'));
     await tester.pumpAndSettle();
     expect(input.text, 'unfinished');
@@ -295,9 +363,10 @@ void main() {
   testWidgets('system Back cannot pop a route behind the locked gate', (
     tester,
   ) async {
+    final auth = FakeAuthenticator()..result = AuthenticationResult.canceled;
     final lock = AppLockController(
       supported: true,
-      authenticator: FakeAuthenticator(),
+      authenticator: auth,
       store: FakeStore(),
     );
     final observer = AppLockNavigationObserver(lock);
@@ -316,6 +385,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    auth.result = AuthenticationResult.success;
     await tester.tap(find.text('Unlock'));
     await tester.pumpAndSettle();
     unawaited(
