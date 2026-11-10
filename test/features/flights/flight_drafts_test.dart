@@ -125,11 +125,43 @@ void main() {
       aircraftModelCount: 0,
       schemaVersion: 6,
     );
-    // The absent-table path is covered separately below.
     await BackupService(db: target)
         .restorePortableSnapshot(await archive.unpackAndValidateZip(oldZip));
     expect(await SqliteFlightDraftRepository(target).get(null), isNull);
   });
+
+  test(
+    'portable database opened natively preserves edit-draft revision',
+    () async {
+      final source = AppDatabase(NativeDatabase.memory());
+      addTearDown(source.close);
+      await FlightsRepository(source.flightsDao).saveFlight(flight());
+      final drafts = SqliteFlightDraftRepository(source);
+      final revision = await drafts.revision('f1');
+      await drafts.save(draft(flightId: 'f1', revision: revision));
+      final bytes = await BackupService(db: source)
+          .createPortableDatabaseSnapshot();
+      final dir = await Directory.systemTemp.createTemp('native_edit_restore_');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = File('${dir.path}/restored.sqlite')..writeAsBytesSync(bytes);
+      final restored = AppDatabase(NativeDatabase(file));
+      addTearDown(restored.close);
+      final restoredDrafts = SqliteFlightDraftRepository(restored);
+      final recovered = await restoredDrafts.get('f1');
+      expect(await restoredDrafts.revision('f1'), recovered?.baseRevision);
+      await restoredDrafts.finalize(
+        flight().copyWith(remarks: 'Recovered edit'),
+        baseRevision: recovered!.baseRevision,
+      );
+      expect(await restoredDrafts.get('f1'), isNull);
+      expect(
+        (await FlightsRepository(
+          restored.flightsDao,
+        ).getAllFlights()).single.remarks,
+        'Recovered edit',
+      );
+    },
+  );
 
   test(
     'finalize is atomic, rejects newer or deleted originals and keeps drafts',

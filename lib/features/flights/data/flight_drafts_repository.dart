@@ -39,7 +39,7 @@ class SqliteFlightDraftRepository implements FlightDraftRepository {
   );
 
   /// Includes child records, so even two edits within one timestamp second
-  /// conflict. Sorting makes the revision independent of SQLite row order.
+  /// conflict. Canonical keys/rows survive portable schema column ordering.
   Future<String?> revision(String flightId) async {
     final parent = await db
         .customSelect(
@@ -48,7 +48,10 @@ class SqliteFlightDraftRepository implements FlightDraftRepository {
         )
         .getSingleOrNull();
     if (parent == null) return null;
-    final snapshot = <String, Object?>{'flight': parent.data};
+    Map<String, Object?> canonical(Map<String, Object?> data) => {
+      for (final key in data.keys.toList()..sort()) key: data[key],
+    };
+    final snapshot = <String, Object?>{'flight': canonical(parent.data)};
     for (final table in [
       'flight_times_table',
       'instrument_times_table',
@@ -61,8 +64,8 @@ class SqliteFlightDraftRepository implements FlightDraftRepository {
             variables: [Variable(flightId)],
           )
           .get();
-      snapshot[table] = rows.map((row) => jsonEncode(row.data)).toList()
-        ..sort();
+      snapshot[table] =
+          rows.map((row) => jsonEncode(canonical(row.data))).toList()..sort();
     }
     return jsonEncode(snapshot);
   }
