@@ -49,7 +49,6 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
         initialFlight: flight,
       );
       if (updated != null) {
-        await ref.read(flightsRepositoryProvider).saveFlight(updated);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -88,7 +87,6 @@ class _FlightListScreenState extends ConsumerState<FlightListScreen> {
     try {
       final flight = await LogFlightDialog.show(context);
       if (flight != null) {
-        await ref.read(flightsRepositoryProvider).saveFlight(flight);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

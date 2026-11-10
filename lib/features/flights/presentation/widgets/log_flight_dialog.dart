@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,6 +10,8 @@ import '../../../aircraft/domain/aircraft_model.dart';
 import '../../../aircraft/presentation/providers/aircraft_providers.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/flight.dart';
+import '../../domain/flight_draft.dart';
+import '../../data/flight_drafts_repository.dart';
 import '../../domain/hobbs_reading.dart';
 import '../../domain/flight_time.dart';
 import '../../domain/instrument_time.dart';
@@ -19,21 +23,49 @@ import '../providers/flights_providers.dart';
 class LogFlightDialog extends ConsumerStatefulWidget {
   final Flight? initialFlight;
   final bool isFullScreen;
+  final String? initialRevision;
 
   const LogFlightDialog({
     super.key,
     this.initialFlight,
+    this.initialRevision,
     this.isFullScreen = false,
   });
 
-  static Future<Flight?> show(BuildContext context, {Flight? initialFlight}) {
+  static Future<Flight?> show(
+    BuildContext context, {
+    Flight? initialFlight,
+  }) async {
+    String? revision;
+    if (initialFlight != null) {
+      final container = ProviderScope.containerOf(context, listen: false);
+      final drafts = container.read(flightDraftsRepositoryProvider);
+      final id = initialFlight.id;
+      final source = await drafts.db.transaction(() async {
+        final flights = await container
+            .read(flightsRepositoryProvider)
+            .getAllFlights();
+        final matching = flights.where((flight) => flight.id == id);
+        return (
+          flight: matching.firstOrNull,
+          revision: await drafts.revision(id),
+        );
+      });
+      if (!context.mounted || source.flight == null) return null;
+      initialFlight = source.flight;
+      revision = source.revision;
+    }
+    if (!context.mounted) return null;
     final isMobile = MediaQuery.of(context).size.width < 600;
     if (isMobile) {
       return Navigator.of(context).push<Flight>(
         MaterialPageRoute<Flight>(
           fullscreenDialog: true,
-          builder: (context) =>
-              LogFlightDialog(initialFlight: initialFlight, isFullScreen: true),
+          builder: (context) => LogFlightDialog(
+            initialFlight: initialFlight,
+            initialRevision: revision,
+            isFullScreen: true,
+          ),
         ),
       );
     }
@@ -45,6 +77,7 @@ class LogFlightDialog extends ConsumerStatefulWidget {
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 680),
           child: LogFlightDialog(
             initialFlight: initialFlight,
+            initialRevision: revision,
             isFullScreen: false,
           ),
         ),
@@ -56,7 +89,220 @@ class LogFlightDialog extends ConsumerStatefulWidget {
   ConsumerState<LogFlightDialog> createState() => _LogFlightDialogState();
 }
 
-class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
+class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
+    with WidgetsBindingObserver {
+  late final SqliteFlightDraftRepository _drafts;
+  Timer? _draftTimer;
+  Future<void> _pendingWrites = Future.value();
+  bool _draftReady = false;
+  bool _dirty = false;
+  bool _saving = false;
+  bool _finalized = false;
+  String? _baseRevision;
+  String _draftStatus = '';
+
+  Map<String, TextEditingController> get _inputControllers => {
+    'type': _typeController,
+    'registration': _regController,
+    'pic': _picController,
+    'duration': _durationController,
+    'remarks': _remarksController,
+    'decimal': _decimalController,
+    'hobbsStart': _hobbsStartController,
+    'hobbsEnd': _hobbsEndController,
+    'adjustment': _adjustmentController,
+    'offBlocks': _offBlocksController,
+    'onBlocks': _onBlocksController,
+    'instrumentActual': _instActualController,
+    'instrumentFstd': _instFstdController,
+    'navaids': _navaidsController,
+    'place': _placeController,
+  };
+
+  FlightDraft _snapshot() {
+    final duration = TimeUtils.tryParseHhMmToMinutes(_durationController.text);
+    final start = TimeUtils.tryParseHourTenths(_hobbsStartController.text);
+    final end = TimeUtils.tryParseHourTenths(_hobbsEndController.text);
+    return FlightDraft(
+      flightId: widget.initialFlight?.id,
+      baseRevision: _baseRevision,
+      updatedAt: DateTime.now(),
+      fields: {
+        for (final entry in _inputControllers.entries)
+          entry.key: entry.value.text,
+        'date': _date.toIso8601String(),
+        'mode': _durationSource,
+        'category': _aircraftCategory.name,
+        'class': _aircraftClass.name,
+        'role': _role.name,
+        'period': _period.name,
+        'fstd': '$_isFstd',
+        'solo': '$_soloCrossCountry',
+        'dayLandings': '$_dayLandings',
+        'nightLandings': '$_nightLandings',
+        'blockTimes': '$_showBlockTimes',
+        'startEdited': '$_startEdited',
+        'step': '$_currentStep',
+      },
+      validatedValues: {
+        'durationMinutes': ?duration,
+        'hobbsStartTenths': ?start,
+        'hobbsEndTenths': ?end,
+      },
+    );
+  }
+
+  void _restoreDraft(FlightDraft draft) {
+    final fields = draft.fields;
+    // Registration listeners must not erase recovered meter readings.
+    _regController.removeListener(_registrationForHobbsChanged);
+    for (final entry in _inputControllers.entries) {
+      entry.value.text = fields[entry.key] ?? '';
+    }
+    _hobbsRegistration = HobbsReading.normalizeRegistration(
+      _regController.text,
+    );
+    _regController.addListener(_registrationForHobbsChanged);
+    _date = DateTime.parse(fields['date']!);
+    _durationSource = fields['mode']!;
+    _aircraftCategory = AircraftCategory.values.byName(fields['category']!);
+    _aircraftClass = AircraftClass.values.byName(fields['class']!);
+    _role = PilotRole.values.byName(fields['role']!);
+    _period = TimePeriod.values.byName(fields['period']!);
+    _isFstd = fields['fstd'] == 'true';
+    _soloCrossCountry = fields['solo'] == 'true';
+    _dayLandings = int.parse(fields['dayLandings']!);
+    _nightLandings = int.parse(fields['nightLandings']!);
+    _showBlockTimes = fields['blockTimes'] == 'true';
+    _startEdited = true;
+    _currentStep = int.parse(fields['step']!).clamp(0, 2);
+    _baseRevision = draft.baseRevision;
+    _dirty = true;
+  }
+
+  Future<void> _loadDraft() async {
+    try {
+      _baseRevision =
+          widget.initialRevision ??
+          (widget.initialFlight == null
+              ? null
+              : await _drafts.revision(widget.initialFlight!.id));
+      final draft = await _drafts.get(widget.initialFlight?.id);
+      if (!mounted) return;
+      if (draft != null) {
+        final resume = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Resume unfinished entry?'),
+            content: const Text(
+              'Your saved draft has not been added to your logbook.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Discard'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Resume'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+        if (resume == true) {
+          _restoreDraft(draft);
+          _draftStatus = 'Draft saved on this device';
+        } else if (resume == false) {
+          final discard = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Discard this draft?'),
+              content: const Text(
+                'The unfinished input will be removed. Logged flights stay unchanged.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Keep draft'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Discard draft'),
+                ),
+              ],
+            ),
+          );
+          if (discard != true) {
+            if (mounted) {
+              Navigator.pop(context);
+            }
+            return;
+          }
+          await _drafts.discard(widget.initialFlight?.id);
+        } else {
+          if (mounted) {
+            Navigator.pop(context);
+          }
+          return;
+        }
+      }
+      if (!mounted) return;
+      setState(() => _draftReady = true);
+      if (_currentStep != 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _pageController.jumpToPage(_currentStep);
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(
+        () => _draftStatus = 'Could not load your draft. Close and try again.',
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed && _draftReady) {
+      _draftTimer?.cancel();
+      _persistDraft();
+    }
+  }
+
+  void _draftChanged() {
+    if (!_draftReady || _finalized || _saving) return;
+    _dirty = true;
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 350), _persistDraft);
+  }
+
+  void _persistDraft() {
+    if (!_dirty || _finalized) return;
+    final snapshot = _snapshot();
+    _pendingWrites = _pendingWrites.then((_) => _drafts.save(snapshot));
+    _pendingWrites = _pendingWrites
+        .then((_) {
+          if (mounted) {
+            super.setState(() => _draftStatus = 'Draft saved on this device');
+          }
+        })
+        .catchError((Object error) {
+          if (mounted) {
+            super.setState(
+              () => _draftStatus = 'Draft could not be saved. Keep this entry open and try again.',
+            );
+          }
+        });
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _draftChanged();
+  }
+
   final _pageController = PageController();
   int _currentStep = 0;
 
@@ -159,6 +405,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final profile = ref.read(pilotProfileProvider);
     final init = widget.initialFlight;
 
@@ -266,10 +513,23 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     );
     _regController.addListener(_registrationForHobbsChanged);
     _prefillHobbs();
+    _drafts = ref.read(flightDraftsRepositoryProvider);
+    for (final controller in _inputControllers.values) {
+      controller.addListener(_draftChanged);
+    }
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => unawaited(_loadDraft()),
+    );
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _draftTimer?.cancel();
+    _persistDraft();
+    for (final controller in _inputControllers.values) {
+      controller.removeListener(_draftChanged);
+    }
     _decimalController.dispose();
     _hobbsStartController.dispose();
     _hobbsEndController.dispose();
@@ -522,7 +782,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
           _remarksController.text = 'Instrument Rating FSTD Session';
           break;
       }
-      _aircraftCategory = _isFstd ? AircraftCategory.fstd : AircraftCategory.aeroplane;
+      _aircraftCategory = _isFstd
+          ? AircraftCategory.fstd
+          : AircraftCategory.aeroplane;
     });
   }
 
@@ -576,7 +838,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
           curve: Curves.easeInOut,
         );
       } else {
-        _onSave();
+        unawaited(_onSave());
       }
     }
   }
@@ -592,7 +854,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
     }
   }
 
-  void _onSave() {
+  Future<void> _onSave() async {
+    if (_saving || !_draftReady) return;
     if (!_validateStep(0) || !_validateStep(1) || !_validateStep(2)) return;
 
     final durationMins =
@@ -654,40 +917,92 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       updatedAt: now,
     );
 
-    Navigator.of(context).pop(flight);
+    setState(() => _saving = true);
+    _draftTimer?.cancel();
+    _persistDraft();
+    await _pendingWrites;
+    try {
+      await _drafts.finalize(flight, baseRevision: _baseRevision);
+      _finalized = true;
+      if (mounted) Navigator.of(context).pop(flight);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _draftStatus = error is FlightDraftConflict
+            ? error.toString()
+            : 'Flight could not be saved. Your draft is kept. Try again.';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     ref.listen(flightsStreamProvider, (previous, next) {
-      if (next.hasValue) _prefillHobbs();
+      if (next.hasValue && !_dirty) _prefillHobbs();
     });
     final title = _isEditing ? 'Edit Flight Entry' : 'Log Flight Entry';
 
-    final bodyContent = Column(
-      children: [
-        // Step progress header
-        _buildStepHeader(theme),
-        const Divider(height: 1),
-
-        // Multi-step pages
-        Expanded(
-          child: PageView(
-            controller: _pageController,
-            physics: const BouncingScrollPhysics(),
-            onPageChanged: (page) => setState(() => _currentStep = page),
-            children: [
-              _buildStep1Aircraft(theme),
-              _buildStep2TimesAndRole(theme),
-              _buildStep3InstrumentAndReview(theme),
-            ],
+    if (!_draftReady) {
+      return Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_draftStatus.isEmpty)
+                  const Text('Checking saved drafts…')
+                else
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(_draftStatus),
+                  ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
           ),
         ),
+      );
+    }
+    final bodyContent = AbsorbPointer(
+      absorbing: _saving,
+      child: Column(
+        children: [
+          if (_draftStatus.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              child: Text(
+                _draftStatus,
+                style: theme.textTheme.bodySmall,
+                semanticsLabel: _draftStatus,
+              ),
+            ),
+          // Step progress header
+          _buildStepHeader(theme),
+          const Divider(height: 1),
 
-        // Bottom Navigation Bar
-        _buildBottomBar(theme),
-      ],
+          // Multi-step pages
+          Expanded(
+            child: PageView(
+              controller: _pageController,
+              physics: const BouncingScrollPhysics(),
+              onPageChanged: (page) => setState(() => _currentStep = page),
+              children: [
+                _buildStep1Aircraft(theme),
+                _buildStep2TimesAndRole(theme),
+                _buildStep3InstrumentAndReview(theme),
+              ],
+            ),
+          ),
+
+          // Bottom Navigation Bar
+          _buildBottomBar(theme),
+        ],
+      ),
     );
 
     if (widget.isFullScreen) {

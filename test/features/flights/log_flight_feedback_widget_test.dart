@@ -1,3 +1,5 @@
+import 'package:aviation_logbook/core/database/app_database.dart';
+import 'package:drift/native.dart';
 import 'package:aviation_logbook/features/aircraft/domain/aircraft_model.dart';
 import 'package:aviation_logbook/features/aircraft/presentation/providers/aircraft_providers.dart';
 import 'package:aviation_logbook/features/flights/domain/flight.dart';
@@ -22,9 +24,12 @@ Future<void> openEntry(
   addTearDown(tester.view.reset);
   SharedPreferences.setMockInitialValues({});
   final date = DateTime(2026, 1);
+  final db = AppDatabase(NativeDatabase.memory());
+  addTearDown(db.close);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        databaseProvider.overrideWithValue(db),
         flightsStreamProvider.overrideWith(
           (ref) => Stream.value([
             Flight(
@@ -76,6 +81,42 @@ Future<void> openEntry(
 }
 
 void main() {
+  testWidgets('unfinished raw input resumes after closing the entry', (
+    tester,
+  ) async {
+    await openEntry(tester, (_) {});
+    await tester.enterText(field('Aircraft Registration'), 'ZS-INCOMPLETE');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(find.text('Draft saved on this device'), findsOneWidget);
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Resume unfinished entry?'), findsOneWidget);
+    await tester.tap(find.text('Resume'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(field('Aircraft Registration')).controller?.text,
+      'ZS-INCOMPLETE',
+    );
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Discard'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard this draft?'), findsOneWidget);
+    await tester.tap(find.text('Discard draft'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(field('Aircraft Registration')).controller?.text,
+      'ZS-ABC',
+    );
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+  });
+
   testWidgets(
     'Hobbs prefill and direct elapsed default save the original readings',
     (tester) async {
