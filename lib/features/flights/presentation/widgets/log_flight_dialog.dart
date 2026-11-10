@@ -11,6 +11,8 @@ import '../../../aircraft/presentation/providers/aircraft_providers.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/flight.dart';
 import '../../domain/flight_draft.dart';
+import '../../domain/registration_suggestion.dart';
+import '../../data/entry_preferences.dart';
 import '../../data/flight_drafts_repository.dart';
 import '../../domain/hobbs_reading.dart';
 import '../../domain/flight_time.dart';
@@ -95,6 +97,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
   Timer? _draftTimer;
   Future<void> _pendingWrites = Future.value();
   bool _draftReady = false;
+  bool _aircraftSuggested = false;
   bool _dirty = false;
   bool _saving = false;
   bool _finalized = false;
@@ -130,6 +133,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
       fields: {
         for (final entry in _inputControllers.entries)
           entry.key: entry.value.text,
+        'aircraftSuggested': '$_aircraftSuggested',
         'date': _date.toIso8601String(),
         'mode': _durationSource,
         'category': _aircraftCategory.name,
@@ -146,6 +150,14 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
       },
       validatedValues: {
         'durationMinutes': ?duration,
+        'instrumentActualMinutes': ?TimeUtils.tryParseHhMmToMinutes(
+          _instActualController.text,
+        ),
+        'instrumentFstdMinutes': ?TimeUtils.tryParseHhMmToMinutes(
+          _instFstdController.text,
+        ),
+        'dayLandings': _dayLandings,
+        'nightLandings': _nightLandings,
         'hobbsStartTenths': ?start,
         'hobbsEndTenths': ?end,
       },
@@ -175,6 +187,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
     _nightLandings = int.parse(fields['nightLandings']!);
     _showBlockTimes = fields['blockTimes'] == 'true';
     _startEdited = true;
+    _aircraftSuggested = fields['aircraftSuggested'] == 'true';
     _currentStep = int.parse(fields['step']!).clamp(0, 2);
     _baseRevision = draft.baseRevision;
     _dirty = true;
@@ -182,11 +195,17 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
 
   Future<void> _loadDraft() async {
     try {
+      if (!_isEditing) {
+        _durationSource = await const EntryPreferences().loadDurationMode();
+      }
       _baseRevision =
           widget.initialRevision ??
           (widget.initialFlight == null
               ? null
               : await _drafts.revision(widget.initialFlight!.id));
+      if (_isEditing && _baseRevision == null) {
+        throw const FlightDraftConflict();
+      }
       final draft = await _drafts.get(widget.initialFlight?.id);
       if (!mounted) return;
       if (draft != null) {
@@ -249,7 +268,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
         }
       }
       if (!mounted) return;
-      setState(() => _draftReady = true);
+      super.setState(() => _draftReady = true);
       if (_currentStep != 0) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _pageController.jumpToPage(_currentStep);
@@ -274,6 +293,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
   void _draftChanged() {
     if (!_draftReady || _finalized || _saving) return;
     _dirty = true;
+    if (mounted && _draftStatus != 'Saving draft…') {
+      super.setState(() => _draftStatus = 'Saving draft…');
+    }
     _draftTimer?.cancel();
     _draftTimer = Timer(const Duration(milliseconds: 350), _persistDraft);
   }
@@ -565,7 +587,39 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
     }
   }
 
+  RegistrationSuggestion? get _registrationSuggestion =>
+      RegistrationSuggestion.find(
+        registration: _regController.text,
+        flights: ref.watch(flightsStreamProvider).value ?? const [],
+        fleet: ref.watch(allAircraftModelsProvider).value ?? const [],
+        excludingId: widget.initialFlight?.id,
+      );
+
+  void _applyAircraftSuggestion(RegistrationSuggestion suggestion) {
+    setState(() {
+      _typeController.text = suggestion.modelId;
+      _aircraftCategory = suggestion.category;
+      _aircraftClass = suggestion.aircraftClass;
+      _isFstd = suggestion.category == AircraftCategory.fstd;
+      _aircraftSuggested = true;
+    });
+  }
+
+  Future<void> _rememberMode(String mode) async {
+    try {
+      await const EntryPreferences().saveDurationMode(mode);
+    } catch (_) {
+      if (mounted) {
+        super.setState(
+          () => _draftStatus =
+              'Entry mode could not be remembered. Your entry is still open.',
+        );
+      }
+    }
+  }
+
   void _onRegChanged(String value) {
+    setState(() => _aircraftSuggested = false);
     String upper = value.toUpperCase().replaceAll(' ', '');
     if (upper.length >= 3 && !upper.contains('-')) {
       if (upper.startsWith('ZS') ||
@@ -1078,6 +1132,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
   }
 
   Widget _buildStep1Aircraft(ThemeData theme) {
+    final suggestion = _registrationSuggestion;
     final aircraftEntries = ref.watch(endorsedAircraftListProvider);
     final dateStr =
         '${_date.day.toString().padLeft(2, '0')}/${_date.month.toString().padLeft(2, '0')}/${_date.year}';
@@ -1252,6 +1307,23 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
               },
               onChanged: _onRegChanged,
             ),
+            if (suggestion != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Suggested from this registration: ${suggestion.modelId}, ${suggestion.category.name}, ${suggestion.aircraftClass == AircraftClass.singleEngine ? "single engine" : "multi engine"}.',
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => _applyAircraftSuggestion(suggestion),
+                  child: const Text('Use aircraft details'),
+                ),
+              ),
+            ],
+            if (_aircraftSuggested)
+              const Text(
+                'Suggested aircraft details applied. Check and edit them before logging.',
+              ),
             const SizedBox(height: 6),
             Wrap(
               spacing: 4,
@@ -1321,6 +1393,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog>
                     selected: _durationSource == mode,
                     onSelected: (_) => setState(() {
                       _durationSource = mode;
+                      unawaited(_rememberMode(mode));
                       if (mode == 'hobbs') {
                         _prefillHobbs();
                         _updateHobbsDuration();
