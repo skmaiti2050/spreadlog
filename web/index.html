@@ -47,6 +47,19 @@
     </div>
   </div>
 
+  <script>
+    // Best effort: refusal or missing support must not prevent startup.
+    (async () => {
+      try {
+        const storage = navigator.storage;
+        if (storage?.persist && !(await storage.persisted())) {
+          await storage.persist();
+        }
+      } catch (error) {
+        console.debug('Persistent storage request unavailable', error);
+      }
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
