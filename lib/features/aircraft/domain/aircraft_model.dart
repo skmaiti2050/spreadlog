@@ -25,7 +25,10 @@ class AircraftModel {
     required this.category,
   });
 
-  String get displayName => '$manufacturer $model';
+  String get displayName => '$manufacturer $model'.trim();
+
+  bool get detailsIncomplete => manufacturer.trim().isEmpty ||
+      manufacturer == 'SACAA' || model.trim().isEmpty;
 
   AircraftModel copyWith({
     String? id,

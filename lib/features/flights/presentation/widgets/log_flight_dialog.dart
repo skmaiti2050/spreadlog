@@ -8,6 +8,7 @@ import '../../../aircraft/domain/aircraft_model.dart';
 import '../../../aircraft/presentation/providers/aircraft_providers.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
 import '../../domain/flight.dart';
+import '../../domain/hobbs_reading.dart';
 import '../../domain/flight_time.dart';
 import '../../domain/instrument_time.dart';
 import '../../domain/landings.dart';
@@ -72,11 +73,64 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   late final TextEditingController _durationController;
   late final TextEditingController _remarksController;
 
+  String _durationSource = 'hhMm';
+  final _decimalController = TextEditingController();
+  final _hobbsStartController = TextEditingController();
+  final _hobbsEndController = TextEditingController();
+  final _adjustmentController = TextEditingController();
+  bool _startEdited = false;
+  String _hobbsRegistration = '';
+
+  void _updateHobbsDuration() {
+    if (_durationSource != 'hobbs') return;
+    final minutes = _hobbsMinutes;
+    _durationController.text = minutes == null
+        ? ''
+        : TimeUtils.formatMinutesToHhMm(minutes);
+  }
+
+  void _registrationForHobbsChanged() {
+    final registration = HobbsReading.normalizeRegistration(
+      _regController.text,
+    );
+    if (registration == _hobbsRegistration) return;
+    _hobbsRegistration = registration;
+    _startEdited = false;
+    _hobbsEndController.clear();
+    _prefillHobbs();
+    _updateHobbsDuration();
+  }
+
+  void _prefillHobbs() {
+    if (_startEdited) return;
+    final value = HobbsReading.previousEnd(
+      ref.read(flightsStreamProvider).value ?? const <Flight>[],
+      registration: _regController.text,
+      date: _date,
+      excludingId: widget.initialFlight?.id,
+      beforeCreatedAt: widget.initialFlight?.createdAt,
+    );
+    final previousText = _hobbsStartController.text;
+    _hobbsStartController.text = value == null
+        ? ''
+        : TimeUtils.formatHourTenths(value);
+    if (_hobbsStartController.text != previousText) _updateHobbsDuration();
+  }
+
+  int? get _hobbsMinutes {
+    final start = TimeUtils.tryParseHourTenths(_hobbsStartController.text);
+    final end = TimeUtils.tryParseHourTenths(_hobbsEndController.text);
+    return start == null || end == null || end <= start
+        ? null
+        : (end - start) * 6;
+  }
+
   // Block time calculator
   bool _showBlockTimes = false;
   final _offBlocksController = TextEditingController();
   final _onBlocksController = TextEditingController();
 
+  AircraftCategory _aircraftCategory = AircraftCategory.aeroplane;
   AircraftClass _aircraftClass = AircraftClass.singleEngine;
   PilotRole _role = PilotRole.pic;
   TimePeriod _period = TimePeriod.day;
@@ -110,6 +164,16 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
     if (init != null) {
       _date = init.date;
+      _aircraftCategory = init.aircraftCategory;
+      _durationSource = init.durationSource;
+      _startEdited = init.hobbsStartTenths != null;
+      _hobbsStartController.text = init.hobbsStartTenths == null
+          ? ''
+          : TimeUtils.formatHourTenths(init.hobbsStartTenths!);
+      _hobbsEndController.text = init.hobbsEndTenths == null
+          ? ''
+          : TimeUtils.formatHourTenths(init.hobbsEndTenths!);
+      _adjustmentController.text = init.durationAdjustmentReason;
       _typeController = TextEditingController(
         text: init.aircraftModelId ?? 'C172',
       );
@@ -167,6 +231,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       final latest = flights.isEmpty
           ? null
           : flights.reduce((a, b) => a.date.isAfter(b.date) ? a : b);
+      if (latest != null) {
+        _aircraftCategory = latest.aircraftCategory;
+        _isFstd = latest.isFstd;
+        if (latest.flightTimes.isNotEmpty) {
+          _aircraftClass = latest.flightTimes.first.aircraftClass;
+        }
+      }
       _typeController = TextEditingController(
         text: latest?.aircraftModelId ?? '',
       );
@@ -185,10 +256,24 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       _navaidsController = TextEditingController();
       _placeController = TextEditingController();
     }
+    if (_durationSource == 'decimal') {
+      _decimalController.text = TimeUtils.formatMinutesToDecimal(
+        TimeUtils.tryParseHhMmToMinutes(_durationController.text) ?? 0,
+      );
+    }
+    _hobbsRegistration = HobbsReading.normalizeRegistration(
+      _regController.text,
+    );
+    _regController.addListener(_registrationForHobbsChanged);
+    _prefillHobbs();
   }
 
   @override
   void dispose() {
+    _decimalController.dispose();
+    _hobbsStartController.dispose();
+    _hobbsEndController.dispose();
+    _adjustmentController.dispose();
     _pageController.dispose();
     _typeController.dispose();
     _regController.dispose();
@@ -213,7 +298,10 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       lastDate: now,
     );
     if (picked != null) {
-      setState(() => _date = picked);
+      setState(() {
+        _date = picked;
+        _prefillHobbs();
+      });
     }
   }
 
@@ -228,6 +316,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
           text: upper,
           selection: TextSelection.collapsed(offset: upper.length),
         );
+        _prefillHobbs();
         return;
       }
     }
@@ -245,6 +334,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       if (model != null) {
         _isFstd = model.category == AircraftCategory.fstd || type == 'FNPT II';
         _aircraftClass = model.aircraftClass;
+        _aircraftCategory = model.category;
       } else {
         if (type == 'FNPT II') {
           _isFstd = true;
@@ -270,6 +360,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   void _applyBlockTimes() {
+    if (_durationSource == 'decimal') _durationSource = 'hhMm';
     final offText = _offBlocksController.text.trim();
     final onText = _onBlocksController.text.trim();
     final offMins = TimeUtils.tryParseHhMmToMinutes(offText);
@@ -296,6 +387,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   Future<void> _pickFlightDuration() async {
+    if (_durationSource == 'decimal') setState(() => _durationSource = 'hhMm');
     final currentMins =
         TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 90;
     final picked = await DurationPickerDialog.show(
@@ -312,11 +404,13 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
   void _quickSetDuration(int mins) {
     setState(() {
+      if (_durationSource == 'decimal') _durationSource = 'hhMm';
       _durationController.text = TimeUtils.formatMinutesToHhMm(mins);
     });
   }
 
   void _quickAddDurationMinutes(int addMins) {
+    if (_durationSource == 'decimal') _durationSource = 'hhMm';
     final current =
         TimeUtils.tryParseHhMmToMinutes(_durationController.text.trim()) ?? 0;
     final updated = (current + addMins).clamp(0, 99 * 60);
@@ -372,6 +466,8 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   }
 
   void _applySyllabusTemplate(String templateName) {
+    _durationSource = 'hhMm';
+    _aircraftCategory = AircraftCategory.aeroplane;
     setState(() {
       switch (templateName) {
         case 'PPL Solo XC':
@@ -426,6 +522,7 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
           _remarksController.text = 'Instrument Rating FSTD Session';
           break;
       }
+      _aircraftCategory = _isFstd ? AircraftCategory.fstd : AircraftCategory.aeroplane;
     });
   }
 
@@ -514,11 +611,22 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
       id: flightId,
       date: _date,
       aircraftModelId: _typeController.text.trim().toUpperCase(),
+      aircraftCategory: _aircraftCategory,
       registration: _regController.text.trim().toUpperCase(),
       picName: _picController.text.trim().toUpperCase(),
       remarks: _remarksController.text.trim(),
       soloCrossCountry: _soloCrossCountry,
       fstdActualMinutes: _isFstd ? durationMins : 0,
+      durationSource: _durationSource,
+      hobbsStartTenths: _durationSource == 'hobbs'
+          ? TimeUtils.tryParseHourTenths(_hobbsStartController.text)
+          : null,
+      hobbsEndTenths: _durationSource == 'hobbs'
+          ? TimeUtils.tryParseHourTenths(_hobbsEndController.text)
+          : null,
+      durationAdjustmentReason: _durationSource == 'hobbs'
+          ? _adjustmentController.text.trim()
+          : '',
       flightTimes: _isFstd
           ? const []
           : [
@@ -552,6 +660,9 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    ref.listen(flightsStreamProvider, (previous, next) {
+      if (next.hasValue) _prefillHobbs();
+    });
     final title = _isEditing ? 'Edit Flight Entry' : 'Log Flight Entry';
 
     final bodyContent = Column(
@@ -743,15 +854,52 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
 
             TextFormField(
               controller: _typeController,
-              readOnly: true,
+              textCapitalization: TextCapitalization.characters,
               decoration: const InputDecoration(
-                labelText: 'Aircraft model',
+                labelText: 'Aircraft model / type',
+                helperText:
+                    'Type a one-off model code, or choose from Fleet below.',
                 border: OutlineInputBorder(),
-                suffixIcon: Icon(Icons.search),
               ),
-              validator: (value) =>
-                  value == null || value.isEmpty ? 'Select an aircraft' : null,
-              onTap: () async {
+              validator: (value) => value == null || value.trim().isEmpty
+                  ? 'Enter an aircraft type'
+                  : null,
+              onChanged: (value) {
+                final matches = aircraftEntries.where(
+                  (entry) =>
+                      entry.model.id.toUpperCase() ==
+                      value.trim().toUpperCase(),
+                );
+                setState(() {});
+                if (matches.isNotEmpty) {
+                  _onTypeSelected(matches.first.model.id, matches.first.model);
+                }
+              },
+            ),
+            DropdownButtonFormField<AircraftCategory>(
+              key: ValueKey(_aircraftCategory),
+              initialValue: _aircraftCategory,
+              decoration: const InputDecoration(labelText: 'Aircraft category'),
+              items: [
+                for (final category in AircraftCategory.values)
+                  DropdownMenuItem(value: category, child: Text(category.name)),
+              ],
+              onChanged:
+                  aircraftEntries.any(
+                    (entry) =>
+                        entry.model.id.toUpperCase() ==
+                        _typeController.text.trim().toUpperCase(),
+                  )
+                  ? null
+                  : (value) => setState(() {
+                      _aircraftCategory = value ?? AircraftCategory.aeroplane;
+                      _isFstd = _aircraftCategory == AircraftCategory.fstd;
+                    }),
+            ),
+            TextButton.icon(
+              icon: const Icon(Icons.search),
+              label: const Text('Choose from Fleet'),
+              onPressed: () async {
                 final selected = await showModalBottomSheet<AircraftModel>(
                   context: context,
                   isScrollControlled: true,
@@ -845,6 +993,126 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
               hintKey: 'hint_step2_block_calc',
               message: 'Tap duration to pick Hours:Minutes or tap the calculator (🖩) to compute from block times.',
             ),
+            Wrap(
+              spacing: 6,
+              children: [
+                for (final mode in ['hhMm', 'decimal', 'hobbs'])
+                  ChoiceChip(
+                    label: Text(switch (mode) {
+                      'decimal' => 'Decimal hours',
+                      'hobbs' => 'Hobbs readings',
+                      _ => 'Hours / minutes',
+                    }),
+                    selected: _durationSource == mode,
+                    onSelected: (_) => setState(() {
+                      _durationSource = mode;
+                      if (mode == 'hobbs') {
+                        _prefillHobbs();
+                        _updateHobbsDuration();
+                      }
+                      if (mode == 'decimal') {
+                        final minutes = TimeUtils.tryParseHhMmToMinutes(
+                          _durationController.text,
+                        );
+                        _decimalController.text =
+                            minutes != null && minutes % 6 == 0
+                            ? TimeUtils.formatMinutesToDecimal(minutes)
+                            : '';
+                        if (_decimalController.text.isEmpty) {
+                          _durationController.clear();
+                        }
+                      }
+                    }),
+                  ),
+              ],
+            ),
+            if (_durationSource == 'decimal') ...[
+              TextFormField(
+                controller: _decimalController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Decimal hours (e.g. 1.5)',
+                  helperText: 'One decimal digit; 0.1 hour = 6 minutes.',
+                ),
+                onChanged: (text) {
+                  final minutes = TimeUtils.tryParseDecimalToMinutes(text);
+                  setState(
+                    () => _durationController.text = minutes == null
+                        ? ''
+                        : TimeUtils.formatMinutesToHhMm(minutes),
+                  );
+                },
+                validator: (value) {
+                  if (value == null ||
+                      TimeUtils.tryParseDecimalToMinutes(value) == null) {
+                    return 'Enter whole hours or one decimal digit';
+                  }
+                  return null;
+                },
+              ),
+            ],
+            if (_durationSource == 'hobbs') ...[
+              const Text(
+                'Your school uses Hobbs elapsed time as logged duration. Check the suggested start against the aircraft meter. Overrides require a reason.',
+              ),
+              TextFormField(
+                controller: _hobbsStartController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(labelText: 'Hobbs start'),
+                onChanged: (_) => setState(() {
+                  _startEdited = true;
+                  _updateHobbsDuration();
+                }),
+                validator: (value) =>
+                    TimeUtils.tryParseHourTenths(value ?? '') == null
+                    ? 'Enter a reading with at most one decimal digit'
+                    : null,
+              ),
+              TextFormField(
+                controller: _hobbsEndController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(labelText: 'Hobbs end'),
+                onChanged: (_) => setState(_updateHobbsDuration),
+                validator: (_) => _hobbsMinutes == null
+                    ? 'End reading must exceed start reading'
+                    : null,
+              ),
+              if (_hobbsMinutes != null)
+                Text(
+                  'Meter elapsed: ${TimeUtils.formatMinutesToHhMm(_hobbsMinutes!)} (${TimeUtils.formatMinutesToDecimal(_hobbsMinutes!)} hours)',
+                ),
+              TextButton(
+                onPressed: _hobbsMinutes == null
+                    ? null
+                    : () => setState(
+                        () => _durationController.text =
+                            TimeUtils.formatMinutesToHhMm(_hobbsMinutes!),
+                      ),
+                child: const Text('Use meter elapsed as logged duration'),
+              ),
+              TextFormField(
+                controller: _adjustmentController,
+                decoration: const InputDecoration(
+                  labelText: 'Reason if logged duration differs',
+                ),
+                validator: (value) =>
+                    _hobbsMinutes != null &&
+                        TimeUtils.tryParseHhMmToMinutes(
+                              _durationController.text,
+                            ) !=
+                            _hobbsMinutes &&
+                        (value == null || value.trim().isEmpty)
+                    ? 'Explain the adjusted logged duration'
+                    : null,
+              ),
+            ],
+            const SizedBox(height: 12),
             // Flight Duration
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1280,10 +1548,12 @@ class _LogFlightDialogState extends ConsumerState<LogFlightDialog> {
                         color: theme.colorScheme.primary,
                       ),
                       const SizedBox(width: 6),
-                      Text(
-                        'Instrument Flying & Navaids (Optional)',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          'Instrument Flying & Navaids (Optional)',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],

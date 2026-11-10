@@ -133,6 +133,20 @@ class FlightDetailsDialog extends StatelessWidget {
               _buildSectionHeader(context, 'Flight Details'),
               const SizedBox(height: 6),
               _buildInfoRow(context, 'PIC Name', flight.picName),
+              if (flight.hobbsStartTenths != null &&
+                  flight.hobbsEndTenths != null) ...[
+                _buildInfoRow(
+                  context,
+                  'Hobbs readings',
+                  '${TimeUtils.formatHourTenths(flight.hobbsStartTenths!)} → ${TimeUtils.formatHourTenths(flight.hobbsEndTenths!)}',
+                ),
+                if (flight.durationAdjustmentReason.isNotEmpty)
+                  _buildInfoRow(
+                    context,
+                    'Duration adjustment',
+                    flight.durationAdjustmentReason,
+                  ),
+              ],
               if (flight.isFstd) ...[
                 _buildInfoRow(context, 'Session Type', 'Flight Simulation Training Device (FSTD)'),
                 _buildInfoRow(context, 'FSTD Time', TimeUtils.formatMinutesToHhMm(flight.fstdActualMinutes)),

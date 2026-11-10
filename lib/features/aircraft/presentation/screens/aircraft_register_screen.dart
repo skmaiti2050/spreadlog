@@ -338,6 +338,11 @@ class _AircraftRegisterScreenState
             ),
             const SizedBox(height: 10),
 
+            if (m.detailsIncomplete)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text('Details incomplete — tap edit to complete'),
+              ),
             // Endorsement Status Pill
             if (entry.isEndorsed) ...[
               Container(
