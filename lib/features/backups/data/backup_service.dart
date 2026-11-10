@@ -382,6 +382,12 @@ class BackupService {
         "SELECT name FROM sqlite_master WHERE type='table';",
       );
       final availableTables = tableRows.map((r) => r['name'] as String).toSet();
+      final draftRows = _readTable(
+        sourceDb,
+        availableTables,
+        'flight_drafts',
+        'flight_drafts',
+      );
 
       final modelsRows = _readTable(
         sourceDb,
@@ -445,6 +451,13 @@ class BackupService {
       }
 
       await db.transaction(() async {
+        await db.customStatement('DELETE FROM flight_drafts');
+        for (final row in draftRows) {
+          await db.customStatement(
+            'INSERT INTO flight_drafts (draft_key, payload) VALUES (?, ?)',
+            [row['draft_key'], row['payload']],
+          );
+        }
         await db.customStatement('PRAGMA foreign_keys = OFF;');
 
         await db.customStatement('DELETE FROM endorsement_corrections');
@@ -740,6 +753,18 @@ class BackupService {
           created_at INTEGER NOT NULL
         );
       ''');
+
+      exportDb.execute(
+        'CREATE TABLE flight_drafts ('
+        'draft_key TEXT NOT NULL PRIMARY KEY, payload TEXT NOT NULL)',
+      );
+      final drafts = await db.customSelect('SELECT * FROM flight_drafts').get();
+      for (final row in drafts) {
+        exportDb.execute('INSERT INTO flight_drafts VALUES (?, ?)', [
+          row.data['draft_key'],
+          row.data['payload'],
+        ]);
+      }
 
       final corrections = await db
           .customSelect('SELECT * FROM endorsement_corrections')

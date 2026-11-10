@@ -94,6 +94,7 @@ void main() {
           'ALTER TABLE flights_table DROP COLUMN $column',
         );
       }
+      await db.customStatement('DROP TABLE flight_drafts');
       await db.customStatement('PRAGMA user_version = 5');
       await db.close();
       db = AppDatabase(NativeDatabase(file));
