@@ -2,11 +2,13 @@ package com.spreadlog.app
 
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
+import android.view.WindowManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.Executors
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
@@ -17,7 +19,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
     private val CHANNEL = "com.spreadlog.app/backup_intent"
     private var pendingBackupPath: String? = null
     private var methodChannel: MethodChannel? = null
@@ -96,6 +98,8 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Protect cold-start and recent-task frames until Dart loads settings.
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         handleIntent(intent)
     }
 
@@ -185,6 +189,34 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
         methodChannel = channel
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.spreadlog.app/app_lock")
+            .setMethodCallHandler { call, result ->
+                val settings = getSharedPreferences("spreadlog_app_lock", MODE_PRIVATE)
+                when (call.method) {
+                    "isProtectionEnabled" -> result.success(settings.getBoolean("enabled", false))
+                    "setProtectionEnabled" -> {
+                        val enabled = call.arguments as? Boolean
+                        if (enabled == null) {
+                            result.error("INVALID_SETTING", "Expected protection state", null)
+                        } else if (!settings.edit().putBoolean("enabled", enabled).commit()) {
+                            result.error("SETTINGS_WRITE_FAILED", "Could not save protection state", null)
+                        } else {
+                            if (enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                            else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                            result.success(null)
+                        }
+                    }
+                    "openSecuritySettings" -> {
+                        try {
+                            startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS))
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("SETTINGS_UNAVAILABLE", "Open Android Security settings manually", null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.spreadlog.app/scanner")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
